@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <set>
 
-#include "base/no_destructor.h"
 #include "chrome/browser/browser_process.h"
 #include "components/prefs/pref_registry_simple.h"
 #include "components/prefs/pref_service.h"
@@ -34,8 +33,9 @@ constexpr int kMaxMinutes = 12 * 60;
 
 // static
 MastSession& MastSession::Get() {
-  static base::NoDestructor<MastSession> instance;
-  return *instance;
+  // Stateless (everything lives in Local State), so a plain static is fine.
+  static MastSession instance;
+  return instance;
 }
 
 // static
