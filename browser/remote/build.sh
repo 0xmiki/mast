@@ -17,7 +17,11 @@ if [ "$(cat .mast-version 2>/dev/null)" != "$VERSION" ]; then
 	say "Syncing Chromium $VERSION (slow the first time)"
 	git -C src reset --hard -q || true
 	rm -f .mast-patches
-	gclient sync --nohooks --no-history -D --force --revision "src@refs/tags/$VERSION"
+	# Fetch only this tag, then sync by commit hash: gclient skips its own fetch when the
+	# commit is already present (a tag ref makes it fetch every branch with full history).
+	git -C src fetch --depth 1 origin "+refs/tags/$VERSION:refs/tags/$VERSION"
+	REV=$(git -C src rev-parse "refs/tags/$VERSION^{commit}")
+	gclient sync --nohooks --no-history -D --force --revision "src@$REV"
 	gclient runhooks
 	echo "$VERSION" > .mast-version
 fi
