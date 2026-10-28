@@ -9,4 +9,4 @@ bun run dev
 ```
 
 Press **Start** to block distractions. Open the **Demo** drawer (bottom-left) to time-travel and try to escape.
-Product rules and the Chromium mapping live in [docs/SPEC.md](docs/SPEC.md).
+Product rules: [docs/SPEC.md](docs/SPEC.md). How it maps onto a Chromium fork: [docs/CHROMIUM.md](docs/CHROMIUM.md).
