@@ -14,7 +14,8 @@ namespace mast {
 std::string BlockPageHtml(std::string_view host, base::Time session_end);
 
 // chrome://mast: start a session, watch it, manage the blocklist.
-std::string StartPageHtml();
+// `as_new_tab` titles it "New Tab" so tabs and history read naturally.
+std::string StartPageHtml(bool as_new_tab);
 
 }  // namespace mast
 

@@ -21,6 +21,7 @@
           glib nss nspr gtk3 cups dbus expat libdrm mesa libgbm libGL libxkbcommon
           alsa-lib at-spi2-atk at-spi2-core pango cairo systemd wayland vulkan-loader
           libva pipewire fontconfig freetype
+          dejavu_fonts liberation_ttf noto-fonts noto-fonts-color-emoji
           libx11 libxcomposite libxdamage libxext libxfixes libxrandr libxcb
           libxcursor libxi libxrender libxtst libxshmfence
         ];

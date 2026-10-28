@@ -1,6 +1,6 @@
 diff -ruN a/chrome/browser/BUILD.gn b/chrome/browser/BUILD.gn
---- a/chrome/browser/BUILD.gn	2026-10-28 12:20:51.329964932 +0000
-+++ b/chrome/browser/BUILD.gn	2026-10-28 12:20:51.329964932 +0000
+--- a/chrome/browser/BUILD.gn	2026-10-28 15:13:47.605571632 +0000
++++ b/chrome/browser/BUILD.gn	2026-10-28 15:13:47.605571632 +0000
 @@ -881,6 +881,7 @@
    }
  
@@ -10,8 +10,8 @@ diff -ruN a/chrome/browser/BUILD.gn b/chrome/browser/BUILD.gn
      ":after_startup_task_utils",
      ":bad_message",
 diff -ruN a/chrome/browser/chrome_content_browser_client_navigation_throttles.cc b/chrome/browser/chrome_content_browser_client_navigation_throttles.cc
---- a/chrome/browser/chrome_content_browser_client_navigation_throttles.cc	2026-10-28 12:20:51.328964930 +0000
-+++ b/chrome/browser/chrome_content_browser_client_navigation_throttles.cc	2026-10-28 12:20:51.328964930 +0000
+--- a/chrome/browser/chrome_content_browser_client_navigation_throttles.cc	2026-10-28 15:13:47.598571617 +0000
++++ b/chrome/browser/chrome_content_browser_client_navigation_throttles.cc	2026-10-28 15:13:47.598571617 +0000
 @@ -38,6 +38,7 @@
  #include "chrome/browser/ssl/https_upgrades_navigation_throttle.h"
  #include "chrome/browser/ssl/typed_navigation_upgrade_throttle.h"
@@ -29,8 +29,8 @@ diff -ruN a/chrome/browser/chrome_content_browser_client_navigation_throttles.cc
    if (auto* throttle_manager =
            subresource_filter::ContentSubresourceFilterThrottleManager::
 diff -ruN a/chrome/browser/prefs/browser_prefs.cc b/chrome/browser/prefs/browser_prefs.cc
---- a/chrome/browser/prefs/browser_prefs.cc	2026-10-28 12:20:51.330964934 +0000
-+++ b/chrome/browser/prefs/browser_prefs.cc	2026-10-28 12:20:51.330964934 +0000
+--- a/chrome/browser/prefs/browser_prefs.cc	2026-10-28 15:13:47.612571646 +0000
++++ b/chrome/browser/prefs/browser_prefs.cc	2026-10-28 15:13:47.612571646 +0000
 @@ -62,6 +62,7 @@
  #include "chrome/browser/platform_experience/prefs.h"
  #include "chrome/browser/prefs/chrome_pref_service_factory.h"
@@ -48,8 +48,8 @@ diff -ruN a/chrome/browser/prefs/browser_prefs.cc b/chrome/browser/prefs/browser
  #if BUILDFLAG(CHROME_FOR_TESTING)
    chrome_for_testing::RegisterPrefs(registry);
 diff -ruN a/chrome/browser/prefs/BUILD.gn b/chrome/browser/prefs/BUILD.gn
---- a/chrome/browser/prefs/BUILD.gn	2026-10-28 12:20:51.331964936 +0000
-+++ b/chrome/browser/prefs/BUILD.gn	2026-10-28 12:20:51.331964936 +0000
+--- a/chrome/browser/prefs/BUILD.gn	2026-10-28 15:13:47.624571672 +0000
++++ b/chrome/browser/prefs/BUILD.gn	2026-10-28 15:13:47.624571672 +0000
 @@ -58,6 +58,7 @@
    ]
  
@@ -59,8 +59,8 @@ diff -ruN a/chrome/browser/prefs/BUILD.gn b/chrome/browser/prefs/BUILD.gn
      ":util",
      "//chrome/browser:browser_process",
 diff -ruN a/chrome/browser/prefs/incognito_mode_prefs.cc b/chrome/browser/prefs/incognito_mode_prefs.cc
---- a/chrome/browser/prefs/incognito_mode_prefs.cc	2026-10-28 12:20:51.331964936 +0000
-+++ b/chrome/browser/prefs/incognito_mode_prefs.cc	2026-10-28 12:20:51.331964936 +0000
+--- a/chrome/browser/prefs/incognito_mode_prefs.cc	2026-10-28 15:13:47.619571661 +0000
++++ b/chrome/browser/prefs/incognito_mode_prefs.cc	2026-10-28 15:13:47.619571661 +0000
 @@ -4,6 +4,8 @@
  
  #include "chrome/browser/prefs/incognito_mode_prefs.h"
@@ -81,9 +81,77 @@ diff -ruN a/chrome/browser/prefs/incognito_mode_prefs.cc b/chrome/browser/prefs/
  
    IncognitoModeAvailability result = kDefaultAvailability;
    // Enterprise Isolated Mode has higher priority than the Incognito mode
+diff -ruN a/chrome/browser/themes/theme_service.cc b/chrome/browser/themes/theme_service.cc
+--- a/chrome/browser/themes/theme_service.cc	2026-10-28 15:13:47.657571741 +0000
++++ b/chrome/browser/themes/theme_service.cc	2026-10-28 15:13:47.657571741 +0000
+@@ -311,7 +311,7 @@
+     user_prefs::PrefRegistrySyncable* registry) {
+ #if BUILDFLAG(IS_LINUX)
+   registry->RegisterIntegerPref(prefs::kSystemTheme,
+-                                static_cast<int>(ui::GetDefaultSystemTheme()));
++                                static_cast<int>(ui::SystemTheme::kDefault));
+ #endif
+   registry->RegisterFilePathPref(prefs::kCurrentThemePackFilename,
+                                  base::FilePath());
+@@ -325,11 +325,12 @@
+       user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
+   registry->RegisterIntegerPref(
+       prefs::kBrowserColorScheme,
+-      std::to_underlying(ThemeService::BrowserColorScheme::kSystem));
++      std::to_underlying(ThemeService::BrowserColorScheme::kDark));
+   registry->RegisterIntegerPref(
+       prefs::kDeprecatedUserColorDoNotUse, SK_ColorTRANSPARENT,
+       user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
+-  registry->RegisterIntegerPref(prefs::kUserColor, SK_ColorTRANSPARENT);
++  registry->RegisterIntegerPref(prefs::kUserColor,
++                                SkColorSetRGB(0xFF, 0x6A, 0x3D));
+   registry->RegisterIntegerPref(
+       prefs::kDeprecatedBrowserColorVariantDoNotUse,
+       static_cast<int>(ui::mojom::BrowserColorVariant::kSystem),
+diff -ruN a/chrome/browser/ui/views/toolbar/BUILD.gn b/chrome/browser/ui/views/toolbar/BUILD.gn
+--- a/chrome/browser/ui/views/toolbar/BUILD.gn	2026-10-28 15:13:47.651571729 +0000
++++ b/chrome/browser/ui/views/toolbar/BUILD.gn	2026-10-28 15:13:47.651571729 +0000
+@@ -199,6 +199,8 @@
+     "toolbar_icon_container_view.cc",
+     "toolbar_ink_drop_util.cc",
+     "toolbar_view.cc",
++    "//mast/browser/ui/mast_toolbar_button.cc",
++    "//mast/browser/ui/mast_toolbar_button.h",
+     "webui_app_menu_control.cc",
+     "webui_avatar_toolbar_button.cc",
+     "webui_back_forward_control.cc",
+@@ -216,6 +218,7 @@
+   ]
+ 
+   deps = [
++    "//mast/browser",
+     ":toolbar",
+     "//base:i18n",
+     "//build:branding_buildflags",
+diff -ruN a/chrome/browser/ui/views/toolbar/toolbar_view.cc b/chrome/browser/ui/views/toolbar/toolbar_view.cc
+--- a/chrome/browser/ui/views/toolbar/toolbar_view.cc	2026-10-28 15:13:47.644571714 +0000
++++ b/chrome/browser/ui/views/toolbar/toolbar_view.cc	2026-10-28 15:13:47.645571716 +0000
+@@ -4,6 +4,8 @@
+ 
+ #include "chrome/browser/ui/views/toolbar/toolbar_view.h"
+ 
++#include "mast/browser/ui/mast_toolbar_button.h"
++
+ #include <algorithm>
+ #include <memory>
+ #include <utility>
+@@ -609,6 +611,8 @@
+     UpdateGlicButtonVisibility();
+   }
+ 
++  AddChildView(std::make_unique<mast::MastToolbarButton>(browser_));
++
+   if (!features::IsWebUIAvatarButtonEnabled()) {
+     avatar_ = AddChildView(std::make_unique<AvatarToolbarButton>(browser_));
+     bool show_avatar_toolbar_button =
 diff -ruN a/chrome/browser/ui/webui/BUILD.gn b/chrome/browser/ui/webui/BUILD.gn
---- a/chrome/browser/ui/webui/BUILD.gn	2026-10-28 12:20:51.332964937 +0000
-+++ b/chrome/browser/ui/webui/BUILD.gn	2026-10-28 12:20:51.332964937 +0000
+--- a/chrome/browser/ui/webui/BUILD.gn	2026-10-28 15:13:47.636571697 +0000
++++ b/chrome/browser/ui/webui/BUILD.gn	2026-10-28 15:13:47.637571699 +0000
 @@ -47,6 +47,7 @@
    }
  
@@ -93,8 +161,8 @@ diff -ruN a/chrome/browser/ui/webui/BUILD.gn b/chrome/browser/ui/webui/BUILD.gn
      ":net_export_ui",
      ":ntp_tiles_internals_ui",
 diff -ruN a/chrome/browser/ui/webui/chrome_web_ui_configs.cc b/chrome/browser/ui/webui/chrome_web_ui_configs.cc
---- a/chrome/browser/ui/webui/chrome_web_ui_configs.cc	2026-10-28 12:20:51.331964936 +0000
-+++ b/chrome/browser/ui/webui/chrome_web_ui_configs.cc	2026-10-28 12:20:51.331964936 +0000
+--- a/chrome/browser/ui/webui/chrome_web_ui_configs.cc	2026-10-28 15:13:47.630571684 +0000
++++ b/chrome/browser/ui/webui/chrome_web_ui_configs.cc	2026-10-28 15:13:47.631571686 +0000
 @@ -65,6 +65,7 @@
  #include "components/security_interstitials/content/known_interception_disclosure_ui.h"
  #include "components/webui/user_actions/user_actions_ui.h"
@@ -107,7 +175,27 @@ diff -ruN a/chrome/browser/ui/webui/chrome_web_ui_configs.cc b/chrome/browser/ui
  #endif  // BUILDFLAG(IS_CHROMEOS)
  
    auto& map = content::WebUIConfigMap::GetInstance();
-+  map.AddWebUIConfig(std::make_unique<mast::MastUIConfig>());
++  map.AddWebUIConfig(std::make_unique<mast::MastUIConfig>(mast::kMastHost));
    map.AddWebUIConfig(std::make_unique<AccessibilityUIConfig>());
    map.AddWebUIConfig(std::make_unique<AutofillInternalsUIConfig>());
    map.AddWebUIConfig(std::make_unique<BluetoothInternalsUIConfig>());
+@@ -330,7 +332,8 @@
+   map.AddWebUIConfig(std::make_unique<WebRtcLogsUIConfig>());
+   map.AddWebUIConfig(std::make_unique<RegionalCapabilitiesInternalsUIConfig>());
+ #if BUILDFLAG(ENABLE_WEBUI_NTP)
+-  map.AddWebUIConfig(std::make_unique<NewTabPageUIConfig>());
++  map.AddWebUIConfig(
++      std::make_unique<mast::MastUIConfig>(chrome::kChromeUINewTabPageHost));
+   map.AddWebUIConfig(std::make_unique<CustomizeChromeUIConfig>());
+ #endif  // BUILDFLAG(ENABLE_WEBUI_NTP)
+ 
+@@ -384,7 +387,8 @@
+           multistep_filter_internals::MultistepFilterInternalsUIConfig>());
+ #if BUILDFLAG(ENABLE_WEBUI_NTP)
+   map.AddWebUIConfig(std::make_unique<NewTabFooterUIConfig>());
+-  map.AddWebUIConfig(std::make_unique<NewTabPageThirdPartyUIConfig>());
++  map.AddWebUIConfig(std::make_unique<mast::MastUIConfig>(
++      chrome::kChromeUINewTabPageThirdPartyHost));
+ #endif  // BUILDFLAG(ENABLE_WEBUI_NTP)
+   map.AddWebUIConfig(std::make_unique<NewTabUIConfig>());
+   map.AddWebUIConfig(std::make_unique<OmniboxEverywhereUIConfig>());

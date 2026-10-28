@@ -68,7 +68,7 @@ tick(); setInterval(tick, 250);
 </script></body></html>)MAST";
 
 constexpr char kStartPage[] = R"MAST(<!doctype html>
-<html><head><meta charset="utf-8"><title>Mast</title><style>{{STYLE}}
+<html><head><meta charset="utf-8"><title>{{TITLE}}</title><style>{{STYLE}}
 body { padding:10vh 24px 64px; background:radial-gradient(70% 45% at 50% 0%,rgb(255 106 61/.07),transparent 70%),var(--bg) }
 body.running { background:radial-gradient(70% 50% at 50% 0%,rgb(255 106 61/.14),transparent 70%),var(--bg) }
 header { position:fixed; top:18px; left:22px; display:flex; align-items:center; gap:10px; font-weight:650; font-size:15px }
@@ -226,8 +226,11 @@ std::string BlockPageHtml(std::string_view host, base::Time session_end) {
   return page;
 }
 
-std::string StartPageHtml() {
-  return Fill(kStartPage);
+std::string StartPageHtml(bool as_new_tab) {
+  std::string page = Fill(kStartPage);
+  base::ReplaceSubstringsAfterOffset(&page, 0, "{{TITLE}}",
+                                     as_new_tab ? "New Tab" : "Mast");
+  return page;
 }
 
 }  // namespace mast

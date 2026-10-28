@@ -17,6 +17,7 @@
 #include "mast/browser/mast_pages.h"
 #include "mast/browser/mast_session.h"
 #include "services/network/public/mojom/content_security_policy.mojom.h"
+#include "url/gurl.h"
 
 namespace mast {
 
@@ -118,12 +119,20 @@ class MastHandler : public content::WebUIMessageHandler {
 
 }  // namespace
 
-MastUIConfig::MastUIConfig()
-    : DefaultWebUIConfig(content::kChromeUIScheme, kMastHost) {}
+MastUIConfig::MastUIConfig(std::string_view host)
+    : WebUIConfig(content::kChromeUIScheme, host) {}
 
-MastUI::MastUI(content::WebUI* web_ui) : content::WebUIController(web_ui) {
+std::unique_ptr<content::WebUIController> MastUIConfig::CreateWebUIController(
+    content::WebUI* web_ui,
+    const GURL& url) {
+  return std::make_unique<MastUI>(web_ui, host());
+}
+
+MastUI::MastUI(content::WebUI* web_ui, std::string_view host)
+    : content::WebUIController(web_ui) {
+  const bool as_new_tab = host != kMastHost;
   content::WebUIDataSource* source = content::WebUIDataSource::CreateAndAdd(
-      web_ui->GetWebContents()->GetBrowserContext(), kMastHost);
+      web_ui->GetWebContents()->GetBrowserContext(), std::string(host));
   // The page is one self-contained document with inline script and style.
   source->OverrideContentSecurityPolicy(
       network::mojom::CSPDirectiveName::ScriptSrc,
@@ -137,11 +146,12 @@ MastUI::MastUI(content::WebUI* web_ui) : content::WebUIController(web_ui) {
         return path.empty() || path == "index.html";
       }),
       base::BindRepeating(
-          [](const std::string& path,
+          [](bool as_new_tab, const std::string& path,
              content::WebUIDataSource::GotDataCallback callback) {
-            std::move(callback).Run(
-                base::MakeRefCounted<base::RefCountedString>(StartPageHtml()));
-          }));
+            std::move(callback).Run(base::MakeRefCounted<base::RefCountedString>(
+                StartPageHtml(as_new_tab)));
+          },
+          as_new_tab));
   web_ui->AddMessageHandler(std::make_unique<MastHandler>());
 }
 

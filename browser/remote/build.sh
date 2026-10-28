@@ -39,9 +39,14 @@ if [ "$(cat .mast-patches 2>/dev/null)" != "$SUM" ]; then
 	echo "$SUM" > .mast-patches
 fi
 
-# 3. Mast's own code (rsync keeps mtimes, so unchanged files don't rebuild)
+# 3. Mast's own code (rsync keeps mtimes, so unchanged files don't rebuild), and
+# whole-file overrides of upstream files (branding, icons). --checksum so an
+# override only touches mtimes when its content really differs.
 mkdir -p "$S/mast"
 rsync -a --delete "$M/src/mast/" "$S/mast/"
+if [ -d "$M/src/overrides" ]; then
+	rsync -a --checksum "$M/src/overrides/" "$S/"
+fi
 
 # 4. Configure + build
 mkdir -p "$OUT"
