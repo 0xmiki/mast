@@ -249,9 +249,17 @@ job() {
 }
 
 follow() {
-	local name=$1
+	local name=$1 rc from=1
 	log "following $name log (Ctrl-C detaches; the job keeps running)"
-	rssh "tail -n +1 -f ~/mast/$name.log & t=\$!; while [ ! -f ~/mast/$name.status ]; do sleep 3; done; sleep 1; kill \$t; exit \$(cat ~/mast/$name.status)"
+	while true; do
+		rssh "tail -n +$from -f ~/mast/$name.log & t=\$!; while [ ! -f ~/mast/$name.status ]; do sleep 3; done; sleep 1; kill \$t; exit \$(cat ~/mast/$name.status)" && return 0
+		rc=$?
+		# ssh exits 255 when the connection drops; anything else is the job's own status.
+		((rc == 255)) || return "$rc"
+		log "connection to the builder dropped; reconnecting (the job keeps running)"
+		sleep 10
+		from=$(rssh "wc -l < ~/mast/$name.log" 2>/dev/null || echo 1)
+	done
 }
 
 cmd_fetch() {
