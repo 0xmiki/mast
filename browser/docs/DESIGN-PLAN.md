@@ -212,3 +212,29 @@ still small enough to rebase each month in an hour or two.
 - Branding: copy-step (no patches), plus `brave_strings.grd` generated from `chromium_strings`
   by regex.
 - Maintenance rule: our own code, then subclass + tiny hook, then wrap, then patch.
+
+## 9. Progress (2026-10-28)
+
+**Done** (builds 1–4, about $0.70 of builder time):
+- Phase 0: Xvfb screenshot loop (`./mast shots`), baseline captured.
+- Phase 1: Mast ref palette (ember accent, cool-grey secondary), Chromium's dark neutrals 26
+  and surface tokens, a postprocessing surface mixer, no Material You seed, a readable
+  countdown pill, Inter/JetBrains Mono on Mast's pages.
+- Phase 2:
+  - names renamed in every string file at build time (`substitute-names.py`), with
+    "The Mast Authors" and the Chromium credit kept
+  - `chrome://version` wordmarks, favicons and the dark logo
+  - product vector icons and the WebUI glyph replaced with the sails
+  - `mast.desktop`
+- Phase 3 (part): no ripples, no profile button, ember text selection, Inter for WebUI.
+
+**Left** (next session):
+- Hide the tab-search chevron and the omnibox "AI Mode" chip, and drop the Lens and AI
+  entry points (feature-default flips).
+- "You and Google": rename it or hide it, since Mast has no sign-in. Same for the "Your Mast"
+  menu item.
+- Menus: 14 px radius and roomier items (MenuConfig). Omnibox popup: radius and colours.
+- Native UI font: Inter (needs the font shipped or installed).
+- Vector icons for back, forward, reload and menu in the demo's stroke style (optional; the
+  Chrome refresh icons are already close).
+- Translated strings: `.xtb` fingerprint remap so other languages keep their translations.
