@@ -261,10 +261,16 @@ cmd_fetch() {
 	[[ $url == https://* ]] || die "tunnel failed: $url"
 	trap 'rssh "bash ~/mast/remote/serve.sh stop" >/dev/null 2>&1 || true' RETURN
 	mkdir -p "$ROOT/dist"
-	sleep 3
-	sum=$(curl -fsS --retry 5 --retry-all-errors "$url/$token/sha256")
+	# A brand-new tunnel hostname takes a little while to appear in DNS; asking too
+	# early caches "no such host" for minutes. Wait until it actually answers.
+	log "waiting for the tunnel to come online"
+	for _ in $(seq 60); do
+		curl -fsS -m 10 -o /dev/null "$url/$token/sha256" 2>/dev/null && break
+		sleep 5
+	done
+	sum=$(curl -fsS -m 30 --retry 5 --retry-all-errors "$url/$token/sha256")
 	log "downloading build"
-	curl -fL --retry 5 --retry-all-errors --progress-bar -o "$ROOT/dist/mast-linux.tar.zst" "$url/$token/mast-linux.tar.zst"
+	curl -fL --retry 5 --retry-all-errors --speed-limit 1024 --speed-time 60 --progress-bar -o "$ROOT/dist/mast-linux.tar.zst" "$url/$token/mast-linux.tar.zst"
 	curl -fsS --retry 5 -o "$ROOT/dist/VERSION" "$url/$token/VERSION"
 	echo "$sum  $ROOT/dist/mast-linux.tar.zst" | sha256sum -c --quiet || die "checksum mismatch"
 	rm -rf "$ROOT/dist/mast"
