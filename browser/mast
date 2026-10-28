@@ -1,0 +1,209 @@
+#!/usr/bin/env bash
+# Mast build CLI. The EC2 builder only runs while building; its disk (Chromium checkout +
+# build cache) is kept while stopped, so later builds are incremental.
+#
+#   ./mast provision        one-time: key, firewall, instance; then first sync + build
+#   ./mast build [--keep]   start → push code → build → download → stop
+#   ./mast run              run the downloaded browser locally
+#   ./mast start | stop | status | ssh | logs [job]
+#   ./mast resize big|small|<type>
+#   ./mast destroy          delete the builder and its disk
+set -euo pipefail
+
+ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=mast.env
+source "$ROOT/mast.env"
+export AWS_REGION=$MAST_REGION AWS_PAGER=""
+STATE=$ROOT/.state
+mkdir -p "$STATE"
+HOST=""
+
+die() { echo "mast: $*" >&2; exit 1; }
+log() { printf '\033[1;33m›\033[0m %s\n' "$*"; }
+need() { command -v "$1" >/dev/null || die "$1 not found. Run inside: nix develop"; }
+
+SSH_OPTS=(-i "$MAST_KEY" -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$STATE/known_hosts"
+	-o ServerAliveInterval=30 -o ConnectTimeout=10 -o LogLevel=ERROR)
+
+instance_id() { [[ -f $STATE/instance-id ]] || die "no builder yet. Run: ./mast provision"; cat "$STATE/instance-id"; }
+describe() { aws ec2 describe-instances --instance-ids "$(instance_id)" --query "Reservations[0].Instances[0].$1" --output text; }
+my_cidr() { echo "$(curl -fsS https://checkip.amazonaws.com | tr -d '[:space:]')/32"; }
+rssh() { ssh "${SSH_OPTS[@]}" "ubuntu@$HOST" "$@"; }
+
+# SSH is only open to your current public IP; re-done on every start since home IPs change.
+allow_my_ip() {
+	local sg new old
+	sg=$(cat "$STATE/sg-id")
+	new=$(my_cidr)
+	old=$(cat "$STATE/allowed-cidr" 2>/dev/null || true)
+	[[ $new == "$old" ]] && return
+	if [[ -n $old ]]; then
+		aws ec2 revoke-security-group-ingress --group-id "$sg" --protocol tcp --port 22 --cidr "$old" >/dev/null 2>&1 || true
+	fi
+	aws ec2 authorize-security-group-ingress --group-id "$sg" --protocol tcp --port 22 --cidr "$new" >/dev/null
+	echo "$new" > "$STATE/allowed-cidr"
+}
+
+wait_ssh() {
+	HOST=$(describe PublicIpAddress)
+	log "waiting for ssh on $HOST"
+	for _ in $(seq 60); do
+		rssh true 2>/dev/null && return
+		sleep 5
+	done
+	die "ssh to $HOST timed out"
+}
+
+push() {
+	log "pushing code"
+	rsync -az --delete -e "ssh ${SSH_OPTS[*]}" \
+		"$ROOT/remote" "$ROOT/patches" "$ROOT/src" "$ROOT/chromium_version.txt" "ubuntu@$HOST:mast/"
+}
+
+# Run remote/<job>.sh detached on the builder (survives your laptop disconnecting), then follow its log.
+job() {
+	local name=$1
+	rssh "cd ~/mast && rm -f $name.status && (MAST_IDLE_MINUTES=$MAST_IDLE_MINUTES nohup bash -c 'bash remote/$name.sh; echo \$? > ~/mast/$name.status' > ~/mast/$name.log 2>&1 &)"
+	follow "$name"
+}
+
+follow() {
+	local name=$1
+	log "following $name log (Ctrl-C detaches; the job keeps running)"
+	rssh "tail -n +1 -f ~/mast/$name.log & t=\$!; while [ ! -f ~/mast/$name.status ]; do sleep 3; done; sleep 1; kill \$t; exit \$(cat ~/mast/$name.status)"
+}
+
+cmd_start() {
+	local s
+	allow_my_ip
+	s=$(describe State.Name)
+	case $s in
+		running) ;;
+		stopping) log "waiting for the previous stop"; aws ec2 wait instance-stopped --instance-ids "$(instance_id)" ;&
+		stopped) log "starting builder ($(describe InstanceType))"; aws ec2 start-instances --instance-ids "$(instance_id)" >/dev/null ;;
+		*) die "builder is $s" ;;
+	esac
+	aws ec2 wait instance-running --instance-ids "$(instance_id)"
+	wait_ssh
+}
+
+cmd_stop() {
+	log "stopping builder"
+	aws ec2 stop-instances --instance-ids "$(instance_id)" >/dev/null
+	log "stopped. While stopped you only pay for the ${MAST_DISK_GB} GB disk (about \$29/month)."
+}
+
+cmd_status() {
+	printf 'state:  %s\ntype:   %s\nip:     %s\n' "$(describe State.Name)" "$(describe InstanceType)" "$(describe PublicIpAddress)"
+}
+
+cmd_resize() {
+	local t=${1:-}
+	case $t in big) t=$MAST_BIG_TYPE ;; small) t=$MAST_SMALL_TYPE ;; "") die "usage: ./mast resize big|small|<instance-type>" ;; esac
+	if [[ $(describe State.Name) != stopped ]]; then
+		cmd_stop
+		aws ec2 wait instance-stopped --instance-ids "$(instance_id)"
+	fi
+	aws ec2 modify-instance-attribute --instance-id "$(instance_id)" --instance-type "{\"Value\":\"$t\"}"
+	log "builder is now $t"
+}
+
+cmd_fetch() {
+	[[ -n $HOST ]] || HOST=$(describe PublicIpAddress)
+	log "downloading build"
+	mkdir -p "$ROOT/dist"
+	rsync -az --info=progress2 -e "ssh ${SSH_OPTS[*]}" "ubuntu@$HOST:mast/dist/" "$ROOT/dist/"
+	rm -rf "$ROOT/dist/mast"
+	mkdir -p "$ROOT/dist/mast"
+	tar --zstd -xf "$ROOT/dist/mast-linux.tar.zst" -C "$ROOT/dist/mast"
+	log "browser in dist/mast (Chromium $(cat "$ROOT/dist/VERSION")). Run: ./mast run"
+}
+
+cmd_build() {
+	cmd_start
+	push
+	if ! job build; then
+		log "build failed. Inspect with: ./mast ssh   (the builder stops itself after ${MAST_IDLE_MINUTES} idle minutes)"
+		exit 1
+	fi
+	cmd_fetch
+	[[ ${1:-} == --keep ]] || cmd_stop
+}
+
+cmd_provision() {
+	need aws
+	[[ -f $STATE/instance-id ]] && die "already provisioned ($(cat "$STATE/instance-id"))"
+	aws sts get-caller-identity --query Arn --output text >/dev/null || die "AWS credentials not set up. Run: aws configure"
+
+	if [[ ! -f $MAST_KEY ]]; then
+		log "creating ssh key $MAST_KEY"
+		ssh-keygen -q -t ed25519 -N "" -C "$MAST_NAME" -f "$MAST_KEY"
+	fi
+	if ! aws ec2 describe-key-pairs --key-names "$MAST_NAME" >/dev/null 2>&1; then
+		aws ec2 import-key-pair --key-name "$MAST_NAME" --public-key-material "fileb://$MAST_KEY.pub" >/dev/null
+	fi
+
+	local vpc sg ami id
+	vpc=$(aws ec2 describe-vpcs --filters Name=isDefault,Values=true --query 'Vpcs[0].VpcId' --output text)
+	[[ $vpc != None ]] || die "no default VPC in $MAST_REGION"
+	log "creating firewall (ssh from your IP only)"
+	sg=$(aws ec2 create-security-group --group-name "$MAST_NAME" --description "Mast builder: ssh only" \
+		--vpc-id "$vpc" --query GroupId --output text)
+	echo "$sg" > "$STATE/sg-id"
+	allow_my_ip
+
+	ami=$(aws ssm get-parameter --name /aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id \
+		--query Parameter.Value --output text)
+	log "launching $MAST_BIG_TYPE with Ubuntu 24.04 ($ami), ${MAST_DISK_GB} GB disk"
+	id=$(aws ec2 run-instances --image-id "$ami" --instance-type "$MAST_BIG_TYPE" --key-name "$MAST_NAME" \
+		--security-group-ids "$sg" --instance-initiated-shutdown-behavior stop \
+		--metadata-options HttpTokens=required \
+		--block-device-mappings "[{\"DeviceName\":\"/dev/sda1\",\"Ebs\":{\"VolumeSize\":$MAST_DISK_GB,\"VolumeType\":\"gp3\",\"Iops\":3000,\"Throughput\":250,\"DeleteOnTermination\":true}}]" \
+		--tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$MAST_NAME}]" \
+		--query 'Instances[0].InstanceId' --output text)
+	echo "$id" > "$STATE/instance-id"
+	aws ec2 wait instance-running --instance-ids "$id"
+	wait_ssh
+	push
+	log "bootstrapping: Chromium sync + first full build. Expect a few hours."
+	if job bootstrap; then
+		cmd_fetch
+		cmd_stop
+		log "done. Shrink the builder for incremental builds: ./mast resize small"
+	else
+		log "bootstrap failed. Inspect with: ./mast ssh"
+		exit 1
+	fi
+}
+
+cmd_destroy() {
+	read -r -p "Delete the builder AND its disk (Chromium checkout + cache)? Type 'destroy': " ok
+	[[ $ok == destroy ]] || die "cancelled"
+	aws ec2 terminate-instances --instance-ids "$(instance_id)" >/dev/null
+	aws ec2 wait instance-terminated --instance-ids "$(instance_id)"
+	aws ec2 delete-security-group --group-id "$(cat "$STATE/sg-id")"
+	aws ec2 delete-key-pair --key-name "$MAST_NAME"
+	rm -f "$STATE/instance-id" "$STATE/sg-id" "$STATE/allowed-cidr" "$STATE/known_hosts"
+	log "builder deleted. No more AWS charges from Mast."
+}
+
+cmd_run() {
+	[[ -x $ROOT/dist/mast/chrome ]] || die "no build yet. Run: ./mast build"
+	local args=(--user-data-dir="$ROOT/.profile" "$@")
+	if [[ -e /etc/NIXOS ]]; then
+		# Chromium built on Ubuntu expects a normal Linux filesystem layout.
+		nix run "$ROOT#fhs" -- -c "$(printf '%q ' "$ROOT/dist/mast/chrome" "${args[@]}")"
+	else
+		"$ROOT/dist/mast/chrome" "${args[@]}"
+	fi
+}
+
+cmd=${1:-help}
+shift || true
+case $cmd in
+	provision | build | start | stop | status | resize | destroy | fetch) need aws; "cmd_$cmd" "$@" ;;
+	run) cmd_run "$@" ;;
+	ssh) need aws; HOST=$(describe PublicIpAddress); ssh "${SSH_OPTS[@]}" -t "ubuntu@$HOST" "$@" ;;
+	logs) need aws; HOST=$(describe PublicIpAddress); follow "${1:-build}" ;;
+	*) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//' ;;
+esac

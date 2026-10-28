@@ -1,0 +1,6 @@
+[Unit]
+Description=Stop the Mast builder when idle
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/mast-idle-stop
