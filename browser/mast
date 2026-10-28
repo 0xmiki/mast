@@ -319,11 +319,12 @@ cmd_run() {
 		# Chromium built on Ubuntu expects a normal Linux filesystem layout.
 		# Build the runner from the system's own nixpkgs revision, so it reuses the
 		# libraries already installed instead of downloading a second copy.
-		local nix_args=(--extra-experimental-features 'nix-command flakes')
+		local run_args=()
 		if command -v nixos-version >/dev/null; then
-			nix_args+=(--no-write-lock-file --override-input nixpkgs "github:NixOS/nixpkgs/$(nixos-version --revision)")
+			run_args+=(--no-write-lock-file --override-input nixpkgs "github:NixOS/nixpkgs/$(nixos-version --revision)")
 		fi
-		nix "${nix_args[@]}" run "$ROOT#fhs" -- -c "$(printf '%q ' "$ROOT/dist/mast/chrome" "${args[@]}")"
+		nix --extra-experimental-features 'nix-command flakes' run "${run_args[@]}" "$ROOT#fhs" -- \
+			-c "$(printf '%q ' "$ROOT/dist/mast/chrome" "${args[@]}")"
 	else
 		"$ROOT/dist/mast/chrome" "${args[@]}"
 	fi
