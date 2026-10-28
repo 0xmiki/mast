@@ -18,9 +18,6 @@ source_set("browser") {
   deps = [
     "//base",
     "//chrome/browser:browser_process",
-    "//chrome/browser/profiles:profile",
-    "//chrome/browser/ui/webui:favicon_source",
-    "//components/favicon_base",
     "//components/prefs",
     "//content/public/browser",
     "//content/public/common",

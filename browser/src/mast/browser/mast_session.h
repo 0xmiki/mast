@@ -14,17 +14,17 @@ class PrefService;
 
 namespace mast {
 
-// A new-tab shortcut tile.
-struct Shortcut {
-  std::string title;
-  std::string url;
-};
-
 // Today's numbers for the new tab page.
 struct TodayStats {
   base::TimeDelta focus;  // deep work so far today, including a running session
   int blocked = 0;        // blocked page loads today
   int sessions = 0;       // sessions started today
+};
+
+// One day of the week strip on the new tab page.
+struct DayFocus {
+  std::string label;  // "Mon"
+  base::TimeDelta focus;
 };
 
 // The browser-wide deep-work session. While it runs, every site on the
@@ -64,10 +64,8 @@ class MastSession {
   // Called by the navigation throttle each time it shows the block page.
   void RecordBlocked();
   TodayStats Today() const;
-
-  std::vector<Shortcut> Shortcuts() const;
-  bool AddShortcut(const std::string& input);
-  bool RemoveShortcut(const std::string& url);
+  // The last 7 days, oldest first, ending with today.
+  std::vector<DayFocus> Week() const;
 
  private:
   PrefService* prefs() const;

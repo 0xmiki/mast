@@ -8,10 +8,6 @@
 #include "base/functional/bind.h"
 #include "base/memory/ref_counted_memory.h"
 #include "base/values.h"
-#include "chrome/browser/profiles/profile.h"
-#include "chrome/browser/ui/webui/favicon_source.h"
-#include "components/favicon_base/favicon_url_parser.h"
-#include "content/public/browser/url_data_source.h"
 #include "content/public/browser/web_contents.h"
 #include "content/public/browser/web_ui.h"
 #include "content/public/browser/web_ui_data_source.h"
@@ -60,8 +56,7 @@ class MastHandler : public content::WebUIMessageHandler {
     On("undo", &MastHandler::HandleUndo);
     On("addSite", &MastHandler::HandleAddSite);
     On("removeSite", &MastHandler::HandleRemoveSite);
-    On("addShortcut", &MastHandler::HandleAddShortcut);
-    On("removeShortcut", &MastHandler::HandleRemoveShortcut);
+
   }
 
  private:
@@ -99,16 +94,6 @@ class MastHandler : public content::WebUIMessageHandler {
     SendState();
   }
 
-  void HandleAddShortcut(const base::ListValue& args) {
-    MastSession::Get().AddShortcut(StringArg(args));
-    SendState();
-  }
-
-  void HandleRemoveShortcut(const base::ListValue& args) {
-    MastSession::Get().RemoveShortcut(StringArg(args));
-    SendState();
-  }
-
   void SendState() {
     AllowJavascript();
     MastSession& session = MastSession::Get();
@@ -129,14 +114,15 @@ class MastHandler : public content::WebUIMessageHandler {
     state.Set("lastMinutes", session.last_minutes());
     state.Set("presets", std::move(presets));
     state.Set("custom", std::move(custom));
-    base::ListValue shortcuts;
-    for (const Shortcut& s : session.Shortcuts()) {
-      shortcuts.Append(base::DictValue().Set("title", s.title).Set("url", s.url));
-    }
-    state.Set("shortcuts", std::move(shortcuts));
     const TodayStats today = session.Today();
+    base::ListValue week;
+    for (const DayFocus& d : session.Week()) {
+      week.Append(base::DictValue().Set("label", d.label).Set(
+          "ms", d.focus.InMillisecondsF()));
+    }
     state.Set("stats",
               base::DictValue()
+                  .Set("week", std::move(week))
                   .Set("focusMs", today.focus.InMillisecondsF())
                   .Set("blocked", today.blocked)
                   .Set("sessions", today.sessions)
@@ -169,9 +155,6 @@ MastUI::MastUI(content::WebUI* web_ui, std::string_view host)
   source->OverrideContentSecurityPolicy(
       network::mojom::CSPDirectiveName::StyleSrc,
       "style-src 'self' 'unsafe-inline';");
-  source->OverrideContentSecurityPolicy(
-      network::mojom::CSPDirectiveName::ImgSrc,
-      "img-src 'self' data: chrome://favicon2;");
   source->DisableTrustedTypesCSP();
   source->SetRequestFilter(
       base::BindRepeating([](const std::string& path) {
@@ -184,11 +167,6 @@ MastUI::MastUI(content::WebUI* web_ui, std::string_view host)
                 StartPageHtml(as_new_tab)));
           },
           as_new_tab));
-  // Site icons for the shortcut tiles (chrome://favicon2), as Chrome's NTP does.
-  Profile* profile = Profile::FromWebUI(web_ui);
-  content::URLDataSource::Add(
-      profile, std::make_unique<FaviconSource>(
-                   profile, chrome::FaviconUrlFormat::kFavicon2));
   web_ui->AddMessageHandler(std::make_unique<MastHandler>());
 }
 

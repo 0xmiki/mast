@@ -6,9 +6,8 @@
 <style>
 :root {
   color-scheme: dark;
-  --text: #ececef; --muted: #a9abb3; --faint: #7d8089;
-  --glass: rgb(14 15 18 / .58); --glass-2: rgb(24 25 30 / .62);
-  --edge: rgb(255 255 255 / .09); --edge-2: rgb(255 255 255 / .16);
+  --text: #ececef; --muted: #a9abb3; --faint: #7d8089; --dim: #5c5f68;
+  --glass: rgb(14 15 18 / .55); --edge: rgb(255 255 255 / .09); --edge-2: rgb(255 255 255 / .16);
   --ember: #ff6a3d; --ember-2: #ff8f5e; --soft: rgb(255 106 61 / .16);
   --font: "Inter Variable", Inter, "Noto Sans", "DejaVu Sans", system-ui, sans-serif;
   --mono: "JetBrains Mono", "DejaVu Sans Mono", ui-monospace, monospace;
@@ -17,116 +16,122 @@
 html, body { margin: 0; height: 100%; overflow: hidden; background: #0a0b0f; color: var(--text);
   font: 14px/1.45 var(--font); -webkit-font-smoothing: antialiased }
 button, input { font: inherit; color: inherit }
-a { color: inherit }
+[hidden] { display: none !important }
 
 /* ---- scene ------------------------------------------------------------ */
 #scene { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0 }
 #scene .reflect line { animation: shimmer 7s ease-in-out infinite }
 #scene .reflect line:nth-child(2n) { animation-delay: -3s }
 @keyframes shimmer { 50% { opacity: .35 } }
-.veil { position: fixed; inset: 0; z-index: 1; pointer-events: none;
-  background: radial-gradient(120% 80% at 50% 40%, transparent 40%, rgb(0 0 0 / .45)),
-              linear-gradient(rgb(0 0 0 / .25), transparent 30%, transparent 70%, rgb(0 0 0 / .35)) }
-body.running .veil { background:
-  radial-gradient(70% 55% at 50% 45%, rgb(255 106 61 / .10), transparent 70%),
-  radial-gradient(120% 80% at 50% 40%, transparent 40%, rgb(0 0 0 / .55)),
-  linear-gradient(rgb(0 0 0 / .3), transparent 30%, transparent 70%, rgb(0 0 0 / .4)) }
+.veil { position: fixed; inset: 0; z-index: 1; pointer-events: none; transition: opacity .6s;
+  background: radial-gradient(120% 80% at 50% 38%, transparent 35%, rgb(0 0 0 / .5)),
+              linear-gradient(rgb(0 0 0 / .3), transparent 32%, transparent 70%, rgb(0 0 0 / .45)) }
+.warm { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0; transition: opacity 1.2s;
+  background: radial-gradient(60% 50% at 50% 42%, rgb(255 106 61 / .12), transparent 70%) }
+body.running .warm { opacity: 1 }
 
 /* ---- layout ----------------------------------------------------------- */
-main { position: relative; z-index: 2; height: 100%; display: grid;
-  grid-template-rows: auto 1fr auto; padding: 22px 28px 26px }
-.glass { background: var(--glass); border: 1px solid var(--edge); border-radius: 18px;
-  backdrop-filter: blur(22px) saturate(1.25); -webkit-backdrop-filter: blur(22px) saturate(1.25);
-  box-shadow: 0 18px 50px rgb(0 0 0 / .35) }
-.eyebrow { margin: 0; font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--faint) }
-
-header { display: flex; align-items: center; justify-content: space-between }
+main { position: relative; z-index: 2; height: 100%; display: grid; grid-template-rows: auto 1fr auto;
+  padding: 22px 28px 26px }
+header { display: flex; align-items: center; justify-content: space-between; gap: 24px }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 15px;
   text-shadow: 0 1px 8px rgb(0 0 0 / .5) }
-.clock { text-align: right; text-shadow: 0 1px 10px rgb(0 0 0 / .6) }
-.clock b { display: block; font-size: 22px; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums }
-.clock span { color: var(--muted); font-size: 12.5px }
+.time { font-size: 15px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 10px rgb(0 0 0 / .6) }
 
-.center { display: flex; flex-direction: column; align-items: center; padding-top: 2vh }
-
-/* shortcuts */
-.tiles { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; max-width: 760px }
-.tile { position: relative; display: flex; flex-direction: column; align-items: center; gap: 7px; width: 76px;
-  text-decoration: none; cursor: pointer }
-.tile .ico { display: grid; place-items: center; width: 60px; height: 60px; border-radius: 16px;
-  background: var(--glass-2); border: 1px solid var(--edge); backdrop-filter: blur(16px);
-  transition: transform .15s, border-color .15s, background .15s }
-.tile:hover .ico { transform: translateY(-2px); border-color: var(--edge-2); background: rgb(34 35 41 / .7) }
-.tile img { width: 28px; height: 28px; border-radius: 6px }
-.tile .mono { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center;
-  font-weight: 700; font-size: 15px; color: #fff }
-.tile .name { max-width: 76px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font-size: 12px; color: var(--text); text-shadow: 0 1px 6px rgb(0 0 0 / .7) }
-.tile .x { position: absolute; top: -6px; right: 2px; width: 20px; height: 20px; border-radius: 50%;
-  border: 1px solid var(--edge-2); background: rgb(20 21 24 / .9); color: var(--muted); font-size: 12px;
-  line-height: 18px; display: none; cursor: pointer; padding: 0 }
-.tile:hover .x { display: block }
-.tile.locked .ico { opacity: .55 }
-.tile.locked img, .tile.locked .mono { filter: grayscale(1) }
-.tile .lock { position: absolute; top: 40px; right: 6px; width: 20px; height: 20px; border-radius: 50%;
-  display: none; place-items: center; background: var(--ember); color: #1a0b05; border: 2px solid #15100f }
-.tile.locked .lock { display: grid }
-.tile.add .ico { border-style: dashed; color: var(--muted); font-size: 24px; font-weight: 300 }
-
-/* search */
-form.search { display: flex; align-items: center; gap: 12px; width: min(600px, 92vw); height: 50px;
-  margin-top: 28px; padding: 0 20px; border-radius: 999px }
-form.search:focus-within { border-color: rgb(255 106 61 / .6); box-shadow: 0 0 0 4px var(--soft), 0 18px 50px rgb(0 0 0 / .35) }
-form.search svg { flex: none; color: var(--muted) }
-form.search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font-size: 15px }
+form.search { display: flex; align-items: center; gap: 12px; width: min(560px, 60vw); height: 44px;
+  padding: 0 18px; border-radius: 999px; background: var(--glass); border: 1px solid var(--edge);
+  backdrop-filter: blur(20px) saturate(1.2) }
+form.search:focus-within { border-color: rgb(255 106 61 / .55); box-shadow: 0 0 0 4px var(--soft) }
+form.search svg { flex: none; color: var(--faint) }
+form.search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font-size: 14.5px }
 form.search input::placeholder { color: var(--faint) }
 
-/* focus card */
-.focus { margin-top: 26px; padding: 22px 26px 20px; display: flex; flex-direction: column; align-items: center;
-  min-width: min(520px, 92vw); text-align: center }
-.lengths { display: flex; gap: 4px; margin-top: 12px; padding: 4px; border-radius: 13px;
-  background: rgb(0 0 0 / .28); border: 1px solid var(--edge) }
-.lengths button { min-width: 62px; height: 36px; padding: 0 12px; border: 0; border-radius: 10px; background: none;
-  color: var(--muted); font-weight: 600; cursor: pointer; transition: color .12s, background .12s }
-.lengths button:hover { color: var(--text) }
-.lengths button.on { background: rgb(255 255 255 / .1); color: var(--text); box-shadow: inset 0 0 0 1px var(--edge-2) }
-.go { width: 100%; max-width: 300px; height: 48px; margin-top: 14px; border: 0; border-radius: 13px;
-  background: var(--ember); color: #1a0b05; font-size: 15.5px; font-weight: 700; cursor: pointer;
-  box-shadow: 0 10px 36px rgb(255 106 61 / .3); transition: background .15s, transform .1s }
-.go:hover { background: var(--ember-2) }
-.go:active { transform: scale(.985) }
-.cd { font-family: var(--mono); font-size: 76px; font-weight: 600; line-height: 1; letter-spacing: -.03em;
-  margin-top: 10px; font-variant-numeric: tabular-nums }
-.running .focus .eyebrow { color: var(--ember-2) }
-.sub { margin: 12px 0 0; color: var(--muted) }
-.row { display: flex; gap: 8px; margin-top: 16px }
-.btn { height: 36px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--edge-2);
-  background: rgb(255 255 255 / .06); font-weight: 600; cursor: pointer }
-.btn:hover { background: rgb(255 255 255 / .1) }
-.btn.ghost { border-color: transparent; background: none; color: var(--muted) }
-.note { margin: 12px 0 0; font-size: 12.5px; color: var(--faint) }
+.stage { display: grid; place-items: center; padding-bottom: 6vh }
 
-/* bottom cards */
-footer { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px }
-.stats { padding: 16px 20px 18px; min-width: 360px }
-.stats .nums { display: flex; gap: 34px; margin-top: 10px }
-.stats b { display: block; font-size: 24px; font-weight: 650; letter-spacing: -.02em; font-variant-numeric: tabular-nums }
-.stats b small { font-size: 13px; font-weight: 600; margin-left: 1px; color: var(--muted) }
-.stats .n1 b { color: var(--ember-2) }
-.stats span { font-size: 12px; color: var(--muted) }
-.listcard { padding: 16px 20px; display: flex; align-items: center; gap: 16px }
-.listcard p { margin: 4px 0 0; color: var(--muted); font-size: 12.5px }
+/* idle: "Focus for 50 min" */
+.setup { display: flex; flex-direction: column; align-items: center; text-align: center;
+  text-shadow: 0 2px 24px rgb(0 0 0 / .55) }
+.phrase { margin: 0; font-size: clamp(40px, 6.2vw, 68px); font-weight: 650; letter-spacing: -.035em; line-height: 1.05 }
+.phrase .len { color: var(--ember-2); font-variant-numeric: tabular-nums }
+.ends { margin: 14px 0 0; color: var(--muted); font-size: 15px }
+.ends b { color: var(--text); font-weight: 600 }
+
+.slider { position: relative; width: min(460px, 78vw); margin-top: 34px }
+.slider input { width: 100%; margin: 0; height: 28px; background: none; -webkit-appearance: none; cursor: pointer }
+.slider input:focus { outline: none }
+.slider input::-webkit-slider-runnable-track { height: 6px; border-radius: 99px;
+  background: linear-gradient(90deg, var(--ember) 0 var(--fill), rgb(255 255 255 / .14) var(--fill) 100%) }
+.slider input::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; margin-top: -8px;
+  border-radius: 50%; background: #fff; border: 0; box-shadow: 0 0 0 6px rgb(255 106 61 / .28), 0 4px 14px rgb(0 0 0 / .4);
+  transition: box-shadow .15s }
+.slider input:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 8px rgb(255 106 61 / .45), 0 4px 14px rgb(0 0 0 / .4) }
+/* Labels sit under their real slider positions (11px = half the thumb, the
+   track's usable inset at each end). */
+.ticks { position: relative; height: 20px; margin: 8px 11px 0; font-size: 11.5px; color: var(--dim) }
+.ticks button { position: absolute; transform: translateX(-50%); border: 0; background: none; padding: 2px 4px;
+  color: inherit; cursor: pointer; border-radius: 6px; white-space: nowrap }
+.ticks button:hover { color: var(--text) }
+
+.go { margin-top: 30px; height: 54px; padding: 0 44px; border: 0; border-radius: 16px; background: var(--ember);
+  color: #1a0b05; font-size: 16px; font-weight: 700; cursor: pointer; letter-spacing: -.01em;
+  box-shadow: 0 14px 44px rgb(255 106 61 / .32); transition: background .15s, transform .1s, box-shadow .15s }
+.go:hover { background: var(--ember-2); box-shadow: 0 16px 50px rgb(255 106 61 / .42) }
+.go:active { transform: scale(.985) }
+.go kbd { margin-left: 10px; padding: 2px 6px; border-radius: 5px; font: 600 11px var(--font);
+  background: rgb(26 11 5 / .16); color: rgb(26 11 5 / .7) }
+.scope { margin: 16px 0 0; font-size: 13px; color: var(--faint) }
+.scope button { border: 0; background: none; padding: 0; color: var(--muted); text-decoration: underline;
+  text-underline-offset: 3px; cursor: pointer }
+.scope button:hover { color: var(--text) }
+
+/* running: the ring */
+.session { display: flex; flex-direction: column; align-items: center; text-align: center }
+.ring { position: relative; width: min(300px, 56vh); aspect-ratio: 1; container-type: inline-size;
+  border-radius: 50%; background: radial-gradient(circle, rgb(10 11 15 / .55) 55%, transparent 71%);
+  box-shadow: 0 0 60px rgb(255 106 61 / .18), inset 0 0 40px rgb(255 106 61 / .08) }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg) }
+.ring .track { stroke: rgb(255 255 255 / .1) }
+.ring .arc { stroke: var(--ember); stroke-linecap: round; transition: stroke-dashoffset .9s linear }
+.ring .inner { position: absolute; inset: 0; display: grid; place-content: center; gap: 6px }
+.ring .label { font-size: 12px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--ember-2) }
+.ring .cd { font-family: var(--mono); font-size: 19cqi; font-weight: 600; letter-spacing: -.03em;
+  line-height: 1; font-variant-numeric: tabular-nums }
+.ring .cd.long { font-size: 14.5cqi }
+.ring .until { font-size: 13px; color: var(--muted) }
+.actions { display: flex; gap: 10px; margin-top: 26px }
+.btn { height: 38px; padding: 0 18px; border-radius: 11px; border: 1px solid var(--edge-2); background: var(--glass);
+  backdrop-filter: blur(16px); font-weight: 600; cursor: pointer }
+.btn:hover { background: rgb(40 41 47 / .7) }
+.btn.quiet { border-color: transparent; background: none; backdrop-filter: none; color: var(--muted) }
+
+/* footer: today + week, quietly */
+footer { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px }
+.today { display: flex; align-items: flex-end; gap: 22px; text-shadow: 0 1px 10px rgb(0 0 0 / .6) }
+.week { display: flex; align-items: flex-end; gap: 6px; height: 46px }
+.week .d { display: flex; flex-direction: column; align-items: center; gap: 5px; width: 14px }
+.week .bar { width: 6px; border-radius: 3px; background: rgb(255 255 255 / .18); min-height: 3px; transition: height .4s }
+.week .d.today .bar { background: var(--ember) }
+.week .d span { font-size: 10px; color: var(--dim) }
+.week .d.today span { color: var(--muted) }
+.line { font-size: 13px; color: var(--muted); padding-bottom: 1px }
+.line b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums }
+.list { border: 0; background: none; color: var(--faint); font-size: 13px; cursor: pointer; padding: 0;
+  text-shadow: 0 1px 10px rgb(0 0 0 / .6) }
+.list:hover { color: var(--text) }
 
 /* blocklist sheet */
-.sheet { position: fixed; inset: 0; z-index: 10; display: none; place-items: center; background: rgb(0 0 0 / .45) }
+.sheet { position: fixed; inset: 0; z-index: 10; display: none; place-items: center; background: rgb(0 0 0 / .5) }
 .sheet.open { display: grid }
-.sheet .panel { width: min(680px, 94vw); max-height: 80vh; overflow: auto; padding: 22px 24px }
-.sheet h2 { margin: 0; font-size: 18px }
-.sheet .lead { margin: 4px 0 16px; color: var(--muted) }
-.sheet form { display: flex; gap: 8px }
-.sheet input { flex: 1; height: 38px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--edge-2);
+.panel { width: min(680px, 94vw); max-height: 80vh; overflow: auto; padding: 22px 24px; border-radius: 18px;
+  background: rgb(16 17 20 / .9); border: 1px solid var(--edge); backdrop-filter: blur(24px);
+  box-shadow: 0 30px 80px rgb(0 0 0 / .5) }
+.panel h2 { margin: 0; font-size: 18px }
+.panel .lead { margin: 4px 0 16px; color: var(--muted) }
+.panel form { display: flex; gap: 8px }
+.panel input { flex: 1; height: 38px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--edge-2);
   background: rgb(0 0 0 / .3); outline: 0 }
-.sheet input:focus { border-color: var(--ember) }
+.panel input:focus { border-color: var(--ember) }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px }
 .chip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 9px;
   background: rgb(255 255 255 / .05); border: 1px solid var(--edge); color: var(--muted); font-size: 13px }
@@ -134,8 +139,6 @@ footer { display: flex; align-items: flex-end; justify-content: space-between; g
 .chip button { border: 0; background: none; color: var(--muted); padding: 0 2px; font-size: 15px; cursor: pointer }
 .hint { margin: 10px 0 0; font-size: 12.5px; color: var(--ember-2) }
 .close { float: right }
-
-@media (max-height: 720px) { .cd { font-size: 60px } .focus { margin-top: 18px } form.search { margin-top: 20px } }
 </style>
 </head>
 <body>
@@ -174,115 +177,137 @@ footer { display: flex; align-items: flex-end; justify-content: space-between; g
     <line x1="1080" y1="890" x2="1220" y2="890" stroke-width="1.4" opacity=".18"/>
     <line x1="1120" y1="940" x2="1180" y2="940" stroke-width="1.2" opacity=".12"/>
   </g>
-  <!-- a small Mast on the horizon -->
   <g transform="translate(1005 704) scale(1.25)" fill="#0b0a0e">
     <path d="M14 10.5V24.5H6.6Q7.4 16 14 10.5Z"/><path d="M17 6V24.5H25.4Q24.7 13 17 6Z"/>
     <path d="M4 26.4H28L25.5 30H7Z"/>
   </g>
 </svg>
 <div class="veil"></div>
+<div class="warm"></div>
 
 <main>
   <header>
     <div class="brand">{{LOGO}} Mast</div>
-    <div class="clock"><b id="time">--:--</b><span id="date"></span></div>
-  </header>
-
-  <div class="center">
-    <div class="tiles" id="tiles"></div>
-    <form class="search glass" id="search">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <form class="search" id="search">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       <input id="q" placeholder="Search Google or type a URL" spellcheck="false" autocomplete="off">
     </form>
-    <section class="focus glass" id="focus">
-      <div id="idle">
-        <p class="eyebrow">Block distractions for</p>
-        <div class="lengths" id="lengths"></div>
-        <button class="go" id="go">Start</button>
+    <div class="time" id="time">--:--</div>
+  </header>
+
+  <div class="stage">
+    <section class="setup" id="setup">
+      <h1 class="phrase">Focus for <span class="len" id="len">50 min</span></h1>
+      <p class="ends">Ends at <b id="ends">--:--</b></p>
+      <div class="slider">
+        <input type="range" id="range" min="0" max="11" step="1" aria-label="Focus length">
+        <div class="ticks" id="ticks"></div>
       </div>
-      <div id="run" hidden>
-        <p class="eyebrow">Deep work</p>
-        <div class="cd" id="cd">00:00</div>
-        <p class="sub" id="until"></p>
-        <div class="row"><button class="btn" id="extend">+ 30 min</button><button class="btn ghost" id="undo" hidden></button></div>
-        <p class="note" id="nostop">There’s no stop button. That’s the point.</p>
+      <button class="go" id="go">Start focusing<kbd>Enter</kbd></button>
+      <p class="scope"><span id="scope">38 sites</span> blocked until it ends · <button id="openList">edit list</button></p>
+    </section>
+
+    <section class="session" id="session" hidden>
+      <div class="ring">
+        <svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="54" fill="none" stroke-width="4"/>
+          <circle class="arc" id="arc" cx="60" cy="60" r="54" fill="none" stroke-width="4"/></svg>
+        <div class="inner">
+          <span class="label">Focusing</span>
+          <span class="cd" id="cd">00:00</span>
+          <span class="until" id="until"></span>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="extend">+ 30 min</button>
+        <button class="btn quiet" id="undo" hidden></button>
       </div>
     </section>
   </div>
 
   <footer>
-    <section class="stats glass">
-      <p class="eyebrow">Today</p>
-      <div class="nums">
-        <div class="n1"><b id="focusTime">0<small>m</small></b><span>Deep work</span></div>
-        <div><b id="blocked">0</b><span>Distractions blocked</span></div>
-        <div><b id="sessions">0</b><span>Sessions</span></div>
-      </div>
-    </section>
-    <section class="listcard glass">
-      <div><p class="eyebrow">Blocklist</p><p><span id="count">0</span> sites blocked during sessions</p></div>
-      <button class="btn" id="openList">Edit</button>
-    </section>
+    <div class="today">
+      <div class="week" id="week" title="Deep work, last 7 days"></div>
+      <div class="line" id="line"></div>
+    </div>
+    <button class="list" id="openList2">Blocklist</button>
   </footer>
 </main>
 
 <div class="sheet" id="sheet">
-  <div class="panel glass">
-    <button class="btn ghost close" id="closeList">Done</button>
+  <div class="panel">
+    <button class="btn quiet close" id="closeList">Done</button>
     <h2>Blocklist</h2>
-    <p class="lead">Every session blocks all of these. Add anything else that pulls you away.</p>
+    <p class="lead">Every focus session blocks all of these.</p>
     <form id="add"><input id="site" placeholder="Add a site, e.g. espn.com" spellcheck="false"><button class="btn">Add</button></form>
     <div class="chips" id="mine"></div>
-    <p class="hint" id="lockhint" hidden>A session is running: you can add sites now, but not remove them.</p>
+    <p class="hint" id="lockhint" hidden>While you’re focusing you can add sites, not remove them.</p>
     <div class="chips" id="presets"></div>
   </div>
 </div>
 
 <script>
 'use strict';
-const LENGTHS = [25, 50, 90, 120, 180, 240];
+// Snap points for the slider (minutes); ticks show a readable subset.
+const STEPS = [15, 25, 30, 45, 50, 60, 75, 90, 120, 150, 180, 240];
+const TICKS = [15, 30, 60, 90, 120, 180, 240];
 const $ = (id) => document.getElementById(id);
 const pad = (n) => String(n).padStart(2, '0');
-const label = (m) => m < 60 ? m + 'm' : (m % 60 ? Math.floor(m / 60) + 'h ' + m % 60 + 'm' : m / 60 + 'h');
-const clock = (t) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+const human = (m) => m < 60 ? m + ' min' : (m % 60 ? Math.floor(m / 60) + ' h ' + m % 60 + ' min' : m / 60 + (m === 60 ? ' hour' : ' hours'));
+const short = (m) => m < 60 ? m + 'm' : (m % 60 ? Math.floor(m / 60) + 'h' + m % 60 : m / 60 + 'h');
+const clock = (t) => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 const countdown = (ms) => {
   const s = Math.max(0, Math.ceil(ms / 1000)), h = Math.floor(s / 3600);
   return (h ? h + ':' : '') + pad(Math.floor(s % 3600 / 60)) + ':' + pad(s % 60);
 };
-const duration = (ms) => {
+const hm = (ms) => {
   const m = Math.floor(ms / 60000), h = Math.floor(m / 60);
-  return h ? `${h}<small>h</small> ${m % 60}<small>m</small>` : `${m}<small>m</small>`;
+  return h ? `${h}h ${pad(m % 60)}m` : `${m}m`;
 };
 const send = (msg, args) => chrome.send(msg, args || []);
-const host = (url) => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } };
-const blocked = (url) => {
-  if (!state || !isActive()) return false;
-  const h = host(url);
-  return [...state.presets, ...state.custom].some((d) => h === d || h.endsWith('.' + d));
-};
 
 let state = null;
-let minutes = null;      // chosen length; survives polling
-let tilesKey = '';
+let step = null;           // index into STEPS; survives polling
+const minutes = () => STEPS[step];
 const isActive = () => state && state.active && Date.now() < state.endsAt;
 
-// ---- built once (stable DOM: clicks never land on an element being replaced)
-LENGTHS.forEach((m) => {
+// ---- controls are built once; polling only updates text ------------------
+const range = $('range');
+for (const m of TICKS) {
   const b = document.createElement('button');
-  b.dataset.m = m; b.textContent = label(m);
-  b.addEventListener('click', () => { minutes = m; paintLengths(); });
-  $('lengths').append(b);
-});
-function paintLengths() {
-  for (const b of $('lengths').children) b.classList.toggle('on', Number(b.dataset.m) === minutes);
-  $('go').textContent = 'Start · ' + label(minutes);
+  b.textContent = short(m);
+  b.style.left = (STEPS.indexOf(m) / (STEPS.length - 1)) * 100 + '%';
+  b.addEventListener('click', () => setStep(STEPS.indexOf(m)));
+  $('ticks').append(b);
 }
-$('go').addEventListener('click', () => send('start', [minutes]));
+function setStep(i) {
+  step = Math.max(0, Math.min(STEPS.length - 1, i));
+  range.value = step;
+  range.style.setProperty('--fill', (step / (STEPS.length - 1)) * 100 + '%');
+  $('len').textContent = human(minutes());
+  paintEnds();
+}
+function paintEnds() {
+  if (step !== null) $('ends').textContent = clock(Date.now() + minutes() * 60000);
+}
+range.addEventListener('input', () => setStep(Number(range.value)));
+$('setup').addEventListener('wheel', (e) => { e.preventDefault(); setStep(step + (e.deltaY < 0 ? 1 : -1)); }, { passive: false });
+const start = () => { if (!isActive() && step !== null) send('start', [minutes()]); };
+$('go').addEventListener('click', start);
+document.addEventListener('keydown', (e) => {
+  if ($('sheet').classList.contains('open')) { if (e.key === 'Escape') closeList(); return; }
+  if (document.activeElement === $('q') || isActive()) return;
+  if (e.key === 'Enter') { e.preventDefault(); start(); }
+  if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); setStep(step + 1); }
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); setStep(step - 1); }
+});
 $('extend').addEventListener('click', () => send('extend', [30]));
 $('undo').addEventListener('click', () => send('undo'));
-$('openList').addEventListener('click', () => $('sheet').classList.add('open'));
-$('closeList').addEventListener('click', () => $('sheet').classList.remove('open'));
-$('sheet').addEventListener('click', (e) => { if (e.target === $('sheet')) $('sheet').classList.remove('open'); });
+const openList = () => $('sheet').classList.add('open');
+const closeList = () => $('sheet').classList.remove('open');
+$('openList').addEventListener('click', openList);
+$('openList2').addEventListener('click', openList);
+$('closeList').addEventListener('click', closeList);
+$('sheet').addEventListener('click', (e) => { if (e.target === $('sheet')) closeList(); });
 $('add').addEventListener('submit', (e) => {
   e.preventDefault();
   const v = $('site').value.trim();
@@ -298,62 +323,22 @@ $('search').addEventListener('submit', (e) => {
       : 'https://www.google.com/search?q=' + encodeURIComponent(q);
 });
 
-// ---- data from the browser
+// ---- data from the browser -----------------------------------------------
 window.mastState = (s) => {
   state = s;
-  if (minutes === null) minutes = s.lastMinutes || 50;
-  paintLengths();
-  paintTiles();
+  if (step === null) {
+    const i = STEPS.indexOf(s.lastMinutes);
+    setStep(i >= 0 ? i : STEPS.indexOf(50));
+  }
   paintList();
+  paintWeek();
   tick();
 };
-
-function paintTiles() {
-  const key = JSON.stringify(state.shortcuts) + '|' + isActive() + '|' + state.custom.join();
-  if (key === tilesKey) return;
-  tilesKey = key;
-  const box = $('tiles');
-  box.textContent = '';
-  for (const s of state.shortcuts) {
-    const a = document.createElement('a');
-    a.className = 'tile' + (blocked(s.url) ? ' locked' : '');
-    a.href = s.url;
-    const h = host(s.url);
-    const hue = [...h].reduce((n, c) => (n * 31 + c.charCodeAt(0)) % 360, 7);
-    a.innerHTML = `<span class="ico"><img alt=""></span><span class="name"></span>
-      <span class="lock"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
-      <button class="x" title="Remove">×</button>`;
-    const img = a.querySelector('img');
-    img.src = 'chrome://favicon2/?size=64&scaleFactor=1x&showFallbackMonogram=&pageUrl=' + encodeURIComponent(s.url);
-    img.onerror = () => {
-      const m = document.createElement('span');
-      m.className = 'mono'; m.textContent = (s.title || h).charAt(0).toUpperCase();
-      m.style.background = `linear-gradient(135deg, hsl(${hue} 60% 50%), hsl(${(hue + 40) % 360} 55% 32%))`;
-      img.replaceWith(m);
-    };
-    a.querySelector('.name').textContent = s.title || h;
-    a.querySelector('.x').addEventListener('click', (e) => {
-      e.preventDefault(); e.stopPropagation(); send('removeShortcut', [s.url]);
-    });
-    box.append(a);
-  }
-  if (state.shortcuts.length < 10) {
-    const add = document.createElement('a');
-    add.className = 'tile add'; add.href = '#';
-    add.innerHTML = '<span class="ico">+</span><span class="name">Add</span>';
-    add.addEventListener('click', (e) => {
-      e.preventDefault();
-      const url = prompt('Site address (e.g. github.com)');
-      if (url && url.trim()) send('addShortcut', [url.trim()]);
-    });
-    box.append(add);
-  }
-}
 
 let listKey = '';
 function paintList() {
   const active = isActive();
-  $('count').textContent = state.presets.length + state.custom.length;
+  $('scope').textContent = (state.presets.length + state.custom.length) + ' sites';
   const key = active + '|' + state.custom.join();
   if (key !== listKey) {
     listKey = key;
@@ -362,8 +347,7 @@ function paintList() {
     for (const d of state.custom) {
       const c = document.createElement('span');
       c.className = 'chip mine'; c.textContent = d;
-      if (active) c.append(' 🔒');
-      else {
+      if (!active) {
         const x = document.createElement('button');
         x.textContent = '×'; x.title = 'Remove';
         x.addEventListener('click', () => send('removeSite', [d]));
@@ -382,32 +366,54 @@ function paintList() {
   }
 }
 
-// ---- every 250 ms: text only, never rebuild interactive elements
+let weekKey = '';
+function paintWeek() {
+  const week = (state.stats && state.stats.week) || [];
+  const key = JSON.stringify(week);
+  if (key === weekKey) return;
+  weekKey = key;
+  const max = Math.max(45 * 60000, ...week.map((d) => d.ms));
+  const box = $('week');
+  box.textContent = '';
+  week.forEach((d, i) => {
+    const col = document.createElement('div');
+    col.className = 'd' + (i === week.length - 1 ? ' today' : '');
+    col.title = d.label + ': ' + hm(d.ms);
+    col.innerHTML = '<div class="bar"></div><span></span>';
+    col.querySelector('.bar').style.height = Math.max(3, Math.round((d.ms / max) * 30)) + 'px';
+    col.querySelector('span').textContent = d.label.charAt(0);
+    box.append(col);
+  });
+}
+
+// ---- every 250 ms: text only ----------------------------------------------
 function tick() {
-  const now = new Date();
-  $('time').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  $('date').textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+  $('time').textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   if (!state) return;
   const active = isActive();
   document.body.classList.toggle('running', active);
-  $('idle').hidden = active;
-  $('run').hidden = !active;
+  $('setup').hidden = active;
+  $('session').hidden = !active;
+  paintEnds();
   if (active) {
-    $('cd').textContent = countdown(state.endsAt - Date.now());
-    $('until').textContent = 'Until ' + clock(state.endsAt) + ' · ' +
-        (state.presets.length + state.custom.length) + ' sites blocked';
+    const total = state.endsAt - state.startedAt, left = state.endsAt - Date.now();
+    $('cd').textContent = countdown(left);
+    $('cd').classList.toggle('long', left >= 3600000);
+    $('until').textContent = 'until ' + clock(state.endsAt);
+    const c = 2 * Math.PI * 54;
+    $('arc').style.strokeDasharray = c;
+    $('arc').style.strokeDashoffset = c * (1 - Math.max(0, Math.min(1, left / total)));
     const undoLeft = Math.ceil((state.startedAt + 10000 - Date.now()) / 1000);
     $('undo').hidden = undoLeft <= 0;
     $('undo').textContent = 'Undo · ' + undoLeft + 's';
-    $('nostop').hidden = undoLeft > 0;
   }
   const st = state.stats || {};
   // st.focusMs is today's total as of st.at (browser time); add what has passed since.
   const focusMs = (st.focusMs || 0) + (active ? Math.max(0, Date.now() - (st.at || Date.now())) : 0);
-  $('focusTime').innerHTML = duration(focusMs);
-  $('blocked').textContent = st.blocked || 0;
-  $('sessions').textContent = st.sessions || 0;
-  if (state.wasActive && !active) { state.wasActive = false; paintTiles(); paintList(); }
+  const parts = [`<b>${hm(focusMs)}</b> focused today`];
+  if (st.blocked) parts.push(`<b>${st.blocked}</b> distraction${st.blocked === 1 ? '' : 's'} stopped`);
+  $('line').innerHTML = parts.join(' · ');
+  if (state.wasActive && !active) { state.wasActive = false; paintList(); send('getState'); }
   if (active) state.wasActive = true;
 }
 

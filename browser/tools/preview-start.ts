@@ -11,11 +11,9 @@ const mock = `<script>
   const presets = ['x.com','twitter.com','facebook.com','instagram.com','tiktok.com','reddit.com',
     'youtube.com','netflix.com','twitch.tv','news.ycombinator.com','amazon.com','chess.com'];
   const s = { active: false, startedAt: 0, endsAt: 0, lastMinutes: 50, presets, custom: ['espn.com'],
-    shortcuts: [
-      { title: 'Gmail', url: 'https://mail.google.com/' }, { title: 'Calendar', url: 'https://calendar.google.com/' },
-      { title: 'Docs', url: 'https://docs.google.com/' }, { title: 'GitHub', url: 'https://github.com/' },
-      { title: 'Notion', url: 'https://www.notion.so/' }, { title: 'YouTube', url: 'https://www.youtube.com/' }],
-    stats: { focusMs: 83 * 60000, blocked: 12, sessions: 3 } };
+    stats: { focusMs: 83 * 60000, blocked: 12, sessions: 3,
+      week: ['Fri','Sat','Sun','Mon','Tue','Wed','Thu'].map((label, i) =>
+        ({ label, ms: [95, 0, 30, 140, 75, 160, 83][i] * 60000 })) } };
   const reply = () => setTimeout(() => window.mastState(
       JSON.parse(JSON.stringify({ ...s, stats: { ...s.stats, at: Date.now() } }))), 30);
   window.chrome = window.chrome || {};
@@ -28,8 +26,6 @@ const mock = `<script>
     if (m === 'undo') { s.active = false; s.stats.sessions--; }
     if (m === 'addSite') s.custom.push(a[0]);
     if (m === 'removeSite') s.custom = s.custom.filter((d) => d !== a[0]);
-    if (m === 'addShortcut') s.shortcuts.push({ title: '', url: a[0].includes('://') ? a[0] : 'https://' + a[0] });
-    if (m === 'removeShortcut') s.shortcuts = s.shortcuts.filter((x) => x.url !== a[0]);
     reply();
   };
 })();
