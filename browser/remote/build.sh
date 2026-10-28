@@ -55,7 +55,8 @@ cd "$S"
 say "gn gen"
 gn gen "$OUT"
 say "Building chrome"
-time autoninja -C "$OUT" chrome
+# -k 0: keep going past failures so one pass reports every error.
+time autoninja -C "$OUT" -k 0 chrome
 
 # 5. Package only what the browser needs at runtime
 say "Packaging"
