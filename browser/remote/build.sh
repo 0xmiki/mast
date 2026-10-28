@@ -47,6 +47,8 @@ rsync -a --delete "$M/src/mast/" "$S/mast/"
 if [ -d "$M/src/overrides" ]; then
 	rsync -a --checksum "$M/src/overrides/" "$S/"
 fi
+# Product name in every UI string file (only rewrites files that change).
+python3 "$M/remote/substitute-names.py" "$S"
 
 # 4. Configure + build
 mkdir -p "$OUT"

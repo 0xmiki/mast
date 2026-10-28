@@ -1,6 +1,6 @@
 diff -ruN a/chrome/browser/ui/color/BUILD.gn b/chrome/browser/ui/color/BUILD.gn
---- a/chrome/browser/ui/color/BUILD.gn	2026-10-28 17:42:06.375989802 +0000
-+++ b/chrome/browser/ui/color/BUILD.gn	2026-10-28 17:42:06.375989802 +0000
+--- a/chrome/browser/ui/color/BUILD.gn	2026-10-28 18:33:24.728168271 +0000
++++ b/chrome/browser/ui/color/BUILD.gn	2026-10-28 18:33:24.728168271 +0000
 @@ -21,6 +21,8 @@
      "chrome_color_mixer.cc",
      "chrome_color_mixer.h",
@@ -11,8 +11,8 @@ diff -ruN a/chrome/browser/ui/color/BUILD.gn b/chrome/browser/ui/color/BUILD.gn
      "chrome_color_provider_utils.cc",
      "chrome_color_provider_utils.h",
 diff -ruN a/chrome/browser/ui/color/chrome_color_mixers.cc b/chrome/browser/ui/color/chrome_color_mixers.cc
---- a/chrome/browser/ui/color/chrome_color_mixers.cc	2026-10-28 17:42:06.368989798 +0000
-+++ b/chrome/browser/ui/color/chrome_color_mixers.cc	2026-10-28 17:42:06.369989798 +0000
+--- a/chrome/browser/ui/color/chrome_color_mixers.cc	2026-10-28 18:33:24.723168262 +0000
++++ b/chrome/browser/ui/color/chrome_color_mixers.cc	2026-10-28 18:33:24.723168262 +0000
 @@ -4,6 +4,8 @@
  
  #include "chrome/browser/ui/color/chrome_color_mixers.h"
@@ -31,8 +31,8 @@ diff -ruN a/chrome/browser/ui/color/chrome_color_mixers.cc b/chrome/browser/ui/c
    // Must be the last one in order to override other mixer colors.
    AddNativeChromeColorMixer(provider, key);
 diff -ruN a/ui/base/ui_base_features.cc b/ui/base/ui_base_features.cc
---- a/ui/base/ui_base_features.cc	2026-10-28 17:42:06.350989786 +0000
-+++ b/ui/base/ui_base_features.cc	2026-10-28 17:42:06.350989786 +0000
+--- a/ui/base/ui_base_features.cc	2026-10-28 18:33:24.712168243 +0000
++++ b/ui/base/ui_base_features.cc	2026-10-28 18:33:24.712168243 +0000
 @@ -507,9 +507,9 @@
  BASE_FEATURE(kWebUIRoundedIcons, base::FEATURE_DISABLED_BY_DEFAULT);
  
@@ -46,8 +46,8 @@ diff -ruN a/ui/base/ui_base_features.cc b/ui/base/ui_base_features.cc
  #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
  BASE_FEATURE(kUsePortalAccentColor, base::FEATURE_ENABLED_BY_DEFAULT);
 diff -ruN a/ui/color/BUILD.gn b/ui/color/BUILD.gn
---- a/ui/color/BUILD.gn	2026-10-28 17:42:06.360989792 +0000
-+++ b/ui/color/BUILD.gn	2026-10-28 17:42:06.360989792 +0000
+--- a/ui/color/BUILD.gn	2026-10-28 18:33:24.716168250 +0000
++++ b/ui/color/BUILD.gn	2026-10-28 18:33:24.716168250 +0000
 @@ -155,6 +155,9 @@
  component("mixers") {
    sources = [
@@ -59,8 +59,8 @@ diff -ruN a/ui/color/BUILD.gn b/ui/color/BUILD.gn
      "color_provider_manager.cc",
      "color_provider_manager.h",
 diff -ruN a/ui/color/color_mixers.cc b/ui/color/color_mixers.cc
---- a/ui/color/color_mixers.cc	2026-10-28 17:42:06.357989791 +0000
-+++ b/ui/color/color_mixers.cc	2026-10-28 17:42:06.357989791 +0000
+--- a/ui/color/color_mixers.cc	2026-10-28 18:33:24.714168246 +0000
++++ b/ui/color/color_mixers.cc	2026-10-28 18:33:24.714168246 +0000
 @@ -4,6 +4,8 @@
  
  #include "ui/color/color_mixers.h"

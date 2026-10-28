@@ -132,10 +132,22 @@ edit(T, "chrome/browser/ui/color/BUILD.gn", lambda t: once(t,
 # ---------------------------------------------------------------- branding
 B = "mast-branding.patch"
 
-def strings(t):
-    new = re.sub(r"Chromium(?! ?OS)(?! Authors)(?!\.org)", "Mast", t)
-    return new
-edit(B, "chrome/app/chromium_strings.grd", strings)
+# Product names in UI strings are renamed at build time by substitute-names.py
+# (every .grd/.grdp), not by patch.
+
+# The shared WebUI "chrome-product" glyph (Settings header, About) -> Mast sails.
+SAILS = "M10 7.25V21.25H2.6Q3.4 12.75 10 7.25ZM13 2.75V21.25H21.4Q20.7 9.75 13 2.75Z"
+def sails_glyph(t):
+    t, n1 = re.subn(r'(<g id="chrome-product">\s*<path d=")[^"]*(")', r"\g<1>" + SAILS + r"\g<2>", t)
+    t, n2 = re.subn(r'<g id="chrome-product" viewBox="0 -960 960 960">\s*<path d="[^"]*">\s*</path>',
+                    '<g id="chrome-product" viewBox="0 0 24 24">\n        <path d="' + SAILS + '"></path>', t)
+    assert (n1, n2) == (1, 1), (n1, n2)
+    return t
+edit(B, "ui/webui/resources/cr_elements/icons.html.ts", sails_glyph)
+
+# Linux identity: desktop file (and so WM_CLASS) is "mast".
+edit(B, "chrome/common/channel_info_posix.cc", lambda t: once(t,
+    'return "chromium-browser.desktop";', 'return "mast.desktop";'))
 edit(B, "chrome/common/chrome_paths_linux.cc", lambda t: once(t,
     'std::string data_dir_basename = "chromium";', 'std::string data_dir_basename = "mast";'))
 edit(B, "chrome/browser/ui/startup/infobar_utils.cc", lambda t: once(t,

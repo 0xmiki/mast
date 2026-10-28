@@ -1,6 +1,6 @@
 diff -ruN a/chrome/browser/BUILD.gn b/chrome/browser/BUILD.gn
---- a/chrome/browser/BUILD.gn	2026-10-28 17:42:06.287989746 +0000
-+++ b/chrome/browser/BUILD.gn	2026-10-28 17:42:06.288989747 +0000
+--- a/chrome/browser/BUILD.gn	2026-10-28 18:33:24.672168170 +0000
++++ b/chrome/browser/BUILD.gn	2026-10-28 18:33:24.673168172 +0000
 @@ -881,6 +881,7 @@
    }
  
@@ -10,8 +10,8 @@ diff -ruN a/chrome/browser/BUILD.gn b/chrome/browser/BUILD.gn
      ":after_startup_task_utils",
      ":bad_message",
 diff -ruN a/chrome/browser/chrome_content_browser_client_navigation_throttles.cc b/chrome/browser/chrome_content_browser_client_navigation_throttles.cc
---- a/chrome/browser/chrome_content_browser_client_navigation_throttles.cc	2026-10-28 17:42:06.280989742 +0000
-+++ b/chrome/browser/chrome_content_browser_client_navigation_throttles.cc	2026-10-28 17:42:06.280989742 +0000
+--- a/chrome/browser/chrome_content_browser_client_navigation_throttles.cc	2026-10-28 18:33:24.665168158 +0000
++++ b/chrome/browser/chrome_content_browser_client_navigation_throttles.cc	2026-10-28 18:33:24.665168158 +0000
 @@ -38,6 +38,7 @@
  #include "chrome/browser/ssl/https_upgrades_navigation_throttle.h"
  #include "chrome/browser/ssl/typed_navigation_upgrade_throttle.h"
@@ -29,8 +29,8 @@ diff -ruN a/chrome/browser/chrome_content_browser_client_navigation_throttles.cc
    if (auto* throttle_manager =
            subresource_filter::ContentSubresourceFilterThrottleManager::
 diff -ruN a/chrome/browser/prefs/browser_prefs.cc b/chrome/browser/prefs/browser_prefs.cc
---- a/chrome/browser/prefs/browser_prefs.cc	2026-10-28 17:42:06.298989753 +0000
-+++ b/chrome/browser/prefs/browser_prefs.cc	2026-10-28 17:42:06.298989753 +0000
+--- a/chrome/browser/prefs/browser_prefs.cc	2026-10-28 18:33:24.677168179 +0000
++++ b/chrome/browser/prefs/browser_prefs.cc	2026-10-28 18:33:24.677168179 +0000
 @@ -62,6 +62,7 @@
  #include "chrome/browser/platform_experience/prefs.h"
  #include "chrome/browser/prefs/chrome_pref_service_factory.h"
@@ -48,8 +48,8 @@ diff -ruN a/chrome/browser/prefs/browser_prefs.cc b/chrome/browser/prefs/browser
  #if BUILDFLAG(CHROME_FOR_TESTING)
    chrome_for_testing::RegisterPrefs(registry);
 diff -ruN a/chrome/browser/prefs/BUILD.gn b/chrome/browser/prefs/BUILD.gn
---- a/chrome/browser/prefs/BUILD.gn	2026-10-28 17:42:06.306989758 +0000
-+++ b/chrome/browser/prefs/BUILD.gn	2026-10-28 17:42:06.306989758 +0000
+--- a/chrome/browser/prefs/BUILD.gn	2026-10-28 18:33:24.687168197 +0000
++++ b/chrome/browser/prefs/BUILD.gn	2026-10-28 18:33:24.687168197 +0000
 @@ -58,6 +58,7 @@
    ]
  
@@ -59,8 +59,8 @@ diff -ruN a/chrome/browser/prefs/BUILD.gn b/chrome/browser/prefs/BUILD.gn
      ":util",
      "//chrome/browser:browser_process",
 diff -ruN a/chrome/browser/prefs/incognito_mode_prefs.cc b/chrome/browser/prefs/incognito_mode_prefs.cc
---- a/chrome/browser/prefs/incognito_mode_prefs.cc	2026-10-28 17:42:06.302989755 +0000
-+++ b/chrome/browser/prefs/incognito_mode_prefs.cc	2026-10-28 17:42:06.302989755 +0000
+--- a/chrome/browser/prefs/incognito_mode_prefs.cc	2026-10-28 18:33:24.681168187 +0000
++++ b/chrome/browser/prefs/incognito_mode_prefs.cc	2026-10-28 18:33:24.681168187 +0000
 @@ -4,6 +4,8 @@
  
  #include "chrome/browser/prefs/incognito_mode_prefs.h"
@@ -82,8 +82,8 @@ diff -ruN a/chrome/browser/prefs/incognito_mode_prefs.cc b/chrome/browser/prefs/
    IncognitoModeAvailability result = kDefaultAvailability;
    // Enterprise Isolated Mode has higher priority than the Incognito mode
 diff -ruN a/chrome/browser/themes/theme_service.cc b/chrome/browser/themes/theme_service.cc
---- a/chrome/browser/themes/theme_service.cc	2026-10-28 17:42:06.341989780 +0000
-+++ b/chrome/browser/themes/theme_service.cc	2026-10-28 17:42:06.341989780 +0000
+--- a/chrome/browser/themes/theme_service.cc	2026-10-28 18:33:24.706168232 +0000
++++ b/chrome/browser/themes/theme_service.cc	2026-10-28 18:33:24.706168232 +0000
 @@ -311,7 +311,7 @@
      user_prefs::PrefRegistrySyncable* registry) {
  #if BUILDFLAG(IS_LINUX)
@@ -103,8 +103,8 @@ diff -ruN a/chrome/browser/themes/theme_service.cc b/chrome/browser/themes/theme
        prefs::kDeprecatedUserColorDoNotUse, SK_ColorTRANSPARENT,
        user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
 diff -ruN a/chrome/browser/ui/views/toolbar/BUILD.gn b/chrome/browser/ui/views/toolbar/BUILD.gn
---- a/chrome/browser/ui/views/toolbar/BUILD.gn	2026-10-28 17:42:06.334989776 +0000
-+++ b/chrome/browser/ui/views/toolbar/BUILD.gn	2026-10-28 17:42:06.335989777 +0000
+--- a/chrome/browser/ui/views/toolbar/BUILD.gn	2026-10-28 18:33:24.700168221 +0000
++++ b/chrome/browser/ui/views/toolbar/BUILD.gn	2026-10-28 18:33:24.701168223 +0000
 @@ -199,6 +199,8 @@
      "toolbar_icon_container_view.cc",
      "toolbar_ink_drop_util.cc",
@@ -123,8 +123,8 @@ diff -ruN a/chrome/browser/ui/views/toolbar/BUILD.gn b/chrome/browser/ui/views/t
      "//base:i18n",
      "//build:branding_buildflags",
 diff -ruN a/chrome/browser/ui/views/toolbar/toolbar_view.cc b/chrome/browser/ui/views/toolbar/toolbar_view.cc
---- a/chrome/browser/ui/views/toolbar/toolbar_view.cc	2026-10-28 17:42:06.327989771 +0000
-+++ b/chrome/browser/ui/views/toolbar/toolbar_view.cc	2026-10-28 17:42:06.328989772 +0000
+--- a/chrome/browser/ui/views/toolbar/toolbar_view.cc	2026-10-28 18:33:24.697168215 +0000
++++ b/chrome/browser/ui/views/toolbar/toolbar_view.cc	2026-10-28 18:33:24.698168217 +0000
 @@ -4,6 +4,8 @@
  
  #include "chrome/browser/ui/views/toolbar/toolbar_view.h"
@@ -144,8 +144,8 @@ diff -ruN a/chrome/browser/ui/views/toolbar/toolbar_view.cc b/chrome/browser/ui/
      avatar_ = AddChildView(std::make_unique<AvatarToolbarButton>(browser_));
      bool show_avatar_toolbar_button =
 diff -ruN a/chrome/browser/ui/webui/BUILD.gn b/chrome/browser/ui/webui/BUILD.gn
---- a/chrome/browser/ui/webui/BUILD.gn	2026-10-28 17:42:06.321989768 +0000
-+++ b/chrome/browser/ui/webui/BUILD.gn	2026-10-28 17:42:06.322989768 +0000
+--- a/chrome/browser/ui/webui/BUILD.gn	2026-10-28 18:33:24.693168208 +0000
++++ b/chrome/browser/ui/webui/BUILD.gn	2026-10-28 18:33:24.693168208 +0000
 @@ -47,6 +47,7 @@
    }
  
@@ -155,8 +155,8 @@ diff -ruN a/chrome/browser/ui/webui/BUILD.gn b/chrome/browser/ui/webui/BUILD.gn
      ":net_export_ui",
      ":ntp_tiles_internals_ui",
 diff -ruN a/chrome/browser/ui/webui/chrome_web_ui_configs.cc b/chrome/browser/ui/webui/chrome_web_ui_configs.cc
---- a/chrome/browser/ui/webui/chrome_web_ui_configs.cc	2026-10-28 17:42:06.315989764 +0000
-+++ b/chrome/browser/ui/webui/chrome_web_ui_configs.cc	2026-10-28 17:42:06.315989764 +0000
+--- a/chrome/browser/ui/webui/chrome_web_ui_configs.cc	2026-10-28 18:33:24.690168203 +0000
++++ b/chrome/browser/ui/webui/chrome_web_ui_configs.cc	2026-10-28 18:33:24.690168203 +0000
 @@ -65,6 +65,7 @@
  #include "components/security_interstitials/content/known_interception_disclosure_ui.h"
  #include "components/webui/user_actions/user_actions_ui.h"
