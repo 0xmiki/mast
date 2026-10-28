@@ -1,0 +1,113 @@
+diff -ruN a/chrome/browser/BUILD.gn b/chrome/browser/BUILD.gn
+--- a/chrome/browser/BUILD.gn	2026-10-28 12:20:51.329964932 +0000
++++ b/chrome/browser/BUILD.gn	2026-10-28 12:20:51.329964932 +0000
+@@ -881,6 +881,7 @@
+   }
+ 
+   deps = [
++    "//mast/browser",
+     ":active_use_util",
+     ":after_startup_task_utils",
+     ":bad_message",
+diff -ruN a/chrome/browser/chrome_content_browser_client_navigation_throttles.cc b/chrome/browser/chrome_content_browser_client_navigation_throttles.cc
+--- a/chrome/browser/chrome_content_browser_client_navigation_throttles.cc	2026-10-28 12:20:51.328964930 +0000
++++ b/chrome/browser/chrome_content_browser_client_navigation_throttles.cc	2026-10-28 12:20:51.328964930 +0000
+@@ -38,6 +38,7 @@
+ #include "chrome/browser/ssl/https_upgrades_navigation_throttle.h"
+ #include "chrome/browser/ssl/typed_navigation_upgrade_throttle.h"
+ #include "chrome/browser/supervised_user/classify_url_navigation_throttle.h"
++#include "mast/browser/mast_navigation_throttle.h"
+ #include "chrome/browser/supervised_user/supervised_user_google_auth_navigation_throttle.h"
+ #include "chrome/browser/ui/blocked_content/tab_under_navigation_throttle.h"
+ #include "chrome/browser/ui/login/login_navigation_throttle.h"
+@@ -402,6 +403,7 @@
+ 
+   SupervisedUserGoogleAuthNavigationThrottle::MaybeCreateAndAdd(registry);
+   supervised_user::ClassifyUrlNavigationThrottle::MaybeCreateAndAdd(registry);
++  mast::MastNavigationThrottle::MaybeCreateAndAdd(registry);
+ 
+   if (auto* throttle_manager =
+           subresource_filter::ContentSubresourceFilterThrottleManager::
+diff -ruN a/chrome/browser/prefs/browser_prefs.cc b/chrome/browser/prefs/browser_prefs.cc
+--- a/chrome/browser/prefs/browser_prefs.cc	2026-10-28 12:20:51.330964934 +0000
++++ b/chrome/browser/prefs/browser_prefs.cc	2026-10-28 12:20:51.330964934 +0000
+@@ -62,6 +62,7 @@
+ #include "chrome/browser/platform_experience/prefs.h"
+ #include "chrome/browser/prefs/chrome_pref_service_factory.h"
+ #include "chrome/browser/prefs/incognito_mode_prefs.h"
++#include "mast/browser/mast_session.h"
+ #include "chrome/browser/prefs/session_startup_pref.h"
+ #include "chrome/browser/preloading/prefetch/prefetch_service/prefetch_origin_decider.h"
+ #include "chrome/browser/preloading/prefetch/search_prefetch/search_prefetch_service.h"
+@@ -1532,6 +1533,7 @@
+   breadcrumbs::RegisterPrefs(registry);
+   browser_shutdown::RegisterPrefs(registry);
+   BrowserProcessImpl::RegisterPrefs(registry);
++  mast::MastSession::RegisterLocalStatePrefs(registry);
+   ChromeContentBrowserClient::RegisterLocalStatePrefs(registry);
+ #if BUILDFLAG(CHROME_FOR_TESTING)
+   chrome_for_testing::RegisterPrefs(registry);
+diff -ruN a/chrome/browser/prefs/BUILD.gn b/chrome/browser/prefs/BUILD.gn
+--- a/chrome/browser/prefs/BUILD.gn	2026-10-28 12:20:51.331964936 +0000
++++ b/chrome/browser/prefs/BUILD.gn	2026-10-28 12:20:51.331964936 +0000
+@@ -58,6 +58,7 @@
+   ]
+ 
+   deps = [
++    "//mast/browser",
+     ":prefs",
+     ":util",
+     "//chrome/browser:browser_process",
+diff -ruN a/chrome/browser/prefs/incognito_mode_prefs.cc b/chrome/browser/prefs/incognito_mode_prefs.cc
+--- a/chrome/browser/prefs/incognito_mode_prefs.cc	2026-10-28 12:20:51.331964936 +0000
++++ b/chrome/browser/prefs/incognito_mode_prefs.cc	2026-10-28 12:20:51.331964936 +0000
+@@ -4,6 +4,8 @@
+ 
+ #include "chrome/browser/prefs/incognito_mode_prefs.h"
+ 
++#include "mast/browser/mast_session.h"
++
+ #include <stdint.h>
+ 
+ #include "base/command_line.h"
+@@ -164,6 +166,10 @@
+     const Profile* profile,
+     GetAvailabilityMode mode) {
+   DCHECK(profile);
++  // Mast: no private windows during a deep-work session.
++  if (mast::IsSessionActive()) {
++    return policy::IncognitoModeAvailability::kDisabled;
++  }
+ 
+   IncognitoModeAvailability result = kDefaultAvailability;
+   // Enterprise Isolated Mode has higher priority than the Incognito mode
+diff -ruN a/chrome/browser/ui/webui/BUILD.gn b/chrome/browser/ui/webui/BUILD.gn
+--- a/chrome/browser/ui/webui/BUILD.gn	2026-10-28 12:20:51.332964937 +0000
++++ b/chrome/browser/ui/webui/BUILD.gn	2026-10-28 12:20:51.332964937 +0000
+@@ -47,6 +47,7 @@
+   }
+ 
+   deps = [
++    "//mast/browser",
+     ":gcm_internals_ui",
+     ":net_export_ui",
+     ":ntp_tiles_internals_ui",
+diff -ruN a/chrome/browser/ui/webui/chrome_web_ui_configs.cc b/chrome/browser/ui/webui/chrome_web_ui_configs.cc
+--- a/chrome/browser/ui/webui/chrome_web_ui_configs.cc	2026-10-28 12:20:51.331964936 +0000
++++ b/chrome/browser/ui/webui/chrome_web_ui_configs.cc	2026-10-28 12:20:51.331964936 +0000
+@@ -65,6 +65,7 @@
+ #include "components/security_interstitials/content/known_interception_disclosure_ui.h"
+ #include "components/webui/user_actions/user_actions_ui.h"
+ #include "content/public/browser/webui_config_map.h"
++#include "mast/browser/mast_ui.h"
+ #include "extensions/buildflags/buildflags.h"
+ #include "printing/buildflags/buildflags.h"
+ #include "ui/webui/buildflags.h"
+@@ -263,6 +264,7 @@
+ #endif  // BUILDFLAG(IS_CHROMEOS)
+ 
+   auto& map = content::WebUIConfigMap::GetInstance();
++  map.AddWebUIConfig(std::make_unique<mast::MastUIConfig>());
+   map.AddWebUIConfig(std::make_unique<AccessibilityUIConfig>());
+   map.AddWebUIConfig(std::make_unique<AutofillInternalsUIConfig>());
+   map.AddWebUIConfig(std::make_unique<BluetoothInternalsUIConfig>());

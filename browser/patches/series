@@ -1,2 +1,3 @@
 # Quilt-style list of patches applied to chromium/src, in order (paths relative to patches/).
 # Keep each one small: Mast's real code lives in src/mast/, patches only hook it in.
+mast-hooks.patch
