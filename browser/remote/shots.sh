@@ -20,7 +20,7 @@ export DISPLAY=:99
 sleep 1
 # --no-sandbox only because the builder runs as root; never in a real install.
 "$OUT/chrome" --no-sandbox --user-data-dir=/tmp/mast-shot-profile --no-first-run \
-	--no-default-browser-check --ozone-platform=x11 --window-position=0,0 \
+	--no-default-browser-check --test-type --ozone-platform=x11 --window-position=0,0 \
 	--window-size="$W,$H" --remote-debugging-port=9333 --remote-allow-origins='*' \
 	> "$SHOTS/chrome.log" 2>&1 &
 CHROME=$!
