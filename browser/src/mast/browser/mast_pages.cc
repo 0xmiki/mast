@@ -17,7 +17,7 @@ constexpr char kStyle[] = R"MAST(
   --ember:#ff6a3d; --ember2:#ff8f5e; --soft:rgb(255 106 61/.14); }
 * { box-sizing:border-box }
 html,body { margin:0; min-height:100%; background:var(--bg); color:var(--text);
-  font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-font-smoothing:antialiased }
+  font:14px/1.45 "Inter Variable",Inter,"Noto Sans","DejaVu Sans",system-ui,sans-serif; -webkit-font-smoothing:antialiased }
 button { font:inherit; color:inherit; cursor:pointer }
 .eyebrow { margin:0 0 12px; font-size:11.5px; font-weight:650; letter-spacing:.08em; text-transform:uppercase; color:var(--faint) }
 .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; height:38px; padding:0 18px;
@@ -26,7 +26,7 @@ button { font:inherit; color:inherit; cursor:pointer }
 .btn.primary { background:var(--ember); border-color:transparent; color:#1a0b05 }
 .btn.primary:hover { background:var(--ember2) }
 .btn.ghost { background:none; border-color:transparent; color:var(--muted) }
-.time { font-family:ui-monospace,"JetBrains Mono",Menlo,monospace; font-weight:600; letter-spacing:-.02em; font-variant-numeric:tabular-nums }
+.time { font-family:"JetBrains Mono","DejaVu Sans Mono","Noto Sans Mono",ui-monospace,monospace; font-weight:600; letter-spacing:-.02em; font-variant-numeric:tabular-nums }
 )MAST";
 
 constexpr char kLogo[] = R"MAST(<svg width="28" height="28" viewBox="0 0 32 32" aria-label="Mast"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6a3d"/><stop offset="1" stop-color="#c2300f"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#g)"/><path d="M14 10.5V24.5H6.6Q7.4 16 14 10.5Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/><path d="M17 6V24.5H25.4Q24.7 13 17 6Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>)MAST";

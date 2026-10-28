@@ -25,6 +25,9 @@ export PATH=$HOME/depot_tools:$PATH
 # Normally done by depot_tools auto-update, which is skipped when running as root.
 "$HOME/depot_tools/ensure_bootstrap"
 
+# Snapshot restores can change file ownership; let git trust the checkout.
+git config --global --add safe.directory "*"
+
 mkdir -p "$HOME/chromium"
 cd "$HOME/chromium"
 if [ ! -f .gclient ]; then

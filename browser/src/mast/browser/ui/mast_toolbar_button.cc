@@ -11,6 +11,7 @@
 #include "base/time/time.h"
 #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
 #include "mast/browser/mast_session.h"
+#include "mast/ui/color/mast_palette.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "ui/base/metadata/metadata_impl_macros.h"
 #include "ui/base/window_open_disposition.h"
@@ -21,7 +22,7 @@ namespace mast {
 
 namespace {
 
-constexpr SkColor kEmber = SkColorSetRGB(0xFF, 0x6A, 0x3D);
+constexpr SkColor kEmber = palette::kEmber;
 
 std::u16string Countdown(base::TimeDelta left) {
   const int64_t s = std::max<int64_t>(0, left.InSecondsF() + 0.999);
@@ -48,6 +49,14 @@ MastToolbarButton::MastToolbarButton(BrowserWindowInterface* browser)
 }
 
 MastToolbarButton::~MastToolbarButton() = default;
+
+bool MastToolbarButton::ShouldBlendHighlightColor() const {
+  return true;
+}
+
+std::optional<SkColor> MastToolbarButton::GetHighlightTextColor() const {
+  return palette::kEmber2;
+}
 
 void MastToolbarButton::ButtonPressed() {
   browser_->OpenGURL(GURL("chrome://newtab/"),

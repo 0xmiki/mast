@@ -1,6 +1,6 @@
 diff -ruN a/chrome/app/chromium_strings.grd b/chrome/app/chromium_strings.grd
---- a/chrome/app/chromium_strings.grd	2026-10-28 15:13:47.670571769 +0000
-+++ b/chrome/app/chromium_strings.grd	2026-10-28 15:13:47.671571771 +0000
+--- a/chrome/app/chromium_strings.grd	2026-10-28 17:42:06.389989811 +0000
++++ b/chrome/app/chromium_strings.grd	2026-10-28 17:42:06.390989811 +0000
 @@ -278,7 +278,7 @@
  
        <!--
@@ -3193,8 +3193,8 @@ diff -ruN a/chrome/app/chromium_strings.grd b/chrome/app/chromium_strings.grd
      </messages>
    </release>
 diff -ruN a/chrome/browser/ui/startup/infobar_utils.cc b/chrome/browser/ui/startup/infobar_utils.cc
---- a/chrome/browser/ui/startup/infobar_utils.cc	2026-10-28 15:13:47.682571794 +0000
-+++ b/chrome/browser/ui/startup/infobar_utils.cc	2026-10-28 15:13:47.683571796 +0000
+--- a/chrome/browser/ui/startup/infobar_utils.cc	2026-10-28 17:42:06.405989821 +0000
++++ b/chrome/browser/ui/startup/infobar_utils.cc	2026-10-28 17:42:06.405989821 +0000
 @@ -253,7 +253,8 @@
    infobars::ContentInfoBarManager* infobar_manager =
        infobars::ContentInfoBarManager::FromWebContents(web_contents);
@@ -3206,8 +3206,8 @@ diff -ruN a/chrome/browser/ui/startup/infobar_utils.cc b/chrome/browser/ui/start
              infobars::InfoBarDelegate::GOOGLE_API_KEYS_INFOBAR_DELEGATE)) {
        if (auto* manager =
 diff -ruN a/chrome/common/chrome_paths_linux.cc b/chrome/common/chrome_paths_linux.cc
---- a/chrome/common/chrome_paths_linux.cc	2026-10-28 15:13:47.677571783 +0000
-+++ b/chrome/common/chrome_paths_linux.cc	2026-10-28 15:13:47.677571783 +0000
+--- a/chrome/common/chrome_paths_linux.cc	2026-10-28 17:42:06.397989816 +0000
++++ b/chrome/common/chrome_paths_linux.cc	2026-10-28 17:42:06.398989817 +0000
 @@ -95,7 +95,7 @@
  #elif BUILDFLAG(GOOGLE_CHROME_BRANDING)
    std::string data_dir_basename = "google-chrome";

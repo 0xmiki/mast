@@ -89,16 +89,45 @@ edit(H, "chrome/browser/ui/views/toolbar/BUILD.gn", lambda t: add_dep(once(t,
     '    "toolbar_view.cc",\n    "//mast/browser/ui/mast_toolbar_button.cc",\n    "//mast/browser/ui/mast_toolbar_button.h",\n'),
     'source_set("impl") {', "//mast/browser"))
 
-# Theme: dark, seeded with Mast's ember, and not the GTK theme on Linux.
+# Theme: dark and not the GTK theme on Linux. The colours themselves come from
+# Mast's palette (mast-theme.patch), so no seeded user colour.
 def theme(t):
     t = once(t, 'registry->RegisterIntegerPref(\n      prefs::kBrowserColorScheme,\n      std::to_underlying(ThemeService::BrowserColorScheme::kSystem));',
              'registry->RegisterIntegerPref(\n      prefs::kBrowserColorScheme,\n      std::to_underlying(ThemeService::BrowserColorScheme::kDark));')
-    t = once(t, 'registry->RegisterIntegerPref(prefs::kUserColor, SK_ColorTRANSPARENT);',
-             'registry->RegisterIntegerPref(prefs::kUserColor,\n                                SkColorSetRGB(0xFF, 0x6A, 0x3D));')
     t = once(t, 'static_cast<int>(ui::GetDefaultSystemTheme()));',
              'static_cast<int>(ui::SystemTheme::kDefault));')
     return t
 edit(H, "chrome/browser/themes/theme_service.cc", theme)
+
+# ---------------------------------------------------------------- theme
+T = "mast-theme.patch"
+
+# Chromium's own cool dark neutrals (match the demo) and surface tokens.
+edit(T, "ui/base/ui_base_features.cc", lambda t: once(once(t,
+    'BASE_FEATURE(kChromeDarkNeutrals26, base::FEATURE_DISABLED_BY_DEFAULT);',
+    'BASE_FEATURE(kChromeDarkNeutrals26, base::FEATURE_ENABLED_BY_DEFAULT);'),
+    'BASE_FEATURE(kDarkModeSurfaceTokens, base::FEATURE_DISABLED_BY_DEFAULT);',
+    'BASE_FEATURE(kDarkModeSurfaceTokens, base::FEATURE_ENABLED_BY_DEFAULT);'))
+
+# Mast accent palette, right after the reference palette.
+edit(T, "ui/color/color_mixers.cc", lambda t: once(once(t,
+    '#include "ui/color/color_mixers.h"\n',
+    '#include "ui/color/color_mixers.h"\n\n#include "mast/ui/color/mast_ref_color_mixer.h"\n'),
+    '  AddRefColorMixer(provider, key);\n',
+    '  AddRefColorMixer(provider, key);\n  mast::AddMastRefColorMixer(provider, key);\n'))
+edit(T, "ui/color/BUILD.gn", lambda t: once(t,
+    '    "color_mixers.cc",\n',
+    '    "color_mixers.cc",\n    "//mast/ui/color/mast_palette.h",\n    "//mast/ui/color/mast_ref_color_mixer.cc",\n    "//mast/ui/color/mast_ref_color_mixer.h",\n'))
+
+# Mast surfaces, after all of Chrome's mixers.
+edit(T, "chrome/browser/ui/color/chrome_color_mixers.cc", lambda t: once(once(t,
+    '#include "chrome/browser/ui/color/chrome_color_mixers.h"\n',
+    '#include "chrome/browser/ui/color/chrome_color_mixers.h"\n\n#include "mast/browser/ui/color/mast_chrome_color_mixer.h"\n'),
+    '  AddMaterialTabStripColorMixer(provider, key);\n',
+    '  AddMaterialTabStripColorMixer(provider, key);\n  mast::AddMastChromeColorMixer(provider, key);\n'))
+edit(T, "chrome/browser/ui/color/BUILD.gn", lambda t: once(t,
+    '    "chrome_color_mixers.cc",\n',
+    '    "chrome_color_mixers.cc",\n    "//mast/browser/ui/color/mast_chrome_color_mixer.cc",\n    "//mast/browser/ui/color/mast_chrome_color_mixer.h",\n'))
 
 # ---------------------------------------------------------------- branding
 B = "mast-branding.patch"

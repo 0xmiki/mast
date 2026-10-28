@@ -3,6 +3,7 @@
 #ifndef MAST_BROWSER_UI_MAST_TOOLBAR_BUTTON_H_
 #define MAST_BROWSER_UI_MAST_TOOLBAR_BUTTON_H_
 
+#include <optional>
 #include <string>
 
 #include "base/memory/raw_ptr.h"
@@ -26,6 +27,11 @@ class MastToolbarButton : public ToolbarButton {
   ~MastToolbarButton() override;
 
  private:
+  // ToolbarButton: an ember-tinted pill with light ember text during a session
+  // (by default the text takes the highlight colour too and disappears).
+  bool ShouldBlendHighlightColor() const override;
+  std::optional<SkColor> GetHighlightTextColor() const override;
+
   void ButtonPressed();
   void Update();
 

@@ -1,0 +1,80 @@
+diff -ruN a/chrome/browser/ui/color/BUILD.gn b/chrome/browser/ui/color/BUILD.gn
+--- a/chrome/browser/ui/color/BUILD.gn	2026-10-28 17:42:06.375989802 +0000
++++ b/chrome/browser/ui/color/BUILD.gn	2026-10-28 17:42:06.375989802 +0000
+@@ -21,6 +21,8 @@
+     "chrome_color_mixer.cc",
+     "chrome_color_mixer.h",
+     "chrome_color_mixers.cc",
++    "//mast/browser/ui/color/mast_chrome_color_mixer.cc",
++    "//mast/browser/ui/color/mast_chrome_color_mixer.h",
+     "chrome_color_mixers.h",
+     "chrome_color_provider_utils.cc",
+     "chrome_color_provider_utils.h",
+diff -ruN a/chrome/browser/ui/color/chrome_color_mixers.cc b/chrome/browser/ui/color/chrome_color_mixers.cc
+--- a/chrome/browser/ui/color/chrome_color_mixers.cc	2026-10-28 17:42:06.368989798 +0000
++++ b/chrome/browser/ui/color/chrome_color_mixers.cc	2026-10-28 17:42:06.369989798 +0000
+@@ -4,6 +4,8 @@
+ 
+ #include "chrome/browser/ui/color/chrome_color_mixers.h"
+ 
++#include "mast/browser/ui/color/mast_chrome_color_mixer.h"
++
+ #include <memory>
+ #include <string_view>
+ 
+@@ -84,6 +86,7 @@
+   AddMaterialOmniboxColorMixer(provider, key);
+   AddMaterialSidePanelColorMixer(provider, key);
+   AddMaterialTabStripColorMixer(provider, key);
++  mast::AddMastChromeColorMixer(provider, key);
+ 
+   // Must be the last one in order to override other mixer colors.
+   AddNativeChromeColorMixer(provider, key);
+diff -ruN a/ui/base/ui_base_features.cc b/ui/base/ui_base_features.cc
+--- a/ui/base/ui_base_features.cc	2026-10-28 17:42:06.350989786 +0000
++++ b/ui/base/ui_base_features.cc	2026-10-28 17:42:06.350989786 +0000
+@@ -507,9 +507,9 @@
+ BASE_FEATURE(kWebUIRoundedIcons, base::FEATURE_DISABLED_BY_DEFAULT);
+ 
+ // Updates the default dark neutrals for the theme palette.
+-BASE_FEATURE(kChromeDarkNeutrals26, base::FEATURE_DISABLED_BY_DEFAULT);
++BASE_FEATURE(kChromeDarkNeutrals26, base::FEATURE_ENABLED_BY_DEFAULT);
+ 
+-BASE_FEATURE(kDarkModeSurfaceTokens, base::FEATURE_DISABLED_BY_DEFAULT);
++BASE_FEATURE(kDarkModeSurfaceTokens, base::FEATURE_ENABLED_BY_DEFAULT);
+ 
+ #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
+ BASE_FEATURE(kUsePortalAccentColor, base::FEATURE_ENABLED_BY_DEFAULT);
+diff -ruN a/ui/color/BUILD.gn b/ui/color/BUILD.gn
+--- a/ui/color/BUILD.gn	2026-10-28 17:42:06.360989792 +0000
++++ b/ui/color/BUILD.gn	2026-10-28 17:42:06.360989792 +0000
+@@ -155,6 +155,9 @@
+ component("mixers") {
+   sources = [
+     "color_mixers.cc",
++    "//mast/ui/color/mast_palette.h",
++    "//mast/ui/color/mast_ref_color_mixer.cc",
++    "//mast/ui/color/mast_ref_color_mixer.h",
+     "color_mixers.h",
+     "color_provider_manager.cc",
+     "color_provider_manager.h",
+diff -ruN a/ui/color/color_mixers.cc b/ui/color/color_mixers.cc
+--- a/ui/color/color_mixers.cc	2026-10-28 17:42:06.357989791 +0000
++++ b/ui/color/color_mixers.cc	2026-10-28 17:42:06.357989791 +0000
+@@ -4,6 +4,8 @@
+ 
+ #include "ui/color/color_mixers.h"
+ 
++#include "mast/ui/color/mast_ref_color_mixer.h"
++
+ #include "ui/base/ui_base_features.h"
+ #include "ui/color/core_default_color_mixer.h"
+ #include "ui/color/css_system_color_mixer.h"
+@@ -23,6 +25,7 @@
+ 
+ void AddColorMixers(ColorProvider* provider, const ColorProviderKey& key) {
+   AddRefColorMixer(provider, key);
++  mast::AddMastRefColorMixer(provider, key);
+   // TODO(tluk): Determine the correct place to insert the sys color mixer.
+   AddSysColorMixer(provider, key);
+ #if BUILDFLAG(IS_ANDROID)
