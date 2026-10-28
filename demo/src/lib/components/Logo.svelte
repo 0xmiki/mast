@@ -11,12 +11,6 @@
 		</linearGradient>
 	</defs>
 	<rect width="32" height="32" rx="8" fill="url(#{id})" />
-	<path
-		d="M16 6v20M9 11h14M11 11c0 6 2 9 5 10 3-1 5-4 5-10"
-		fill="none"
-		stroke="#1a0b05"
-		stroke-width="2.4"
-		stroke-linecap="round"
-		stroke-linejoin="round"
-	/>
+	<path d="M5.5 24 13.5 6.5V24Z" fill="#1a0b05" />
+	<path d="M16.5 6.5 26.5 24H16.5Z" fill="#1a0b05" />
 </svg>
