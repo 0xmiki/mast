@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { browser } from '#lib/mast/browser.svelte.ts';
-	import { pacts } from '#lib/mast/pacts.svelte.ts';
 	import { clock } from '#lib/mast/clock.svelte.ts';
 	import { formatWhen } from '#lib/mast/engine.ts';
 	import { titleFor } from '#lib/mast/url.ts';
@@ -12,7 +11,7 @@
 <div class="page">
 	<div class="wrap">
 		<h1>History</h1>
-		<p class="sub">Clearing history works as usual. Pacts and the ledger aren’t part of it.</p>
+		<p class="sub">Clearing history works as usual. It never touches a running session.</p>
 		<div class="card">
 			{#each entries as e}
 				<a href={e.href}>
@@ -30,7 +29,7 @@
 				class="btn small"
 				onclick={() => {
 					browser.clearHistory();
-					browser.toast(`History cleared. ${pacts.live.length} pacts untouched.`, 'good');
+					browser.toast('History cleared.', 'good');
 				}}>Clear browsing data</button
 			>
 		{/if}

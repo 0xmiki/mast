@@ -1,8 +1,7 @@
 /** Tabs, navigation and transient UI (panel, menu, toasts, dialogs). */
-import { pacts } from './pacts.svelte';
+import { focus } from './focus.svelte';
 import { clock } from './clock.svelte';
 import { normalizeInput } from './url';
-import type { Draft } from './types';
 
 export interface Tab {
 	id: string;
@@ -14,6 +13,7 @@ export interface Toast {
 	id: number;
 	text: string;
 	tone: 'info' | 'lock' | 'good';
+	action?: { label: string; run: () => void };
 }
 
 export interface Dialog {
@@ -39,14 +39,11 @@ function uid() {
 class Browser {
 	tabs = $state<Tab[]>([]);
 	activeId = $state('');
-	panelOpen = $state(false);
 	toasts = $state<Toast[]>([]);
 	dialog = $state<Dialog | null>(null);
 	history = $state<HistoryEntry[]>([]);
 	/** Bumped to ask the omnibox to focus itself. */
 	omniboxFocus = $state(0);
-	/** Prefill for the next pact wizard (e.g. from the omnibox shield). */
-	draftSeed = $state<Partial<Draft> | null>(null);
 	/** Bumped on reload so the content re-mounts. */
 	reloads = $state(0);
 
@@ -91,7 +88,7 @@ class Browser {
 		const at = this.tabs.findIndex((t) => t.id === this.activeId);
 		this.tabs.splice(at < 0 ? this.tabs.length : at + 1, 0, tab);
 		if (activate) this.activeId = tab.id;
-		if (href !== 'mast://newtab') pacts.recordAttempt(href);
+		if (href !== 'mast://newtab') focus.recordAttempt(href);
 		if (activate && href === 'mast://newtab') this.omniboxFocus++;
 		this.#save();
 		return tab;
@@ -116,7 +113,7 @@ class Browser {
 		tab.history = [...tab.history.slice(0, tab.index + 1), href];
 		tab.index = tab.history.length - 1;
 		this.history.push({ href, at: clock.now });
-		pacts.recordAttempt(href);
+		focus.recordAttempt(href);
 		this.#save();
 	}
 
@@ -132,7 +129,7 @@ class Browser {
 
 	reload() {
 		this.reloads++;
-		pacts.recordAttempt(this.url);
+		focus.recordAttempt(this.url);
 	}
 
 	/** Leave a blocked page: go back if possible, otherwise to a new tab page. */
@@ -141,16 +138,14 @@ class Browser {
 		else this.navigate('mast://newtab');
 	}
 
-	toast(text: string, tone: Toast['tone'] = 'info') {
+	toast(text: string, tone: Toast['tone'] = 'info', action?: Toast['action'], ms = 3600) {
 		const id = nextToast++;
-		this.toasts.push({ id, text, tone });
-		setTimeout(() => (this.toasts = this.toasts.filter((t) => t.id !== id)), 3600);
+		this.toasts.push({ id, text, tone, action });
+		setTimeout(() => this.dismiss(id), ms);
 	}
 
-	newPact(seed: Partial<Draft> | null = null) {
-		this.draftSeed = seed;
-		if (this.url.startsWith('mast://pacts/new')) this.reloads++;
-		else this.navigate('mast://pacts/new');
+	dismiss(id: number) {
+		this.toasts = this.toasts.filter((t) => t.id !== id);
 	}
 
 	clearHistory() {

@@ -12,7 +12,7 @@
 		ScrollText
 	} from '@lucide/svelte';
 	import { browser } from '#lib/mast/browser.svelte.ts';
-	import { pacts } from '#lib/mast/pacts.svelte.ts';
+	import { focus } from '#lib/mast/focus.svelte.ts';
 	import { attemptEscape } from '#lib/mast/escapes.ts';
 
 	let { onclose }: { onclose: () => void } = $props();
@@ -30,13 +30,13 @@
 	<button role="menuitem" onclick={() => run(() => browser.toast('New windows open in the real browser.'))}>
 		<AppWindow size={16} /> New window
 	</button>
-	<button role="menuitem" class:locked={pacts.locked} onclick={() => run(() => attemptEscape('incognito'))}>
+	<button role="menuitem" class:locked={!!focus.active} onclick={() => run(() => attemptEscape('incognito'))}>
 		<VenetianMask size={16} /> New incognito window
-		{#if pacts.locked}<Lock size={13} class="lock" />{/if}
+		{#if !!focus.active}<Lock size={13} class="lock" />{/if}
 	</button>
 	<hr />
-	<button role="menuitem" onclick={() => run(() => browser.navigate('mast://pacts'))}>
-		<ScrollText size={16} /> Pacts
+	<button role="menuitem" onclick={() => run(() => browser.navigate('mast://blocklist'))}>
+		<ScrollText size={16} /> Blocklist
 	</button>
 	<button role="menuitem" onclick={() => run(() => browser.navigate('mast://history'))}>
 		<History size={16} /> History
@@ -45,9 +45,9 @@
 	<button role="menuitem" onclick={() => run(() => attemptEscape('extensions'))}>
 		<Puzzle size={16} /> Extensions
 	</button>
-	<button role="menuitem" class:locked={pacts.locked} onclick={() => run(() => attemptEscape('devtools'))}>
+	<button role="menuitem" class:locked={!!focus.active} onclick={() => run(() => attemptEscape('devtools'))}>
 		<Code size={16} /> Developer tools
-		{#if pacts.locked}<Lock size={13} class="lock" />{/if}
+		{#if !!focus.active}<Lock size={13} class="lock" />{/if}
 	</button>
 	<button role="menuitem" onclick={() => run(() => browser.navigate('mast://settings'))}>
 		<Settings size={16} /> Settings
@@ -61,7 +61,7 @@
 					(browser.dialog = {
 						icon: 'info',
 						title: 'Mast 0.1 · demo',
-						body: 'A browser that keeps your word. This is the interactive mock used to design the product before the Chromium fork.'
+						body: 'One button, no distractions. This is the interactive mock used to design the product before the Chromium fork.'
 					})
 			)}
 	>

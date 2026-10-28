@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Component } from 'svelte';
 	import { browser } from '#lib/mast/browser.svelte.ts';
-	import { pacts } from '#lib/mast/pacts.svelte.ts';
+	import { focus } from '#lib/mast/focus.svelte.ts';
 	import { hostOf, isInternal, parse } from '#lib/mast/url.ts';
 	import { matches } from '#lib/mast/url.ts';
 	import type { SiteProps } from '#lib/sites/types.ts';
@@ -14,11 +14,8 @@
 	import Search from '#lib/sites/Search.svelte';
 	import Generic from '#lib/sites/Generic.svelte';
 	import Blocked from './pages/Blocked.svelte';
-	import Friction from './pages/Friction.svelte';
 	import NewTab from './pages/NewTab.svelte';
-	import PactsPage from './pages/PactsPage.svelte';
-	import PactDetail from './pages/PactDetail.svelte';
-	import NewPact from './pages/NewPact.svelte';
+	import BlocklistPage from './pages/BlocklistPage.svelte';
 	import Settings from './pages/Settings.svelte';
 	import HistoryPage from './pages/HistoryPage.svelte';
 
@@ -34,7 +31,7 @@
 
 	const href = $derived(browser.url);
 	const url = $derived(parse(href));
-	const verdict = $derived(pacts.verdict(href));
+	const blocked = $derived(focus.blocks(href));
 	const page = $derived(isInternal(href) ? url.host : '');
 	const Site = $derived(SITES.find(([d]) => matches(hostOf(href), d))?.[1] ?? Generic);
 
@@ -57,18 +54,12 @@
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 <div class="content" {onclick} onauxclick={onclick}>
 	{#key `${browser.activeId}|${href}|${browser.reloads}`}
-		{#if verdict.kind === 'block' || verdict.kind === 'focus-block' || verdict.kind === 'budget-out'}
-			<Blocked {verdict} {href} />
-		{:else if verdict.kind === 'friction'}
-			<Friction {verdict} {href} />
+		{#if blocked}
+			<Blocked {href} />
 		{:else if page === 'newtab'}
 			<NewTab />
-		{:else if page === 'pacts' && url.pathname === '/new'}
-			<NewPact />
-		{:else if page === 'pacts' && url.pathname.length > 1}
-			<PactDetail id={url.pathname.slice(1)} />
-		{:else if page === 'pacts'}
-			<PactsPage />
+		{:else if page === 'blocklist'}
+			<BlocklistPage />
 		{:else if page === 'settings'}
 			<Settings />
 		{:else if page === 'history'}
@@ -78,7 +69,7 @@
 		{:else if page}
 			<NewTab />
 		{:else}
-			<Site {url} clean={verdict.kind === 'allow' ? verdict.clean : []} {navigate} />
+			<Site {url} clean={[]} {navigate} />
 		{/if}
 	{/key}
 </div>

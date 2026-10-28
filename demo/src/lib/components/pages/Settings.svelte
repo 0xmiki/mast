@@ -1,13 +1,12 @@
 <script lang="ts">
 	import { Lock, ShieldCheck, VenetianMask, Users, Code, Clock, Trash2, Puzzle, RotateCcw, MonitorSmartphone, Power } from '@lucide/svelte';
 	import { browser } from '#lib/mast/browser.svelte.ts';
-	import { pacts } from '#lib/mast/pacts.svelte.ts';
-	import { formatDate } from '#lib/mast/engine.ts';
+	import { focus } from '#lib/mast/focus.svelte.ts';
+	import { clockTime } from '#lib/mast/engine.ts';
 	import { attemptEscape } from '#lib/mast/escapes.ts';
 
-	const locked = $derived(pacts.locked);
-	const until = $derived(locked ? formatDate(Math.max(...pacts.live.map((p) => p.endsAt))) : '');
-	const lockNote = $derived(`Sealed until ${until} · ${pacts.live.length} pact${pacts.live.length === 1 ? '' : 's'} in force`);
+	const locked = $derived(!!focus.active);
+	const lockNote = $derived(focus.active ? `Session running until ${clockTime(focus.active.endsAt)}` : '');
 
 	let theme = $state('Dark');
 	let homepage = $state(true);
@@ -20,6 +19,7 @@
 		<a href="#privacy">Privacy</a>
 		<a href="#system">System</a>
 		<a href="#appearance">Appearance</a>
+		<a href="mast://blocklist">Blocklist</a>
 	</nav>
 
 	<main>
@@ -27,8 +27,8 @@
 			<div class="banner">
 				<Lock size={18} />
 				<div>
-					<strong>Some settings are sealed</strong>
-					<span>{lockNote}. They unlock on their own when the last pact ends.</span>
+					<strong>Some settings are locked</strong>
+					<span>{lockNote}. They unlock on their own when it ends.</span>
 				</div>
 			</div>
 		{/if}
@@ -38,8 +38,8 @@
 			<div class="row">
 				<span class="ic"><ShieldCheck size={18} /></span>
 				<div class="txt">
-					<strong>Pact enforcement</strong>
-					<span>Built into the browser. There is no switch for this, on purpose.</span>
+					<strong>Blocking</strong>
+					<span>Built into the browser. A running session has no off switch, on purpose.</span>
 				</div>
 				<span class="chip good">Always on</span>
 			</div>
@@ -47,7 +47,7 @@
 				<span class="ic"><Clock size={18} /></span>
 				<div class="txt">
 					<strong>Trusted time</strong>
-					<span>Pacts run on a monotonic clock checked against network time. System clock changes are ignored and logged.</span>
+					<span>Sessions run on a monotonic clock checked against network time. System clock changes are ignored.</span>
 				</div>
 				<span class="chip good">Always on</span>
 			</div>
@@ -55,7 +55,7 @@
 				<span class="ic"><Puzzle size={18} /></span>
 				<div class="txt">
 					<strong>Extensions can’t touch Mast</strong>
-					<span>Extensions can’t read, block or restyle mast:// pages or the block screen.</span>
+					<span>No extension can unblock a site or touch the block screen.</span>
 				</div>
 				<span class="chip good">Always on</span>
 			</div>
@@ -63,7 +63,7 @@
 				<span class="ic"><MonitorSmartphone size={18} /></span>
 				<div class="txt">
 					<strong>Mast Guard <em>planned</em></strong>
-					<span>Optional OS companion that closes other browsers while a pact is in force.</span>
+					<span>Optional OS companion that closes other browsers during a session.</span>
 				</div>
 				<button class="btn small" onclick={() => attemptEscape('other-browser')}>Learn more</button>
 			</div>
@@ -76,10 +76,10 @@
 					<span class="ic"><item.icon size={18} /></span>
 					<div class="txt">
 						<strong>{item.title}</strong>
-						<span>{locked ? (item.kind === 'devtools' ? 'Off on sealed sites while pacts are in force.' : 'Off while pacts are in force.') : item.text}</span>
+						<span>{locked ? (item.kind === 'devtools' ? 'Off on blocked sites during a session.' : 'Off during a session.') : item.text}</span>
 					</div>
 					{#if locked}
-						<button class="toggle locked" aria-label="{item.title} sealed" onclick={() => attemptEscape(item.kind)}>
+						<button class="toggle locked" aria-label="{item.title} locked" onclick={() => attemptEscape(item.kind)}>
 							<Lock size={11} strokeWidth={2.6} />
 						</button>
 					{:else}
@@ -91,13 +91,13 @@
 				<span class="ic"><Trash2 size={18} /></span>
 				<div class="txt">
 					<strong>Clear browsing data</strong>
-					<span>History, cookies and cache. Pacts, usage and the ledger are stored separately and stay.</span>
+					<span>History, cookies and cache. A running session isn’t affected.</span>
 				</div>
 				<button
 					class="btn small"
 					onclick={() => {
 						browser.clearHistory();
-						browser.toast(locked ? `Cleared. ${pacts.live.length} pacts still in force.` : 'Browsing data cleared.', 'good');
+						browser.toast(locked ? 'Cleared. The session keeps running.' : 'Browsing data cleared.', 'good');
 					}}>Clear</button
 				>
 			</div>
@@ -109,7 +109,7 @@
 				<span class="ic"><RotateCcw size={18} /></span>
 				<div class="txt">
 					<strong>Reset settings</strong>
-					<span>{locked ? 'Sealed while pacts are in force. Resetting never removes pacts.' : 'Restore defaults. Never removes pacts.'}</span>
+					<span>{locked ? 'Locked during a session.' : 'Restore defaults. Your blocklist stays.'}</span>
 				</div>
 				<button class="btn small" disabled={locked} onclick={() => browser.toast('Settings reset.')}>{#if locked}<Lock size={12} />{/if} Reset</button>
 			</div>
@@ -117,7 +117,7 @@
 				<span class="ic"><Power size={18} /></span>
 				<div class="txt">
 					<strong>Uninstall Mast</strong>
-					<span>{locked ? 'Held by the system service until the last pact ends.' : 'Available whenever no pact is in force.'}</span>
+					<span>{locked ? 'Held by the system service until the session ends.' : 'Available whenever no session is running.'}</span>
 				</div>
 				<button class="btn small" onclick={() => attemptEscape('uninstall')}>{#if locked}<Lock size={12} />{/if} Uninstall</button>
 			</div>
@@ -126,7 +126,7 @@
 		<h2 id="appearance">Appearance</h2>
 		<div class="card">
 			<div class="row">
-				<div class="txt"><strong>Theme</strong><span>Not sealed. Pacts only lock what could break them.</span></div>
+				<div class="txt"><strong>Theme</strong><span>Never locked. Sessions only lock what could break them.</span></div>
 				<div class="seg">
 					{#each ['Dark', 'Light', 'System'] as t}
 						<button class:on={theme === t} onclick={() => (theme = t)}>{t}</button>
@@ -134,7 +134,7 @@
 				</div>
 			</div>
 			<div class="row">
-				<div class="txt"><strong>Show pacts on the new tab page</strong><span>Your countdowns, front and centre.</span></div>
+				<div class="txt"><strong>Show today’s stats on the new tab page</strong><span>Deep work time and distractions blocked.</span></div>
 				<button class="toggle" class:on={homepage} aria-label="Toggle" onclick={() => (homepage = !homepage)}></button>
 			</div>
 		</div>

@@ -13,6 +13,15 @@
 		<div class="toast {t.tone}">
 			{#if t.tone === 'lock'}<Lock size={14} />{:else if t.tone === 'good'}<CircleCheck size={14} />{:else}<Info size={14} />{/if}
 			{t.text}
+			{#if t.action}
+				<button
+					class="act"
+					onclick={() => {
+						t.action?.run();
+						browser.dismiss(t.id);
+					}}>{t.action.label}</button
+				>
+			{/if}
 		</div>
 	{/each}
 </div>
@@ -54,6 +63,20 @@
 		box-shadow: 0 12px 30px rgb(0 0 0 / 0.5);
 		font-size: 13px;
 		animation: up 0.2s ease-out;
+		pointer-events: auto;
+	}
+	.act {
+		margin-left: 6px;
+		padding: 4px 10px;
+		border: 0;
+		border-radius: 7px;
+		background: var(--raised-2);
+		color: var(--ember-2);
+		font-weight: 650;
+		cursor: pointer;
+	}
+	.act:hover {
+		background: #3a3d45;
 	}
 	.toast.lock :global(svg) {
 		color: var(--ember);

@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { Lock, Wind, Hourglass, Sparkles, ShieldCheck, Search } from '@lucide/svelte';
+	import { Lock, ShieldCheck, Search } from '@lucide/svelte';
 	import { browser } from '#lib/mast/browser.svelte.ts';
-	import { pacts } from '#lib/mast/pacts.svelte.ts';
-	import { clock } from '#lib/mast/clock.svelte.ts';
-	import { formatDuration, formatWhen } from '#lib/mast/engine.ts';
+	import { focus } from '#lib/mast/focus.svelte.ts';
+	import { clockTime } from '#lib/mast/engine.ts';
 	import { displayUrl, hostOf, isInternal, normalizeInput } from '#lib/mast/url.ts';
 	import Logo from '../Logo.svelte';
 	import Favicon from './Favicon.svelte';
@@ -16,9 +15,8 @@
 	let selected = $state(0);
 
 	const url = $derived(browser.url);
-	const verdict = $derived(pacts.verdict(url));
 	const internal = $derived(isInternal(url));
-	const sealed = $derived(verdict.kind === 'block' || verdict.kind === 'focus-block' || verdict.kind === 'budget-out');
+	const sealed = $derived(focus.blocks(url));
 
 	const KNOWN = [
 		'youtube.com',
@@ -28,8 +26,7 @@
 		'github.com',
 		'github.com/mast-browser/mast',
 		'en.wikipedia.org/wiki/Ulysses_pact',
-		'mast://pacts',
-		'mast://pacts/new',
+		'mast://blocklist',
 		'mast://settings',
 		'mast://history'
 	];
@@ -85,12 +82,6 @@
 			<Logo size={16} />
 		{:else if sealed}
 			<Lock size={15} strokeWidth={2.4} />
-		{:else if verdict.kind === 'friction'}
-			<Wind size={15} />
-		{:else if verdict.kind === 'allow' && verdict.budget}
-			<Hourglass size={15} />
-		{:else if verdict.kind === 'allow' && verdict.clean.length}
-			<Sparkles size={15} />
 		{:else}
 			<ShieldCheck size={15} />
 		{/if}
@@ -110,25 +101,9 @@
 		{onkeydown}
 	/>
 
-	{#if !focused}
-		{#if verdict.kind === 'allow' && verdict.budget}
-			<span class="pill warn tabular" title="Today's budget left">
-				<Hourglass size={12} />
-				{formatDuration(verdict.budget.remainingMs)} left
-			</span>
-		{/if}
-		{#if verdict.kind === 'allow' && verdict.clean.length}
-			<span class="pill good" title="Distractions hidden by a Clean pact"><Sparkles size={12} /> Cleaned</span>
-		{/if}
-		{#if sealed && verdict.kind !== 'allow' && verdict.kind !== 'friction'}
-			<span class="pill ember tabular"><Lock size={12} /> Sealed until {formatWhen(verdict.until, clock.now)}</span>
-		{/if}
-	{/if}
-
 	{#if suggestions.length}
 		<div class="suggest">
 			{#each suggestions as s, i}
-				{@const v = pacts.verdict(s)}
 				<button class="row" class:sel={i === selected} onmousedown={() => go(s)}>
 					{#if s.startsWith('mast://search')}
 						<Search size={15} />
@@ -138,10 +113,8 @@
 						<Favicon href={s} size={15} />
 					{/if}
 					<span class="text">{label(s)}</span>
-					{#if v.kind === 'block' || v.kind === 'focus-block' || v.kind === 'budget-out'}
-						<span class="pill ember small"><Lock size={11} /> sealed until {formatWhen(v.until, clock.now)}</span>
-					{:else if v.kind === 'friction'}
-						<span class="pill small"><Wind size={11} /> {v.waitSeconds}s wait</span>
+					{#if focus.blocks(s) && focus.active}
+						<span class="pill ember small"><Lock size={11} /> blocked until {clockTime(focus.active.endsAt)}</span>
 					{/if}
 				</button>
 			{/each}
@@ -227,14 +200,6 @@
 		height: 20px;
 		padding: 0 8px;
 		font-size: 11px;
-	}
-	.pill.warn {
-		background: var(--warn-soft);
-		color: var(--warn);
-	}
-	.pill.good {
-		background: var(--good-soft);
-		color: var(--good);
 	}
 	.pill.ember {
 		background: var(--ember-soft);

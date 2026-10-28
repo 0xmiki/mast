@@ -1,14 +1,10 @@
 <script lang="ts">
 	import { Plus, X, Lock } from '@lucide/svelte';
 	import { browser } from '#lib/mast/browser.svelte.ts';
-	import { pacts } from '#lib/mast/pacts.svelte.ts';
+	import { focus } from '#lib/mast/focus.svelte.ts';
 	import { titleFor } from '#lib/mast/url.ts';
 	import Favicon from './Favicon.svelte';
 
-	function sealed(href: string) {
-		const kind = pacts.verdict(href).kind;
-		return kind === 'block' || kind === 'focus-block' || kind === 'budget-out';
-	}
 </script>
 
 <div class="strip">
@@ -26,7 +22,7 @@
 				onauxclick={(e) => e.button === 1 && browser.close(tab.id)}
 				onkeydown={(e) => e.key === 'Enter' && browser.activate(tab.id)}
 			>
-				{#if sealed(href)}
+				{#if focus.blocks(href)}
 					<span class="sealed"><Lock size={11} strokeWidth={2.6} /></span>
 				{:else}
 					<Favicon {href} />

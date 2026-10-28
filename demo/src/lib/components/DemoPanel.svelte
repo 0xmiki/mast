@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { FlaskConical, X, FastForward, Sunrise, RotateCcw, Sparkles, Trash2, DoorOpen } from '@lucide/svelte';
+	import { FlaskConical, X, FastForward, RotateCcw, Trash2, DoorOpen } from '@lucide/svelte';
 	import { browser } from '#lib/mast/browser.svelte.ts';
-	import { pacts } from '#lib/mast/pacts.svelte.ts';
+	import { focus } from '#lib/mast/focus.svelte.ts';
 	import { clock } from '#lib/mast/clock.svelte.ts';
-	import { HOUR, DAY, MINUTE } from '#lib/mast/engine.ts';
+	import { HOUR, MINUTE } from '#lib/mast/engine.ts';
 	import { ESCAPES, attemptEscape } from '#lib/mast/escapes.ts';
 
 	let open = $state(false);
@@ -28,30 +28,20 @@
 				<div class="grid">
 					<button onclick={() => clock.advance(10 * MINUTE)}><FastForward size={13} /> +10 min</button>
 					<button onclick={() => clock.advance(HOUR)}><FastForward size={13} /> +1 hour</button>
-					<button onclick={() => clock.advance(DAY)}><FastForward size={13} /> +1 day</button>
-					<button onclick={() => clock.advance(7 * DAY)}><FastForward size={13} /> +1 week</button>
-					<button onclick={() => clock.jumpTo(9, 30)}><Sunrise size={13} /> Next 09:30</button>
+					<button onclick={() => clock.advance(30 * MINUTE)}><FastForward size={13} /> +30 min</button>
 					<button disabled={!clock.travelled} onclick={() => clock.reset()}><RotateCcw size={13} /> Real time</button>
 				</div>
 			</section>
 
 			<section>
-				<h4>Scenario</h4>
 				<div class="grid">
 					<button
 						onclick={() => {
-							pacts.loadScenario();
-							clock.jumpTo(10, 0);
-							browser.toast('Loaded 5 example pacts and jumped to 10:00.', 'good');
-						}}><Sparkles size={13} /> Example pacts</button
-					>
-					<button
-						onclick={() => {
-							pacts.reset();
+							focus.reset();
 							clock.reset();
 							browser.resetTabs();
 							browser.toast('Everything reset.');
-						}}><Trash2 size={13} /> Reset all</button
+						}}><Trash2 size={13} /> Reset demo</button
 					>
 				</div>
 			</section>

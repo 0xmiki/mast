@@ -27,7 +27,7 @@ export function parse(href: string): URL {
 	}
 }
 
-/** Hostname without `www.` / `m.` — the key pacts match against. */
+/** Hostname without `www.` / `m.` — the key the blocklist matches against. */
 export function hostOf(href: string): string {
 	if (isInternal(href)) return '';
 	const host = parse(href).hostname.toLowerCase();
@@ -60,7 +60,7 @@ export function titleFor(href: string): string {
 		return (
 			{
 				newtab: 'New Tab',
-				pacts: 'Pacts',
+				blocklist: 'Blocklist',
 				settings: 'Settings',
 				history: 'History'
 			}[page] ?? 'Mast'
