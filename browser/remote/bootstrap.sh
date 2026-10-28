@@ -2,10 +2,11 @@
 # One-time builder setup (Ubuntu 24.04): packages, idle auto-stop, depot_tools, then the
 # first Chromium sync + build via build.sh. Safe to re-run.
 set -euxo pipefail
+export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a
 M=$HOME/mast
 
 sudo apt-get update
-sudo apt-get install -y git python3 curl lsb-release zstd rsync
+sudo -E apt-get install -y git python3 curl lsb-release zstd rsync
 
 # Idle auto-stop
 echo "${MAST_IDLE_MINUTES:-20}" | sudo tee /etc/mast-idle-minutes >/dev/null
@@ -38,6 +39,6 @@ VERSION=$(cat "$M/chromium_version.txt")
 if [ ! -d src/build ]; then
 	gclient sync --nohooks --no-history --revision "src@refs/tags/$VERSION"
 fi
-sudo ./src/build/install-build-deps.sh --no-prompt
+sudo -E ./src/build/install-build-deps.sh --no-prompt
 
 exec bash "$M/remote/build.sh"
