@@ -289,5 +289,6 @@ case $cmd in
 	run) cmd_run "$@" ;;
 	ssh) HOST=$(server_ip); ssh "${SSH_OPTS[@]}" -t "root@$HOST" "$@" ;;
 	logs) HOST=$(server_ip); follow "${1:-build}" ;;
+	job) HOST=$(server_ip); job "${1:?usage: ./mast job bootstrap|build}" ;;
 	*) sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//' ;;
 esac
