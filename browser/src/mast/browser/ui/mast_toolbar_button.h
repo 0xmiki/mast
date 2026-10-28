@@ -15,8 +15,8 @@ class BrowserWindowInterface;
 
 namespace mast {
 
-// "Block" when idle; the live countdown (ember) during a session. Opens the
-// Mast new tab page, where sessions start and the blocklist lives.
+// The live session countdown (ember pill); hidden when no session is running.
+// Opens the Mast new tab page, where sessions start and the blocklist lives.
 class MastToolbarButton : public ToolbarButton {
   METADATA_HEADER(MastToolbarButton, ToolbarButton)
 

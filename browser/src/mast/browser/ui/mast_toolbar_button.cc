@@ -68,6 +68,9 @@ void MastToolbarButton::Update() {
   const bool active = session.IsActive();
   const std::u16string text =
       active ? Countdown(session.end_time() - base::Time::Now()) : u"Block";
+  // Only there during a session, as the countdown; the new tab page is where
+  // sessions start.
+  SetVisible(active);
   if (text == shown_) {
     return;
   }

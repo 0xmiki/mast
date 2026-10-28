@@ -47,6 +47,9 @@ rsync -a --delete "$M/src/mast/" "$S/mast/"
 if [ -d "$M/src/overrides" ]; then
 	rsync -a --checksum "$M/src/overrides/" "$S/"
 fi
+# Mast's HTML pages -> C++ strings, in the generated-sources dir so the rsync of
+# src/mast above never deletes them (unchanged pages keep their mtime).
+python3 "$M/remote/embed-pages.py" "$S/mast/browser/resources" "$OUT/gen/mast/browser/resources"
 # Product name in every UI string file (only rewrites files that change).
 python3 "$M/remote/substitute-names.py" "$S"
 

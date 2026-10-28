@@ -14,6 +14,19 @@ class PrefService;
 
 namespace mast {
 
+// A new-tab shortcut tile.
+struct Shortcut {
+  std::string title;
+  std::string url;
+};
+
+// Today's numbers for the new tab page.
+struct TodayStats {
+  base::TimeDelta focus;  // deep work so far today, including a running session
+  int blocked = 0;        // blocked page loads today
+  int sessions = 0;       // sessions started today
+};
+
 // The browser-wide deep-work session. While it runs, every site on the
 // blocklist is blocked. It can be extended but never shortened or stopped,
 // apart from a short undo right after starting.
@@ -47,6 +60,14 @@ class MastSession {
   bool RemoveSite(const std::string& domain);
 
   bool IsBlocked(const GURL& url) const;
+
+  // Called by the navigation throttle each time it shows the block page.
+  void RecordBlocked();
+  TodayStats Today() const;
+
+  std::vector<Shortcut> Shortcuts() const;
+  bool AddShortcut(const std::string& input);
+  bool RemoveShortcut(const std::string& url);
 
  private:
   PrefService* prefs() const;

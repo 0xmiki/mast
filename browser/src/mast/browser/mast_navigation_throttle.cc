@@ -47,6 +47,9 @@ MastNavigationThrottle::Check() {
   if (!session.IsBlocked(url)) {
     return PROCEED;
   }
+  if (navigation_handle()->IsInPrimaryMainFrame()) {
+    session.RecordBlocked();
+  }
   return ThrottleCheckResult(
       CANCEL, net::ERR_BLOCKED_BY_CLIENT,
       BlockPageHtml(NormalizeHost(url.host()), session.end_time()));
