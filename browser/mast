@@ -129,8 +129,10 @@ cmd_down() {
 		hcloud server shutdown "$MAST_NAME" >/dev/null 2>&1 || true
 		local id gb old
 		old=$(hcloud image list --type snapshot --selector mast=builder -o json | jq -r '.[].id')
-		id=$(hcloud server create-image "$MAST_NAME" --type snapshot --description "mast $(date +%F)" \
-			--label mast=builder -o json | jq -r '.image.id')
+		hcloud server create-image "$MAST_NAME" --type snapshot --description "mast $(date +%F)" \
+			--label mast=builder >/dev/null
+		id=$(latest_snapshot)
+		[[ -n $id ]] || die "snapshot failed; builder kept so nothing is lost"
 		gb=$(hcloud image describe "$id" -o json | jq -r '.image_size // .disk_size')
 		ledger snap "$id" "$gb"
 		for o in $old; do hcloud image delete "$o" >/dev/null && ledger unsnap "$o"; done
