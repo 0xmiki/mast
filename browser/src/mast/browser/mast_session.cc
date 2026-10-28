@@ -49,6 +49,8 @@ std::string DayKey(base::Time t) {
   return base::StringPrintf("%04d-%02d-%02d", e.year, e.month, e.day_of_month);
 }
 
+constexpr int kMaxMinutes = 12 * 60;
+
 }  // namespace
 
 // static
