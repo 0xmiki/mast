@@ -21,8 +21,8 @@ fi
 mkdir -p "/root/serve/$token"
 ln -s /root/mast/dist/mast-linux.tar.zst /root/mast/dist/VERSION "/root/serve/$token/"
 sha256sum /root/mast/dist/mast-linux.tar.zst | cut -d' ' -f1 > "/root/serve/$token/sha256"
-(cd /root/serve && nohup python3 -m http.server 8765 --bind 127.0.0.1 > /root/serve.log 2>&1 &)
-(nohup cloudflared tunnel --no-autoupdate --url http://127.0.0.1:8765 > /root/cf.log 2>&1 &)
+(cd /root/serve && nohup python3 -m http.server 8765 --bind 127.0.0.1 > /root/serve.log 2>&1 < /dev/null &)
+(nohup cloudflared tunnel --no-autoupdate --url http://127.0.0.1:8765 > /root/cf.log 2>&1 < /dev/null &)
 for _ in $(seq 45); do
 	url=$(grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' /root/cf.log | head -1 || true)
 	if [ -n "$url" ]; then echo "$url"; exit 0; fi
