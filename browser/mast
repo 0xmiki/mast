@@ -253,9 +253,20 @@ follow() {
 
 cmd_fetch() {
 	[[ -n $HOST ]] || HOST=$(server_ip)
-	log "downloading build"
+	local token url sum
+	token=$(head -c 18 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 24)
+	log "publishing the build through a temporary Cloudflare tunnel (much faster than SSH from Hetzner)"
+	rsync -az -e "ssh ${SSH_OPTS[*]}" "$ROOT/remote/serve.sh" "root@$HOST:mast/remote/"
+	url=$(rssh "bash ~/mast/remote/serve.sh $token")
+	[[ $url == https://* ]] || die "tunnel failed: $url"
+	trap 'rssh "bash ~/mast/remote/serve.sh stop" >/dev/null 2>&1 || true' RETURN
 	mkdir -p "$ROOT/dist"
-	rsync -az --info=progress2 -e "ssh ${SSH_OPTS[*]}" "root@$HOST:mast/dist/" "$ROOT/dist/"
+	sleep 3
+	sum=$(curl -fsS --retry 5 --retry-all-errors "$url/$token/sha256")
+	log "downloading build"
+	curl -fL --retry 5 --retry-all-errors --progress-bar -o "$ROOT/dist/mast-linux.tar.zst" "$url/$token/mast-linux.tar.zst"
+	curl -fsS --retry 5 -o "$ROOT/dist/VERSION" "$url/$token/VERSION"
+	echo "$sum  $ROOT/dist/mast-linux.tar.zst" | sha256sum -c --quiet || die "checksum mismatch"
 	rm -rf "$ROOT/dist/mast"
 	mkdir -p "$ROOT/dist/mast"
 	tar --zstd -xf "$ROOT/dist/mast-linux.tar.zst" -C "$ROOT/dist/mast"
@@ -267,7 +278,7 @@ cmd_build() {
 	HOST=$(server_ip)
 	push
 	job build || die "build failed. Inspect with: ./mast ssh  (or ./mast down to stop paying)"
-	cmd_fetch
+	[[ -n ${MAST_SKIP_FETCH:-} ]] || cmd_fetch
 	log "builder still running for quick rebuilds. When done: ./mast down [--keep]"
 }
 
