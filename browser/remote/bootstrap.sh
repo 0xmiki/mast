@@ -22,6 +22,8 @@ fi
 [ -d "$HOME/depot_tools" ] || git clone --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git "$HOME/depot_tools"
 grep -q depot_tools "$HOME/.profile" || echo 'export PATH=$HOME/depot_tools:$PATH' >> "$HOME/.profile"
 export PATH=$HOME/depot_tools:$PATH
+# Normally done by depot_tools auto-update, which is skipped when running as root.
+"$HOME/depot_tools/ensure_bootstrap"
 
 mkdir -p "$HOME/chromium"
 cd "$HOME/chromium"
