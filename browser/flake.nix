@@ -11,7 +11,7 @@
     {
       # `nix develop` → aws, rsync, ssh, zstd for ./mast
       devShells.${system}.default = pkgs.mkShell {
-        packages = with pkgs; [ awscli2 jq rsync openssh zstd curl shellcheck ];
+        packages = with pkgs; [ awscli2 hcloud jq rsync openssh zstd curl shellcheck ];
       };
 
       # A normal-Linux filesystem so the Ubuntu-built browser runs on NixOS (`./mast run`).
