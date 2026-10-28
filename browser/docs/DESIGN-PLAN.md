@@ -21,7 +21,6 @@ Still Chrome:
   - the `chrome-product` glyph in the shared WebUI toolbar and drawer
   - product glyphs in the omnibox
   - favicons of `chrome://` pages
-  - the Google "G" search-engine icon in the omnibox
   - "Chromium" in strings outside `chromium_strings.grd` and in every translation
   - the Linux desktop name and WM_CLASS
   - "The Chromium Authors" on the About page
@@ -84,7 +83,7 @@ Still Chrome:
   margins. The omnibox stays a pill for free (upstream uses `kMaximum`).
 - **Tabs** (`MastTabStyle`, one-token swap in `TabStyle::Get()`). Top radius 10, our widths,
   separator style, no tab strokes. We keep the demo's Chrome-like flared tabs rather than
-  Helium/Brave's detached pills; see decision 1.
+  Helium/Brave's detached pills (decision 1).
 - **Menus and dialogs.** `MenuConfig` (radius 14, item padding) and `LayoutProvider` radii.
 - **No ripples.** `PlatformStyle::kUseRipples = false`, plus `noink` in WebUI `cr-ripple`
   (about 4 lines).
@@ -94,7 +93,7 @@ Still Chrome:
   - hide Labs, Lens, Glic/AI and reading-list entry points (feature-default flips)
   - keep back, forward, reload, the omnibox, Block and the menu
 - **Omnibox.**
-  - drop the search-engine favicon, so the Google "G" goes
+  - keep the search-engine favicon (Google stays the default; decision 2)
   - hide the AI/Lens/payments page actions
   - ember focus ring
   - restyle the popup: radius 14 and our colours
@@ -128,7 +127,7 @@ Still Chrome:
   (done).
 - **About and credits.** "The Mast Authors" plus "Built on Chromium" with its licence link
   (required by the licence).
-- **Default search engine.** See decision 2.
+- **Default search engine.** Stays Google (decision 2).
 - **Remove Google promos and intros** (resource and feature flips).
 
 ### F. Internal pages (WebUI)
@@ -182,13 +181,13 @@ nothing.
 Upstream footprint after all phases: about 30–40 hook lines plus the string and asset sweeps,
 still small enough to rebase each month in an hour or two.
 
-## 7. Decisions for you
+## 7. Decisions (made 2026-10-28)
 
-1. **Tab shape.** Keep the demo's Chrome-like flared tabs (more familiar), or detached rounded
-   pills like Helium/Brave (more distinct)?
-2. **Default search engine.** Google (familiar), or DuckDuckGo/another (fits "no Google
-   branding", and gets rid of Google's logo everywhere)?
-3. **Light mode.** Dark only for v1, or also a light variant of the palette?
+1. **Tab shape:** flared, like the demo. Chromium's tab path stays; we restyle colours, sizes,
+   radius and separators.
+2. **Default search engine:** Google. We keep its search icon in the search-engine UI. Mast
+   branding removes Chrome/Chromium names and product logos, not Google as a search provider.
+3. **Light mode:** dark only for v1.
 
 ## 8. Research notes (short)
 
