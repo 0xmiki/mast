@@ -9,4 +9,4 @@ bun run dev
 ```
 
 Press **Start** to block distractions. Open the **Demo** drawer (bottom-left) to time-travel and try to escape.
-Product rules, pact types, and the Chromium mapping live in [docs/SPEC.md](docs/SPEC.md).
+Product rules and the Chromium mapping live in [docs/SPEC.md](docs/SPEC.md).
