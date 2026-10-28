@@ -1,0 +1,28 @@
+# Copyright 2026 The Mast Authors
+# Mast's browser-side code. Depends only on small, standalone Chromium targets,
+# so upstream targets can depend on it without circular includes.
+
+source_set("browser") {
+  sources = [
+    "mast_blocklist.cc",
+    "mast_blocklist.h",
+    "mast_navigation_throttle.cc",
+    "mast_navigation_throttle.h",
+    "mast_pages.cc",
+    "mast_pages.h",
+    "mast_session.cc",
+    "mast_session.h",
+    "mast_ui.cc",
+    "mast_ui.h",
+  ]
+  deps = [
+    "//base",
+    "//chrome/browser:browser_process",
+    "//components/prefs",
+    "//content/public/browser",
+    "//content/public/common",
+    "//net",
+    "//services/network/public/mojom",
+    "//url",
+  ]
+}

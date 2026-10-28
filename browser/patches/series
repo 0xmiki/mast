@@ -1,0 +1,6 @@
+# Quilt-style list of patches applied to chromium/src, in order (paths relative to patches/).
+# Keep each one small: Mast's real code lives in src/mast/, patches only hook it in.
+# Regenerate with remote/make-patches.py on the builder.
+mast-hooks.patch
+mast-theme.patch
+mast-branding.patch

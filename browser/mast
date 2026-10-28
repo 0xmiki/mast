@@ -1,0 +1,342 @@
+#!/usr/bin/env bash
+# Mast build CLI (Hetzner Cloud). The builder only exists while we're building:
+# Hetzner bills servers even when powered off, so "stop" means delete. Between sessions the
+# disk can be kept as a compressed snapshot (cheap) or thrown away (rebuild from scratch).
+#
+#   ./mast up [type]        create the builder (from the last snapshot if there is one)
+#   ./mast build            push code → build → download (creates the builder if needed)
+#   ./mast down [--keep]    delete the builder; --keep snapshots its disk first
+#   ./mast resize <type>    change server type, keeping the disk
+#   ./mast cost             money spent so far vs MAST_BUDGET
+#   ./mast hold <minutes>   keep an idle builder alive that long (e.g. while writing code)
+#   ./mast run              run the downloaded browser locally
+#   ./mast shots            screenshot fixed UI scenes on the builder (Xvfb) -> shots/<time>/
+#   ./mast status | ssh | logs [job] | destroy
+set -euo pipefail
+
+ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=mast.env
+source "$ROOT/mast.env"
+STATE=$ROOT/.state
+LEDGER=$STATE/ledger # "<epoch> <event> <type> <usd_per_hour>"
+mkdir -p "$STATE"
+HOST=""
+
+die() { echo "mast: $*" >&2; exit 1; }
+log() { printf '\033[1;33m›\033[0m %s\n' "$*"; }
+need() { command -v "$1" >/dev/null || die "$1 not found. Run inside: nix develop"; }
+
+SSH_OPTS=(-i "$MAST_KEY" -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$STATE/known_hosts"
+	-o ServerAliveInterval=15 -o ServerAliveCountMax=4 -o ConnectTimeout=15 -o LogLevel=ERROR)
+
+exists() { hcloud server describe "$MAST_NAME" >/dev/null 2>&1; }
+server_ip() { hcloud server ip "$MAST_NAME"; }
+server_type() { hcloud server describe "$MAST_NAME" -o format='{{.ServerType.Name}}'; }
+hourly() { hcloud server-type describe "$1" -o json | jq -r --arg l "$MAST_LOCATION" '.prices[] | select(.location==$l) | .price_hourly.net'; }
+latest_snapshot() {
+	hcloud image list --type snapshot --selector mast=builder -o json |
+		jq -r 'sort_by(.created) | last | .id // empty'
+}
+rssh() { ssh "${SSH_OPTS[@]}" "root@$HOST" "$@"; }
+
+# ---------------------------------------------------------------- money
+
+ledger() { echo "$(date +%s) $*" >> "$LEDGER"; }
+
+# Server-hours (with the price at the time) plus snapshot storage, in USD.
+spent() {
+	[[ -f $LEDGER ]] || { echo 0; return; }
+	awk -v now="$(date +%s)" -v snap_rate="$MAST_SNAPSHOT_USD_GB_MONTH" '
+		$2 == "up" || $2 == "resize" { if (on) total += (($1 - t0) / 3600) * rate; on = 1; t0 = $1; rate = $4 }
+		$2 == "down" { if (on) total += (($1 - t0) / 3600) * rate; on = 0 }
+		$2 == "extra" { total += $4 }
+		$2 == "snap" { snaps[$3] = $1; gb[$3] = $4 }
+		$2 == "unsnap" { if ($3 in snaps) { total += (($1 - snaps[$3]) / 2592000) * gb[$3] * snap_rate; delete snaps[$3] } }
+		END {
+			if (on) total += ((now - t0) / 3600) * rate
+			for (s in snaps) total += ((now - snaps[s]) / 2592000) * gb[s] * snap_rate
+			printf "%.2f\n", total
+		}' "$LEDGER"
+}
+
+cmd_cost() {
+	local s
+	s=$(spent)
+	printf 'spent:  $%s of $%s budget\n' "$s" "$MAST_BUDGET"
+	if exists; then printf 'now:    %s running at $%s/hour\n' "$(server_type)" "$(hourly "$(server_type)")"; fi
+}
+
+# ---------------------------------------------------------------- lifecycle
+
+ensure_key_and_firewall() {
+	if [[ ! -f $MAST_KEY ]]; then
+		log "creating ssh key $MAST_KEY"
+		ssh-keygen -q -t ed25519 -N "" -C "$MAST_NAME" -f "$MAST_KEY"
+	fi
+	hcloud ssh-key describe "$MAST_NAME" >/dev/null 2>&1 ||
+		hcloud ssh-key create --name "$MAST_NAME" --public-key-from-file "$MAST_KEY.pub" >/dev/null
+	hcloud firewall describe "$MAST_NAME" >/dev/null 2>&1 || hcloud firewall create --name "$MAST_NAME" >/dev/null
+	# SSH only from your current public IP (home IPs change, so this is redone every time).
+	local ip rules
+	ip="$(curl -fsS https://checkip.amazonaws.com | tr -d '[:space:]')/32"
+	rules=$(jq -nc --arg ip "$ip" '[{direction:"in",protocol:"tcp",port:"22",source_ips:[$ip],description:"ssh"}]')
+	hcloud firewall replace-rules "$MAST_NAME" --rules-file <(echo "$rules") >/dev/null
+}
+
+wait_ssh() {
+	HOST=$(server_ip)
+	log "waiting for ssh on $HOST"
+	ssh-keygen -R "$HOST" -f "$STATE/known_hosts" >/dev/null 2>&1 || true
+	for _ in $(seq 60); do
+		rssh true 2>/dev/null && return
+		sleep 5
+	done
+	die "ssh to $HOST timed out"
+}
+
+check_budget() {
+	local s
+	s=$(spent)
+	awk -v s="$s" -v b="$MAST_BUDGET" 'BEGIN { exit !(s >= b * 0.9) }' &&
+		die "spent \$$s of the \$$MAST_BUDGET budget. Raise MAST_BUDGET in mast.env to continue."
+	return 0
+}
+
+cmd_up() {
+	need hcloud
+	exists && { HOST=$(server_ip); log "builder already running ($(server_type), $HOST)"; return; }
+	check_budget
+	ensure_key_and_firewall
+	local type=${1:-$MAST_TYPE} image snap
+	snap=$(latest_snapshot)
+	image=${snap:-ubuntu-24.04}
+	log "creating $type in $MAST_LOCATION from ${snap:+snapshot }$image at \$$(hourly "$type")/hour"
+	hcloud server create --name "$MAST_NAME" --type "$type" --image "$image" --location "$MAST_LOCATION" \
+		--ssh-key "$MAST_NAME" --firewall "$MAST_NAME" --label mast=builder >/dev/null
+	ledger up "$type" "$(hourly "$type")"
+	wait_ssh
+	start_guard
+	if [[ -z $snap ]]; then
+		push
+		log "fresh server: installing packages and syncing Chromium (about 30–45 min)"
+		job bootstrap || die "bootstrap failed. Inspect with: ./mast ssh"
+	fi
+}
+
+cmd_down() {
+	exists || { log "no builder running"; return; }
+	if [[ ${1:-} == --keep ]]; then
+		log "snapshotting the disk (keeps the checkout + build cache)"
+		hcloud server shutdown "$MAST_NAME" >/dev/null 2>&1 || true
+		local id gb old
+		old=$(hcloud image list --type snapshot --selector mast=builder -o json | jq -r '.[].id')
+		hcloud server create-image "$MAST_NAME" --type snapshot --description "mast $(date +%F)" \
+			--label mast=builder >/dev/null
+		id=$(latest_snapshot)
+		[[ -n $id ]] || die "snapshot failed; builder kept so nothing is lost"
+		gb=$(hcloud image describe "$id" -o json | jq -r '.image_size // .disk_size')
+		ledger snap "$id" "$gb"
+		for o in $old; do hcloud image delete "$o" >/dev/null && ledger unsnap "$o"; done
+		log "snapshot $id saved (${gb} GB, about \$$(awk -v g="$gb" -v r="$MAST_SNAPSHOT_USD_GB_MONTH" 'BEGIN{printf "%.2f", g*r}')/month)"
+	fi
+	hcloud server delete "$MAST_NAME" >/dev/null
+	ledger down
+	stop_guard
+	log "builder deleted. Spent so far: \$$(spent) of \$$MAST_BUDGET"
+}
+
+cmd_resize() {
+	local t=${1:?usage: ./mast resize <server-type>}
+	exists || die "no builder running"
+	log "resizing to $t (disk kept)"
+	hcloud server poweroff "$MAST_NAME" >/dev/null
+	hcloud server change-type "$MAST_NAME" "$t" --keep-disk >/dev/null
+	ledger resize "$t" "$(hourly "$t")"
+	hcloud server poweron "$MAST_NAME" >/dev/null
+	wait_ssh
+}
+
+cmd_hold() {
+	local m=${1:?usage: ./mast hold <minutes>}
+	echo $(($(date +%s) + m * 60)) > "$STATE/hold"
+	local usd
+	usd=$(awk -v m="$m" -v r="$(hourly "$(server_type)")" 'BEGIN { printf "%.2f", m / 60 * r }')
+	log "guard will keep the builder for $m more minutes (about \$$usd at the current rate)"
+}
+
+cmd_status() {
+	if exists; then
+		printf 'builder: %s  %s  %s\n' "$(server_type)" "$(server_ip)" "$(hcloud server describe "$MAST_NAME" -o format='{{.Status}}')"
+	else
+		echo "builder: none"
+	fi
+	local snap
+	snap=$(latest_snapshot)
+	echo "snapshot: ${snap:-none}"
+	cmd_cost
+}
+
+cmd_destroy() {
+	read -r -p "Delete the builder, all snapshots, firewall and key? Type 'destroy': " ok
+	[[ $ok == destroy ]] || die "cancelled"
+	if exists; then hcloud server delete "$MAST_NAME" >/dev/null; ledger down; fi
+	for o in $(hcloud image list --type snapshot --selector mast=builder -o json | jq -r '.[].id'); do
+		hcloud image delete "$o" >/dev/null && ledger unsnap "$o"
+	done
+	hcloud firewall delete "$MAST_NAME" >/dev/null 2>&1 || true
+	hcloud ssh-key delete "$MAST_NAME" >/dev/null 2>&1 || true
+	stop_guard
+	log "everything deleted. Total spent: \$$(spent)"
+}
+
+# ---------------------------------------------------------------- guard
+# Runs on this laptop while a builder exists. Deletes the builder if nothing has run on it
+# for MAST_IDLE_MINUTES, or if spending reaches the budget. (A token on the server could do
+# this itself, but that would put a project-wide credential on the builder.)
+
+start_guard() {
+	stop_guard
+	setsid nohup "$ROOT/mast" _guard >> "$STATE/guard.log" 2>&1 < /dev/null &
+	echo $! > "$STATE/guard.pid"
+}
+
+stop_guard() {
+	[[ -f $STATE/guard.pid ]] || return 0
+	local pid
+	pid=$(cat "$STATE/guard.pid")
+	[[ $pid != "$$" ]] && kill "$pid" 2>/dev/null || true
+	rm -f "$STATE/guard.pid"
+}
+
+cmd__guard() {
+	local idle_since
+	idle_since=$(date +%s)
+	while exists; do
+		HOST=$(server_ip)
+		if awk -v s="$(spent)" -v b="$MAST_BUDGET" 'BEGIN { exit !(s >= b * 0.95) }'; then
+			log "$(date) budget nearly spent (\$$(spent)): deleting builder"
+			echo $$ > "$STATE/guard.pid"
+			cmd_down
+			exit 0
+		fi
+		if (($(cat "$STATE/hold" 2>/dev/null || echo 0) > $(date +%s))) ||
+			rssh "pgrep -f 'mast/remote/(bootstrap|build)\.sh' >/dev/null || [ -n \"\$(who)\" ]" 2>/dev/null; then
+			idle_since=$(date +%s)
+		elif (($(date +%s) - idle_since > MAST_IDLE_MINUTES * 60)); then
+			log "$(date) idle for ${MAST_IDLE_MINUTES}m: deleting builder (no snapshot)"
+			echo $$ > "$STATE/guard.pid"
+			cmd_down
+			exit 0
+		fi
+		sleep 120
+	done
+	rm -f "$STATE/guard.pid"
+}
+
+# ---------------------------------------------------------------- jobs
+
+push() {
+	log "pushing code"
+	rsync -az --timeout=120 --delete -e "ssh ${SSH_OPTS[*]}" \
+		"$ROOT/remote" "$ROOT/patches" "$ROOT/src" "$ROOT/chromium_version.txt" "root@$HOST:mast/"
+}
+
+# Run remote/<job>.sh detached on the builder (survives your laptop disconnecting), then follow its log.
+job() {
+	local name=$1
+	rssh "cd ~/mast && rm -f $name.status && (nohup bash -c 'bash remote/$name.sh; echo \$? > ~/mast/$name.status' > ~/mast/$name.log 2>&1 &)"
+	follow "$name"
+}
+
+follow() {
+	local name=$1 rc from=1
+	log "following $name log (Ctrl-C detaches; the job keeps running)"
+	while true; do
+		rssh "tail -n +$from -f ~/mast/$name.log & t=\$!; while [ ! -f ~/mast/$name.status ]; do sleep 3; done; sleep 1; kill \$t; exit \$(cat ~/mast/$name.status)" && return 0
+		rc=$?
+		# ssh exits 255 when the connection drops; anything else is the job's own status.
+		((rc == 255)) || return "$rc"
+		log "connection to the builder dropped; reconnecting (the job keeps running)"
+		sleep 10
+		from=$(rssh "wc -l < ~/mast/$name.log" 2>/dev/null || echo 1)
+	done
+}
+
+cmd_fetch() {
+	[[ -n $HOST ]] || HOST=$(server_ip)
+	local token url sum
+	token=$(head -c 18 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 24)
+	log "publishing the build through a temporary Cloudflare tunnel (much faster than SSH from Hetzner)"
+	rsync -az --timeout=120 -e "ssh ${SSH_OPTS[*]}" "$ROOT/remote/serve.sh" "root@$HOST:mast/remote/"
+	url=$(rssh "bash ~/mast/remote/serve.sh $token")
+	[[ $url == https://* ]] || die "tunnel failed: $url"
+	trap 'rssh "bash ~/mast/remote/serve.sh stop" >/dev/null 2>&1 || true' RETURN
+	mkdir -p "$ROOT/dist"
+	# A brand-new tunnel hostname takes a little while to appear in DNS; asking too
+	# early caches "no such host" for minutes. Wait until it actually answers.
+	log "waiting for the tunnel to come online"
+	for _ in $(seq 60); do
+		curl -fsS -m 10 -o /dev/null "$url/$token/sha256" 2>/dev/null && break
+		sleep 5
+	done
+	sum=$(curl -fsS -m 30 --retry 5 --retry-all-errors "$url/$token/sha256")
+	log "downloading build"
+	curl -fL --retry 5 --retry-all-errors --speed-limit 1024 --speed-time 60 --progress-bar -o "$ROOT/dist/mast-linux.tar.zst" "$url/$token/mast-linux.tar.zst"
+	curl -fsS --retry 5 -o "$ROOT/dist/VERSION" "$url/$token/VERSION"
+	echo "$sum  $ROOT/dist/mast-linux.tar.zst" | sha256sum -c --quiet || die "checksum mismatch"
+	rm -rf "$ROOT/dist/mast"
+	mkdir -p "$ROOT/dist/mast"
+	tar --zstd -xf "$ROOT/dist/mast-linux.tar.zst" -C "$ROOT/dist/mast"
+	log "browser in dist/mast (Chromium $(cat "$ROOT/dist/VERSION")). Run: ./mast run"
+}
+
+cmd_build() {
+	cmd_up
+	HOST=$(server_ip)
+	push
+	job build || die "build failed. Inspect with: ./mast ssh  (or ./mast down to stop paying)"
+	[[ -n ${MAST_SKIP_FETCH:-} ]] || cmd_fetch
+	log "builder still running for quick rebuilds. When done: ./mast down [--keep]"
+}
+
+cmd_shots() {
+	[[ -n $HOST ]] || HOST=$(server_ip)
+	local dir
+	dir="$ROOT/shots/$(date +%m%d-%H%M%S)"
+	rsync -az --timeout=120 -e "ssh ${SSH_OPTS[*]}" "$ROOT/remote/" "root@$HOST:mast/remote/"
+	log "rendering scenes on the builder"
+	rssh "bash ~/mast/remote/shots.sh"
+	mkdir -p "$dir"
+	rsync -az --timeout=120 -e "ssh ${SSH_OPTS[*]}" "root@$HOST:mast/shots/*.jpg" "$dir/"
+	ln -sfn "$dir" "$ROOT/shots/latest"
+	log "screenshots in ${dir#"$ROOT/"}"
+}
+
+cmd_run() {
+	[[ -x $ROOT/dist/mast/chrome ]] || die "no build yet. Run: ./mast build"
+	local args=(--user-data-dir="$ROOT/.profile" "$@")
+	if [[ -e /etc/NIXOS ]]; then
+		# Chromium built on Ubuntu expects a normal Linux filesystem layout.
+		# Build the runner from the system's own nixpkgs revision, so it reuses the
+		# libraries already installed instead of downloading a second copy.
+		local run_args=()
+		if command -v nixos-version >/dev/null; then
+			run_args+=(--no-write-lock-file --override-input nixpkgs "github:NixOS/nixpkgs/$(nixos-version --revision)")
+		fi
+		nix --extra-experimental-features 'nix-command flakes' run "${run_args[@]}" "$ROOT#fhs" -- \
+			-c "$(printf '%q ' "$ROOT/dist/mast/chrome" "${args[@]}")"
+	else
+		"$ROOT/dist/mast/chrome" "${args[@]}"
+	fi
+}
+
+cmd=${1:-help}
+shift || true
+case $cmd in
+	up | down | build | resize | status | cost | hold | destroy | fetch | shots | _guard) need hcloud; need jq; "cmd_$cmd" "$@" ;;
+	run) cmd_run "$@" ;;
+	ssh) HOST=$(server_ip); ssh "${SSH_OPTS[@]}" -t "root@$HOST" "$@" ;;
+	logs) HOST=$(server_ip); follow "${1:-build}" ;;
+	job) HOST=$(server_ip); job "${1:?usage: ./mast job bootstrap|build}" ;;
+	*) sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//' ;;
+esac

@@ -1,0 +1,200 @@
+diff -ruN a/chrome/browser/BUILD.gn b/chrome/browser/BUILD.gn
+--- a/chrome/browser/BUILD.gn
++++ b/chrome/browser/BUILD.gn
+@@ -881,6 +881,7 @@
+   }
+ 
+   deps = [
++    "//mast/browser",
+     ":active_use_util",
+     ":after_startup_task_utils",
+     ":bad_message",
+diff -ruN a/chrome/browser/chrome_content_browser_client_navigation_throttles.cc b/chrome/browser/chrome_content_browser_client_navigation_throttles.cc
+--- a/chrome/browser/chrome_content_browser_client_navigation_throttles.cc
++++ b/chrome/browser/chrome_content_browser_client_navigation_throttles.cc
+@@ -38,6 +38,7 @@
+ #include "chrome/browser/ssl/https_upgrades_navigation_throttle.h"
+ #include "chrome/browser/ssl/typed_navigation_upgrade_throttle.h"
+ #include "chrome/browser/supervised_user/classify_url_navigation_throttle.h"
++#include "mast/browser/mast_navigation_throttle.h"
+ #include "chrome/browser/supervised_user/supervised_user_google_auth_navigation_throttle.h"
+ #include "chrome/browser/ui/blocked_content/tab_under_navigation_throttle.h"
+ #include "chrome/browser/ui/login/login_navigation_throttle.h"
+@@ -402,6 +403,7 @@
+ 
+   SupervisedUserGoogleAuthNavigationThrottle::MaybeCreateAndAdd(registry);
+   supervised_user::ClassifyUrlNavigationThrottle::MaybeCreateAndAdd(registry);
++  mast::MastNavigationThrottle::MaybeCreateAndAdd(registry);
+ 
+   if (auto* throttle_manager =
+           subresource_filter::ContentSubresourceFilterThrottleManager::
+diff -ruN a/chrome/browser/prefs/browser_prefs.cc b/chrome/browser/prefs/browser_prefs.cc
+--- a/chrome/browser/prefs/browser_prefs.cc
++++ b/chrome/browser/prefs/browser_prefs.cc
+@@ -62,6 +62,7 @@
+ #include "chrome/browser/platform_experience/prefs.h"
+ #include "chrome/browser/prefs/chrome_pref_service_factory.h"
+ #include "chrome/browser/prefs/incognito_mode_prefs.h"
++#include "mast/browser/mast_session.h"
+ #include "chrome/browser/prefs/session_startup_pref.h"
+ #include "chrome/browser/preloading/prefetch/prefetch_service/prefetch_origin_decider.h"
+ #include "chrome/browser/preloading/prefetch/search_prefetch/search_prefetch_service.h"
+@@ -1532,6 +1533,7 @@
+   breadcrumbs::RegisterPrefs(registry);
+   browser_shutdown::RegisterPrefs(registry);
+   BrowserProcessImpl::RegisterPrefs(registry);
++  mast::MastSession::RegisterLocalStatePrefs(registry);
+   ChromeContentBrowserClient::RegisterLocalStatePrefs(registry);
+ #if BUILDFLAG(CHROME_FOR_TESTING)
+   chrome_for_testing::RegisterPrefs(registry);
+diff -ruN a/chrome/browser/prefs/BUILD.gn b/chrome/browser/prefs/BUILD.gn
+--- a/chrome/browser/prefs/BUILD.gn
++++ b/chrome/browser/prefs/BUILD.gn
+@@ -58,6 +58,7 @@
+   ]
+ 
+   deps = [
++    "//mast/browser",
+     ":prefs",
+     ":util",
+     "//chrome/browser:browser_process",
+diff -ruN a/chrome/browser/prefs/incognito_mode_prefs.cc b/chrome/browser/prefs/incognito_mode_prefs.cc
+--- a/chrome/browser/prefs/incognito_mode_prefs.cc
++++ b/chrome/browser/prefs/incognito_mode_prefs.cc
+@@ -4,6 +4,8 @@
+ 
+ #include "chrome/browser/prefs/incognito_mode_prefs.h"
+ 
++#include "mast/browser/mast_session.h"
++
+ #include <stdint.h>
+ 
+ #include "base/command_line.h"
+@@ -164,6 +166,10 @@
+     const Profile* profile,
+     GetAvailabilityMode mode) {
+   DCHECK(profile);
++  // Mast: no private windows during a deep-work session.
++  if (mast::IsSessionActive()) {
++    return policy::IncognitoModeAvailability::kDisabled;
++  }
+ 
+   IncognitoModeAvailability result = kDefaultAvailability;
+   // Enterprise Isolated Mode has higher priority than the Incognito mode
+diff -ruN a/chrome/browser/themes/theme_service.cc b/chrome/browser/themes/theme_service.cc
+--- a/chrome/browser/themes/theme_service.cc
++++ b/chrome/browser/themes/theme_service.cc
+@@ -311,7 +311,7 @@
+     user_prefs::PrefRegistrySyncable* registry) {
+ #if BUILDFLAG(IS_LINUX)
+   registry->RegisterIntegerPref(prefs::kSystemTheme,
+-                                static_cast<int>(ui::GetDefaultSystemTheme()));
++                                static_cast<int>(ui::SystemTheme::kDefault));
+ #endif
+   registry->RegisterFilePathPref(prefs::kCurrentThemePackFilename,
+                                  base::FilePath());
+@@ -325,7 +325,7 @@
+       user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
+   registry->RegisterIntegerPref(
+       prefs::kBrowserColorScheme,
+-      std::to_underlying(ThemeService::BrowserColorScheme::kSystem));
++      std::to_underlying(ThemeService::BrowserColorScheme::kDark));
+   registry->RegisterIntegerPref(
+       prefs::kDeprecatedUserColorDoNotUse, SK_ColorTRANSPARENT,
+       user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
+diff -ruN a/chrome/browser/ui/views/toolbar/BUILD.gn b/chrome/browser/ui/views/toolbar/BUILD.gn
+--- a/chrome/browser/ui/views/toolbar/BUILD.gn
++++ b/chrome/browser/ui/views/toolbar/BUILD.gn
+@@ -199,6 +199,8 @@
+     "toolbar_icon_container_view.cc",
+     "toolbar_ink_drop_util.cc",
+     "toolbar_view.cc",
++    "//mast/browser/ui/mast_toolbar_button.cc",
++    "//mast/browser/ui/mast_toolbar_button.h",
+     "webui_app_menu_control.cc",
+     "webui_avatar_toolbar_button.cc",
+     "webui_back_forward_control.cc",
+@@ -216,6 +218,7 @@
+   ]
+ 
+   deps = [
++    "//mast/browser",
+     ":toolbar",
+     "//base:i18n",
+     "//build:branding_buildflags",
+diff -ruN a/chrome/browser/ui/views/toolbar/toolbar_view.cc b/chrome/browser/ui/views/toolbar/toolbar_view.cc
+--- a/chrome/browser/ui/views/toolbar/toolbar_view.cc
++++ b/chrome/browser/ui/views/toolbar/toolbar_view.cc
+@@ -4,6 +4,8 @@
+ 
+ #include "chrome/browser/ui/views/toolbar/toolbar_view.h"
+ 
++#include "mast/browser/ui/mast_toolbar_button.h"
++
+ #include <algorithm>
+ #include <memory>
+ #include <utility>
+@@ -609,10 +611,12 @@
+     UpdateGlicButtonVisibility();
+   }
+ 
++  AddChildView(std::make_unique<mast::MastToolbarButton>(browser_));
++
+   if (!features::IsWebUIAvatarButtonEnabled()) {
+     avatar_ = AddChildView(std::make_unique<AvatarToolbarButton>(browser_));
+     bool show_avatar_toolbar_button =
+-        AvatarToolbarButtonInterface::CanShowForProfile(browser_->GetProfile());
++        false;  // Mast: no sign-in, so no profile button.
+     avatar_->SetVisible(show_avatar_toolbar_button);
+   }
+ 
+diff -ruN a/chrome/browser/ui/webui/BUILD.gn b/chrome/browser/ui/webui/BUILD.gn
+--- a/chrome/browser/ui/webui/BUILD.gn
++++ b/chrome/browser/ui/webui/BUILD.gn
+@@ -47,6 +47,7 @@
+   }
+ 
+   deps = [
++    "//mast/browser",
+     ":gcm_internals_ui",
+     ":net_export_ui",
+     ":ntp_tiles_internals_ui",
+diff -ruN a/chrome/browser/ui/webui/chrome_web_ui_configs.cc b/chrome/browser/ui/webui/chrome_web_ui_configs.cc
+--- a/chrome/browser/ui/webui/chrome_web_ui_configs.cc
++++ b/chrome/browser/ui/webui/chrome_web_ui_configs.cc
+@@ -65,6 +65,7 @@
+ #include "components/security_interstitials/content/known_interception_disclosure_ui.h"
+ #include "components/webui/user_actions/user_actions_ui.h"
+ #include "content/public/browser/webui_config_map.h"
++#include "mast/browser/mast_ui.h"
+ #include "extensions/buildflags/buildflags.h"
+ #include "printing/buildflags/buildflags.h"
+ #include "ui/webui/buildflags.h"
+@@ -263,6 +264,7 @@
+ #endif  // BUILDFLAG(IS_CHROMEOS)
+ 
+   auto& map = content::WebUIConfigMap::GetInstance();
++  map.AddWebUIConfig(std::make_unique<mast::MastUIConfig>(mast::kMastHost));
+   map.AddWebUIConfig(std::make_unique<AccessibilityUIConfig>());
+   map.AddWebUIConfig(std::make_unique<AutofillInternalsUIConfig>());
+   map.AddWebUIConfig(std::make_unique<BluetoothInternalsUIConfig>());
+@@ -330,7 +332,8 @@
+   map.AddWebUIConfig(std::make_unique<WebRtcLogsUIConfig>());
+   map.AddWebUIConfig(std::make_unique<RegionalCapabilitiesInternalsUIConfig>());
+ #if BUILDFLAG(ENABLE_WEBUI_NTP)
+-  map.AddWebUIConfig(std::make_unique<NewTabPageUIConfig>());
++  map.AddWebUIConfig(
++      std::make_unique<mast::MastUIConfig>(chrome::kChromeUINewTabPageHost));
+   map.AddWebUIConfig(std::make_unique<CustomizeChromeUIConfig>());
+ #endif  // BUILDFLAG(ENABLE_WEBUI_NTP)
+ 
+@@ -384,7 +387,8 @@
+           multistep_filter_internals::MultistepFilterInternalsUIConfig>());
+ #if BUILDFLAG(ENABLE_WEBUI_NTP)
+   map.AddWebUIConfig(std::make_unique<NewTabFooterUIConfig>());
+-  map.AddWebUIConfig(std::make_unique<NewTabPageThirdPartyUIConfig>());
++  map.AddWebUIConfig(std::make_unique<mast::MastUIConfig>(
++      chrome::kChromeUINewTabPageThirdPartyHost));
+ #endif  // BUILDFLAG(ENABLE_WEBUI_NTP)
+   map.AddWebUIConfig(std::make_unique<NewTabUIConfig>());
+   map.AddWebUIConfig(std::make_unique<OmniboxEverywhereUIConfig>());
