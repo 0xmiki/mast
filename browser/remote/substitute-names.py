@@ -19,14 +19,13 @@ SKIP = re.compile(r"/(chromeos|ash|remoting|android|ios|fuchsia|test|tests|testd
 
 # Order matters. Credits to Chromium (required by its licence) are protected.
 PROTECT = [
-    "Chromium open source project", "Chromium project", "Chromium Authors",
+    "Chromium open source project", "Chromium project",
     "Chrome Web Store", "Chrome Remote Desktop", "Chrome OS", "ChromeOS", "Chromebook",
     "Chromecast", "Chrome Enterprise", "Chrome Browser Cloud", "Chrome Sync",
     "Google Chrome Frame",
 ]
 RULES = [
-    (re.compile(r"(Copyright\s+(?:<ph name=\"[A-Z_]+\">[^<]*</ph>|\d{4})\s+)The Chromium Authors"),
-     r"\1The Mast Authors"),
+    (re.compile(r"The Chromium Authors"), "The Mast Authors"),
     (re.compile(r"\bGoogle Chrome\b"), "Mast"),
     (re.compile(r"\bChromium\b"), "Mast"),
     (re.compile(r"\bChrome\b(?![.:/_-])"), "Mast"),
@@ -37,6 +36,10 @@ def rename(text):
     # Copyright first, then shield protected phrases, then rename, then unshield.
     text = RULES[0][0].sub(RULES[0][1], text)
     shields = {}
+    # The credit link "…made possible by the <link>Chromium</link> open source
+    # project" must keep naming Chromium (its licence asks for attribution).
+    text = re.sub(r'Chromium(?=<ph name="END_LINK_CHROMIUM")', "\x00credit\x00", text)
+    shields["\x00credit\x00"] = "Chromium"
     for i, phrase in enumerate(PROTECT):
         token = f"\x00{i}\x00"
         if phrase in text:

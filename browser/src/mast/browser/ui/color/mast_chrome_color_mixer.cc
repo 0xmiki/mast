@@ -65,6 +65,13 @@ void AddMastChromeColorMixer(ui::ColorProvider* provider,
   mixer[ui::kColorPrimaryBackground] = {p::kChrome};
   mixer[ui::kColorTextfieldBackground] = {p::kChrome2};
   mixer[ui::kColorFocusableBorderFocused] = {p::kEmber};
+
+  // Text selection: a deep ember wash with normal text, not solid orange.
+  constexpr SkColor kSelection = SkColorSetRGB(0x5C, 0x2A, 0x1B);
+  mixer[ui::kColorTextSelectionBackground] = {kSelection};
+  mixer[ui::kColorTextSelectionForeground] = {p::kText};
+  mixer[kColorOmniboxSelectionBackground] = {kSelection};
+  mixer[kColorOmniboxSelectionForeground] = {p::kText};
 }
 
 }  // namespace mast

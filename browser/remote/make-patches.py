@@ -83,7 +83,9 @@ edit(H, "chrome/browser/ui/views/toolbar/toolbar_view.cc", lambda t: once(once(t
     '#include "chrome/browser/ui/views/toolbar/toolbar_view.h"\n',
     '#include "chrome/browser/ui/views/toolbar/toolbar_view.h"\n\n#include "mast/browser/ui/mast_toolbar_button.h"\n'),
     '  if (!features::IsWebUIAvatarButtonEnabled()) {\n    avatar_ = AddChildView',
-    '  AddChildView(std::make_unique<mast::MastToolbarButton>(browser_));\n\n  if (!features::IsWebUIAvatarButtonEnabled()) {\n    avatar_ = AddChildView'))
+    '  AddChildView(std::make_unique<mast::MastToolbarButton>(browser_));\n\n  if (!features::IsWebUIAvatarButtonEnabled()) {\n    avatar_ = AddChildView').replace(
+    '        AvatarToolbarButtonInterface::CanShowForProfile(browser_->GetProfile());\n',
+    '        false;  // Mast: no sign-in, so no profile button.\n', 1))
 edit(H, "chrome/browser/ui/views/toolbar/BUILD.gn", lambda t: add_dep(once(t,
     '    "toolbar_view.cc",\n',
     '    "toolbar_view.cc",\n    "//mast/browser/ui/mast_toolbar_button.cc",\n    "//mast/browser/ui/mast_toolbar_button.h",\n'),
@@ -129,6 +131,14 @@ edit(T, "chrome/browser/ui/color/BUILD.gn", lambda t: once(t,
     '    "chrome_color_mixers.cc",\n',
     '    "chrome_color_mixers.cc",\n    "//mast/browser/ui/color/mast_chrome_color_mixer.cc",\n    "//mast/browser/ui/color/mast_chrome_color_mixer.h",\n'))
 
+# Calm UI: no ink ripples (the demo has none), no profile button (no sign-in),
+# Inter for internal pages instead of Roboto.
+edit(T, "ui/views/style/platform_style.h", lambda t: once(t,
+    'static constexpr bool kUseRipples = !BUILDFLAG(IS_MAC);',
+    'static constexpr bool kUseRipples = false;  // Mast: no ink ripples.'))
+edit(T, "ui/base/webui/web_ui_util.cc", lambda t: once(t,
+    'return "Roboto, " + GetFontFamily();', 'return "Inter, " + GetFontFamily();'))
+
 # ---------------------------------------------------------------- branding
 B = "mast-branding.patch"
 
@@ -157,5 +167,7 @@ edit(B, "chrome/browser/ui/startup/infobar_utils.cc", lambda t: once(t,
 for patch in PATCHES:
     out = subprocess.run(["diff", "-ruN", "a", "b"], cwd=os.path.join(WORK, patch + ".d"),
                          capture_output=True, text=True).stdout
+    # Drop timestamps from ---/+++ headers so a patch only changes when its content does.
+    out = re.sub(r"^(---|\+\+\+) (\S+)\t.*$", r"\1 \2", out, flags=re.M)
     open(os.path.join(WORK, patch), "w").write(out)
     print(f"{patch}: {len(PATCHES[patch])} files, +{sum(1 for l in out.splitlines() if l.startswith('+') and not l.startswith('+++'))} lines")
