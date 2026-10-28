@@ -1,20 +1,23 @@
 #!/usr/bin/env bash
-# Mast build CLI. The EC2 builder only runs while building; its disk (Chromium checkout +
-# build cache) is kept while stopped, so later builds are incremental.
+# Mast build CLI (Hetzner Cloud). The builder only exists while we're building:
+# Hetzner bills servers even when powered off, so "stop" means delete. Between sessions the
+# disk can be kept as a compressed snapshot (cheap) or thrown away (rebuild from scratch).
 #
-#   ./mast provision        one-time: key, firewall, instance; then first sync + build
-#   ./mast build [--keep]   start → push code → build → download → stop
+#   ./mast up [type]        create the builder (from the last snapshot if there is one)
+#   ./mast build            push code → build → download (creates the builder if needed)
+#   ./mast down [--keep]    delete the builder; --keep snapshots its disk first
+#   ./mast resize <type>    change server type, keeping the disk
+#   ./mast cost             money spent so far vs MAST_BUDGET
+#   ./mast hold <minutes>   keep an idle builder alive that long (e.g. while writing code)
 #   ./mast run              run the downloaded browser locally
-#   ./mast start | stop | status | ssh | logs [job]
-#   ./mast resize big|small|<type>
-#   ./mast destroy          delete the builder and its disk
+#   ./mast status | ssh | logs [job] | destroy
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=mast.env
 source "$ROOT/mast.env"
-export AWS_REGION=$MAST_REGION AWS_PAGER=""
 STATE=$ROOT/.state
+LEDGER=$STATE/ledger # "<epoch> <event> <type> <usd_per_hour>"
 mkdir -p "$STATE"
 HOST=""
 
@@ -25,28 +28,64 @@ need() { command -v "$1" >/dev/null || die "$1 not found. Run inside: nix develo
 SSH_OPTS=(-i "$MAST_KEY" -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile="$STATE/known_hosts"
 	-o ServerAliveInterval=30 -o ConnectTimeout=10 -o LogLevel=ERROR)
 
-instance_id() { [[ -f $STATE/instance-id ]] || die "no builder yet. Run: ./mast provision"; cat "$STATE/instance-id"; }
-describe() { aws ec2 describe-instances --instance-ids "$(instance_id)" --query "Reservations[0].Instances[0].$1" --output text; }
-my_cidr() { echo "$(curl -fsS https://checkip.amazonaws.com | tr -d '[:space:]')/32"; }
-rssh() { ssh "${SSH_OPTS[@]}" "ubuntu@$HOST" "$@"; }
+exists() { hcloud server describe "$MAST_NAME" >/dev/null 2>&1; }
+server_ip() { hcloud server ip "$MAST_NAME"; }
+server_type() { hcloud server describe "$MAST_NAME" -o format='{{.ServerType.Name}}'; }
+hourly() { hcloud server-type describe "$1" -o json | jq -r --arg l "$MAST_LOCATION" '.prices[] | select(.location==$l) | .price_hourly.net'; }
+latest_snapshot() {
+	hcloud image list --type snapshot --selector mast=builder -o json |
+		jq -r 'sort_by(.created) | last | .id // empty'
+}
+rssh() { ssh "${SSH_OPTS[@]}" "root@$HOST" "$@"; }
 
-# SSH is only open to your current public IP; re-done on every start since home IPs change.
-allow_my_ip() {
-	local sg new old
-	sg=$(cat "$STATE/sg-id")
-	new=$(my_cidr)
-	old=$(cat "$STATE/allowed-cidr" 2>/dev/null || true)
-	[[ $new == "$old" ]] && return
-	if [[ -n $old ]]; then
-		aws ec2 revoke-security-group-ingress --group-id "$sg" --protocol tcp --port 22 --cidr "$old" >/dev/null 2>&1 || true
+# ---------------------------------------------------------------- money
+
+ledger() { echo "$(date +%s) $*" >> "$LEDGER"; }
+
+# Server-hours (with the price at the time) plus snapshot storage, in USD.
+spent() {
+	[[ -f $LEDGER ]] || { echo 0; return; }
+	awk -v now="$(date +%s)" -v snap_rate="$MAST_SNAPSHOT_USD_GB_MONTH" '
+		$2 == "up" || $2 == "resize" { if (on) total += (($1 - t0) / 3600) * rate; on = 1; t0 = $1; rate = $4 }
+		$2 == "down" { if (on) total += (($1 - t0) / 3600) * rate; on = 0 }
+		$2 == "extra" { total += $4 }
+		$2 == "snap" { snaps[$3] = $1; gb[$3] = $4 }
+		$2 == "unsnap" { if ($3 in snaps) { total += (($1 - snaps[$3]) / 2592000) * gb[$3] * snap_rate; delete snaps[$3] } }
+		END {
+			if (on) total += ((now - t0) / 3600) * rate
+			for (s in snaps) total += ((now - snaps[s]) / 2592000) * gb[s] * snap_rate
+			printf "%.2f\n", total
+		}' "$LEDGER"
+}
+
+cmd_cost() {
+	local s
+	s=$(spent)
+	printf 'spent:  $%s of $%s budget\n' "$s" "$MAST_BUDGET"
+	if exists; then printf 'now:    %s running at $%s/hour\n' "$(server_type)" "$(hourly "$(server_type)")"; fi
+}
+
+# ---------------------------------------------------------------- lifecycle
+
+ensure_key_and_firewall() {
+	if [[ ! -f $MAST_KEY ]]; then
+		log "creating ssh key $MAST_KEY"
+		ssh-keygen -q -t ed25519 -N "" -C "$MAST_NAME" -f "$MAST_KEY"
 	fi
-	aws ec2 authorize-security-group-ingress --group-id "$sg" --protocol tcp --port 22 --cidr "$new" >/dev/null
-	echo "$new" > "$STATE/allowed-cidr"
+	hcloud ssh-key describe "$MAST_NAME" >/dev/null 2>&1 ||
+		hcloud ssh-key create --name "$MAST_NAME" --public-key-from-file "$MAST_KEY.pub" >/dev/null
+	hcloud firewall describe "$MAST_NAME" >/dev/null 2>&1 || hcloud firewall create --name "$MAST_NAME" >/dev/null
+	# SSH only from your current public IP (home IPs change, so this is redone every time).
+	local ip rules
+	ip="$(curl -fsS https://checkip.amazonaws.com | tr -d '[:space:]')/32"
+	rules=$(jq -nc --arg ip "$ip" '[{direction:"in",protocol:"tcp",port:"22",source_ips:[$ip],description:"ssh"}]')
+	hcloud firewall replace-rules "$MAST_NAME" --rules-file <(echo "$rules") >/dev/null
 }
 
 wait_ssh() {
-	HOST=$(describe PublicIpAddress)
+	HOST=$(server_ip)
 	log "waiting for ssh on $HOST"
+	ssh-keygen -R "$HOST" -f "$STATE/known_hosts" >/dev/null 2>&1 || true
 	for _ in $(seq 60); do
 		rssh true 2>/dev/null && return
 		sleep 5
@@ -54,16 +93,155 @@ wait_ssh() {
 	die "ssh to $HOST timed out"
 }
 
+check_budget() {
+	local s
+	s=$(spent)
+	awk -v s="$s" -v b="$MAST_BUDGET" 'BEGIN { exit !(s >= b * 0.9) }' &&
+		die "spent \$$s of the \$$MAST_BUDGET budget. Raise MAST_BUDGET in mast.env to continue."
+	return 0
+}
+
+cmd_up() {
+	need hcloud
+	exists && { HOST=$(server_ip); log "builder already running ($(server_type), $HOST)"; return; }
+	check_budget
+	ensure_key_and_firewall
+	local type=${1:-$MAST_TYPE} image snap
+	snap=$(latest_snapshot)
+	image=${snap:-ubuntu-24.04}
+	log "creating $type in $MAST_LOCATION from ${snap:+snapshot }$image at \$$(hourly "$type")/hour"
+	hcloud server create --name "$MAST_NAME" --type "$type" --image "$image" --location "$MAST_LOCATION" \
+		--ssh-key "$MAST_NAME" --firewall "$MAST_NAME" --label mast=builder >/dev/null
+	ledger up "$type" "$(hourly "$type")"
+	wait_ssh
+	start_guard
+	if [[ -z $snap ]]; then
+		push
+		log "fresh server: installing packages and syncing Chromium (about 30–45 min)"
+		job bootstrap || die "bootstrap failed. Inspect with: ./mast ssh"
+	fi
+}
+
+cmd_down() {
+	exists || { log "no builder running"; return; }
+	if [[ ${1:-} == --keep ]]; then
+		log "snapshotting the disk (keeps the checkout + build cache)"
+		hcloud server shutdown "$MAST_NAME" >/dev/null 2>&1 || true
+		local id gb old
+		old=$(hcloud image list --type snapshot --selector mast=builder -o json | jq -r '.[].id')
+		id=$(hcloud server create-image "$MAST_NAME" --type snapshot --description "mast $(date +%F)" \
+			--label mast=builder -o json | jq -r '.image.id')
+		gb=$(hcloud image describe "$id" -o json | jq -r '.image_size // .disk_size')
+		ledger snap "$id" "$gb"
+		for o in $old; do hcloud image delete "$o" >/dev/null && ledger unsnap "$o"; done
+		log "snapshot $id saved (${gb} GB, about \$$(awk -v g="$gb" -v r="$MAST_SNAPSHOT_USD_GB_MONTH" 'BEGIN{printf "%.2f", g*r}')/month)"
+	fi
+	hcloud server delete "$MAST_NAME" >/dev/null
+	ledger down
+	stop_guard
+	log "builder deleted. Spent so far: \$$(spent) of \$$MAST_BUDGET"
+}
+
+cmd_resize() {
+	local t=${1:?usage: ./mast resize <server-type>}
+	exists || die "no builder running"
+	log "resizing to $t (disk kept)"
+	hcloud server poweroff "$MAST_NAME" >/dev/null
+	hcloud server change-type "$MAST_NAME" "$t" --keep-disk >/dev/null
+	ledger resize "$t" "$(hourly "$t")"
+	hcloud server poweron "$MAST_NAME" >/dev/null
+	wait_ssh
+}
+
+cmd_hold() {
+	local m=${1:?usage: ./mast hold <minutes>}
+	echo $(($(date +%s) + m * 60)) > "$STATE/hold"
+	local usd
+	usd=$(awk -v m="$m" -v r="$(hourly "$(server_type)")" 'BEGIN { printf "%.2f", m / 60 * r }')
+	log "guard will keep the builder for $m more minutes (about \$$usd at the current rate)"
+}
+
+cmd_status() {
+	if exists; then
+		printf 'builder: %s  %s  %s\n' "$(server_type)" "$(server_ip)" "$(hcloud server describe "$MAST_NAME" -o format='{{.Status}}')"
+	else
+		echo "builder: none"
+	fi
+	local snap
+	snap=$(latest_snapshot)
+	echo "snapshot: ${snap:-none}"
+	cmd_cost
+}
+
+cmd_destroy() {
+	read -r -p "Delete the builder, all snapshots, firewall and key? Type 'destroy': " ok
+	[[ $ok == destroy ]] || die "cancelled"
+	if exists; then hcloud server delete "$MAST_NAME" >/dev/null; ledger down; fi
+	for o in $(hcloud image list --type snapshot --selector mast=builder -o json | jq -r '.[].id'); do
+		hcloud image delete "$o" >/dev/null && ledger unsnap "$o"
+	done
+	hcloud firewall delete "$MAST_NAME" >/dev/null 2>&1 || true
+	hcloud ssh-key delete "$MAST_NAME" >/dev/null 2>&1 || true
+	stop_guard
+	log "everything deleted. Total spent: \$$(spent)"
+}
+
+# ---------------------------------------------------------------- guard
+# Runs on this laptop while a builder exists. Deletes the builder if nothing has run on it
+# for MAST_IDLE_MINUTES, or if spending reaches the budget. (A token on the server could do
+# this itself, but that would put a project-wide credential on the builder.)
+
+start_guard() {
+	stop_guard
+	setsid nohup "$ROOT/mast" _guard >> "$STATE/guard.log" 2>&1 < /dev/null &
+	echo $! > "$STATE/guard.pid"
+}
+
+stop_guard() {
+	[[ -f $STATE/guard.pid ]] || return 0
+	local pid
+	pid=$(cat "$STATE/guard.pid")
+	[[ $pid != "$$" ]] && kill "$pid" 2>/dev/null || true
+	rm -f "$STATE/guard.pid"
+}
+
+cmd__guard() {
+	local idle_since
+	idle_since=$(date +%s)
+	while exists; do
+		HOST=$(server_ip)
+		if awk -v s="$(spent)" -v b="$MAST_BUDGET" 'BEGIN { exit !(s >= b * 0.95) }'; then
+			log "$(date) budget nearly spent (\$$(spent)): deleting builder"
+			echo $$ > "$STATE/guard.pid"
+			cmd_down
+			exit 0
+		fi
+		if (($(cat "$STATE/hold" 2>/dev/null || echo 0) > $(date +%s))) ||
+			rssh "pgrep -f 'mast/remote/(bootstrap|build)\.sh' >/dev/null || [ -n \"\$(who)\" ]" 2>/dev/null; then
+			idle_since=$(date +%s)
+		elif (($(date +%s) - idle_since > MAST_IDLE_MINUTES * 60)); then
+			log "$(date) idle for ${MAST_IDLE_MINUTES}m: deleting builder (no snapshot)"
+			echo $$ > "$STATE/guard.pid"
+			cmd_down
+			exit 0
+		fi
+		sleep 120
+	done
+	rm -f "$STATE/guard.pid"
+}
+
+# ---------------------------------------------------------------- jobs
+
 push() {
 	log "pushing code"
 	rsync -az --delete -e "ssh ${SSH_OPTS[*]}" \
-		"$ROOT/remote" "$ROOT/patches" "$ROOT/src" "$ROOT/chromium_version.txt" "ubuntu@$HOST:mast/"
+		"$ROOT/remote" "$ROOT/patches" "$ROOT/src" "$ROOT/chromium_version.txt" "root@$HOST:mast/"
 }
 
 # Run remote/<job>.sh detached on the builder (survives your laptop disconnecting), then follow its log.
 job() {
 	local name=$1
-	rssh "cd ~/mast && rm -f $name.status && (MAST_IDLE_MINUTES=$MAST_IDLE_MINUTES nohup bash -c 'bash remote/$name.sh; echo \$? > ~/mast/$name.status' > ~/mast/$name.log 2>&1 &)"
+	rssh "cd ~/mast && rm -f $name.status && (nohup bash -c 'bash remote/$name.sh; echo \$? > ~/mast/$name.status' > ~/mast/$name.log 2>&1 &)"
 	follow "$name"
 }
 
@@ -73,46 +251,11 @@ follow() {
 	rssh "tail -n +1 -f ~/mast/$name.log & t=\$!; while [ ! -f ~/mast/$name.status ]; do sleep 3; done; sleep 1; kill \$t; exit \$(cat ~/mast/$name.status)"
 }
 
-cmd_start() {
-	local s
-	allow_my_ip
-	s=$(describe State.Name)
-	case $s in
-		running) ;;
-		stopping) log "waiting for the previous stop"; aws ec2 wait instance-stopped --instance-ids "$(instance_id)" ;&
-		stopped) log "starting builder ($(describe InstanceType))"; aws ec2 start-instances --instance-ids "$(instance_id)" >/dev/null ;;
-		*) die "builder is $s" ;;
-	esac
-	aws ec2 wait instance-running --instance-ids "$(instance_id)"
-	wait_ssh
-}
-
-cmd_stop() {
-	log "stopping builder"
-	aws ec2 stop-instances --instance-ids "$(instance_id)" >/dev/null
-	log "stopped. While stopped you only pay for the ${MAST_DISK_GB} GB disk (about \$29/month)."
-}
-
-cmd_status() {
-	printf 'state:  %s\ntype:   %s\nip:     %s\n' "$(describe State.Name)" "$(describe InstanceType)" "$(describe PublicIpAddress)"
-}
-
-cmd_resize() {
-	local t=${1:-}
-	case $t in big) t=$MAST_BIG_TYPE ;; small) t=$MAST_SMALL_TYPE ;; "") die "usage: ./mast resize big|small|<instance-type>" ;; esac
-	if [[ $(describe State.Name) != stopped ]]; then
-		cmd_stop
-		aws ec2 wait instance-stopped --instance-ids "$(instance_id)"
-	fi
-	aws ec2 modify-instance-attribute --instance-id "$(instance_id)" --instance-type "{\"Value\":\"$t\"}"
-	log "builder is now $t"
-}
-
 cmd_fetch() {
-	[[ -n $HOST ]] || HOST=$(describe PublicIpAddress)
+	[[ -n $HOST ]] || HOST=$(server_ip)
 	log "downloading build"
 	mkdir -p "$ROOT/dist"
-	rsync -az --info=progress2 -e "ssh ${SSH_OPTS[*]}" "ubuntu@$HOST:mast/dist/" "$ROOT/dist/"
+	rsync -az --info=progress2 -e "ssh ${SSH_OPTS[*]}" "root@$HOST:mast/dist/" "$ROOT/dist/"
 	rm -rf "$ROOT/dist/mast"
 	mkdir -p "$ROOT/dist/mast"
 	tar --zstd -xf "$ROOT/dist/mast-linux.tar.zst" -C "$ROOT/dist/mast"
@@ -120,71 +263,12 @@ cmd_fetch() {
 }
 
 cmd_build() {
-	cmd_start
+	cmd_up
+	HOST=$(server_ip)
 	push
-	if ! job build; then
-		log "build failed. Inspect with: ./mast ssh   (the builder stops itself after ${MAST_IDLE_MINUTES} idle minutes)"
-		exit 1
-	fi
+	job build || die "build failed. Inspect with: ./mast ssh  (or ./mast down to stop paying)"
 	cmd_fetch
-	[[ ${1:-} == --keep ]] || cmd_stop
-}
-
-cmd_provision() {
-	need aws
-	[[ -f $STATE/instance-id ]] && die "already provisioned ($(cat "$STATE/instance-id"))"
-	aws sts get-caller-identity --query Arn --output text >/dev/null || die "AWS credentials not set up. Run: aws configure"
-
-	if [[ ! -f $MAST_KEY ]]; then
-		log "creating ssh key $MAST_KEY"
-		ssh-keygen -q -t ed25519 -N "" -C "$MAST_NAME" -f "$MAST_KEY"
-	fi
-	if ! aws ec2 describe-key-pairs --key-names "$MAST_NAME" >/dev/null 2>&1; then
-		aws ec2 import-key-pair --key-name "$MAST_NAME" --public-key-material "fileb://$MAST_KEY.pub" >/dev/null
-	fi
-
-	local vpc sg ami id
-	vpc=$(aws ec2 describe-vpcs --filters Name=isDefault,Values=true --query 'Vpcs[0].VpcId' --output text)
-	[[ $vpc != None ]] || die "no default VPC in $MAST_REGION"
-	log "creating firewall (ssh from your IP only)"
-	sg=$(aws ec2 create-security-group --group-name "$MAST_NAME" --description "Mast builder: ssh only" \
-		--vpc-id "$vpc" --query GroupId --output text)
-	echo "$sg" > "$STATE/sg-id"
-	allow_my_ip
-
-	ami=$(aws ssm get-parameter --name /aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id \
-		--query Parameter.Value --output text)
-	log "launching $MAST_BIG_TYPE with Ubuntu 24.04 ($ami), ${MAST_DISK_GB} GB disk"
-	id=$(aws ec2 run-instances --image-id "$ami" --instance-type "$MAST_BIG_TYPE" --key-name "$MAST_NAME" \
-		--security-group-ids "$sg" --instance-initiated-shutdown-behavior stop \
-		--metadata-options HttpTokens=required \
-		--block-device-mappings "[{\"DeviceName\":\"/dev/sda1\",\"Ebs\":{\"VolumeSize\":$MAST_DISK_GB,\"VolumeType\":\"gp3\",\"Iops\":3000,\"Throughput\":250,\"DeleteOnTermination\":true}}]" \
-		--tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$MAST_NAME}]" \
-		--query 'Instances[0].InstanceId' --output text)
-	echo "$id" > "$STATE/instance-id"
-	aws ec2 wait instance-running --instance-ids "$id"
-	wait_ssh
-	push
-	log "bootstrapping: Chromium sync + first full build. Expect a few hours."
-	if job bootstrap; then
-		cmd_fetch
-		cmd_stop
-		log "done. Shrink the builder for incremental builds: ./mast resize small"
-	else
-		log "bootstrap failed. Inspect with: ./mast ssh"
-		exit 1
-	fi
-}
-
-cmd_destroy() {
-	read -r -p "Delete the builder AND its disk (Chromium checkout + cache)? Type 'destroy': " ok
-	[[ $ok == destroy ]] || die "cancelled"
-	aws ec2 terminate-instances --instance-ids "$(instance_id)" >/dev/null
-	aws ec2 wait instance-terminated --instance-ids "$(instance_id)"
-	aws ec2 delete-security-group --group-id "$(cat "$STATE/sg-id")"
-	aws ec2 delete-key-pair --key-name "$MAST_NAME"
-	rm -f "$STATE/instance-id" "$STATE/sg-id" "$STATE/allowed-cidr" "$STATE/known_hosts"
-	log "builder deleted. No more AWS charges from Mast."
+	log "builder still running for quick rebuilds. When done: ./mast down [--keep]"
 }
 
 cmd_run() {
@@ -201,9 +285,9 @@ cmd_run() {
 cmd=${1:-help}
 shift || true
 case $cmd in
-	provision | build | start | stop | status | resize | destroy | fetch) need aws; "cmd_$cmd" "$@" ;;
+	up | down | build | resize | status | cost | hold | destroy | fetch | _guard) need hcloud; need jq; "cmd_$cmd" "$@" ;;
 	run) cmd_run "$@" ;;
-	ssh) need aws; HOST=$(describe PublicIpAddress); ssh "${SSH_OPTS[@]}" -t "ubuntu@$HOST" "$@" ;;
-	logs) need aws; HOST=$(describe PublicIpAddress); follow "${1:-build}" ;;
-	*) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//' ;;
+	ssh) HOST=$(server_ip); ssh "${SSH_OPTS[@]}" -t "root@$HOST" "$@" ;;
+	logs) HOST=$(server_ip); follow "${1:-build}" ;;
+	*) sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//' ;;
 esac

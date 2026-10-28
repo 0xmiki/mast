@@ -8,12 +8,15 @@ M=$HOME/mast
 sudo apt-get update
 sudo -E apt-get install -y git python3 curl lsb-release zstd rsync
 
-# Idle auto-stop
-echo "${MAST_IDLE_MINUTES:-20}" | sudo tee /etc/mast-idle-minutes >/dev/null
-sudo install -m 755 "$M/remote/idle-stop.sh" /usr/local/bin/mast-idle-stop
-sudo install -m 644 "$M/remote/mast-idle-stop.service" "$M/remote/mast-idle-stop.timer" /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now mast-idle-stop.timer
+# Optional self-shutdown (AWS-style hosts where a stopped machine isn't billed).
+# On Hetzner a powered-off server is still billed, so the laptop-side guard deletes it instead.
+if [ -n "${MAST_REMOTE_IDLE_MINUTES:-}" ]; then
+	echo "$MAST_REMOTE_IDLE_MINUTES" | sudo tee /etc/mast-idle-minutes >/dev/null
+	sudo install -m 755 "$M/remote/idle-stop.sh" /usr/local/bin/mast-idle-stop
+	sudo install -m 644 "$M/remote/mast-idle-stop.service" "$M/remote/mast-idle-stop.timer" /etc/systemd/system/
+	sudo systemctl daemon-reload
+	sudo systemctl enable --now mast-idle-stop.timer
+fi
 
 # depot_tools (gclient, gn, siso, autoninja)
 [ -d "$HOME/depot_tools" ] || git clone --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git "$HOME/depot_tools"
@@ -40,5 +43,9 @@ if [ ! -d src/build ]; then
 	gclient sync --nohooks --no-history --revision "src@refs/tags/$VERSION"
 fi
 sudo -E ./src/build/install-build-deps.sh --no-prompt
+
+# Toolchains (clang, rust, node…) and mark the checkout as synced, so build.sh doesn't re-sync.
+gclient runhooks
+echo "$VERSION" > .mast-version
 
 exec bash "$M/remote/build.sh"
