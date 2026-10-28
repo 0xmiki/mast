@@ -10,6 +10,7 @@
 #   ./mast cost             money spent so far vs MAST_BUDGET
 #   ./mast hold <minutes>   keep an idle builder alive that long (e.g. while writing code)
 #   ./mast run              run the downloaded browser locally
+#   ./mast shots            screenshot fixed UI scenes on the builder (Xvfb) -> shots/<time>/
 #   ./mast status | ssh | logs [job] | destroy
 set -euo pipefail
 
@@ -290,6 +291,19 @@ cmd_build() {
 	log "builder still running for quick rebuilds. When done: ./mast down [--keep]"
 }
 
+cmd_shots() {
+	[[ -n $HOST ]] || HOST=$(server_ip)
+	local dir
+	dir="$ROOT/shots/$(date +%m%d-%H%M%S)"
+	rsync -az -e "ssh ${SSH_OPTS[*]}" "$ROOT/remote/" "root@$HOST:mast/remote/"
+	log "rendering scenes on the builder"
+	rssh "bash ~/mast/remote/shots.sh"
+	mkdir -p "$dir"
+	rsync -az -e "ssh ${SSH_OPTS[*]}" "root@$HOST:mast/shots/*.jpg" "$dir/"
+	ln -sfn "$dir" "$ROOT/shots/latest"
+	log "screenshots in ${dir#"$ROOT/"}"
+}
+
 cmd_run() {
 	[[ -x $ROOT/dist/mast/chrome ]] || die "no build yet. Run: ./mast build"
 	local args=(--user-data-dir="$ROOT/.profile" "$@")
@@ -304,7 +318,7 @@ cmd_run() {
 cmd=${1:-help}
 shift || true
 case $cmd in
-	up | down | build | resize | status | cost | hold | destroy | fetch | _guard) need hcloud; need jq; "cmd_$cmd" "$@" ;;
+	up | down | build | resize | status | cost | hold | destroy | fetch | shots | _guard) need hcloud; need jq; "cmd_$cmd" "$@" ;;
 	run) cmd_run "$@" ;;
 	ssh) HOST=$(server_ip); ssh "${SSH_OPTS[@]}" -t "root@$HOST" "$@" ;;
 	logs) HOST=$(server_ip); follow "${1:-build}" ;;
