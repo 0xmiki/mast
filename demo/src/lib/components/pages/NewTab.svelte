@@ -1,192 +1,243 @@
 <script lang="ts">
-	import { Search, Lock } from '@lucide/svelte';
+	import { Search } from '@lucide/svelte';
 	import { browser } from '#lib/mast/browser.svelte.ts';
-	import { focus } from '#lib/mast/focus.svelte.ts';
+	import { blocks } from '#lib/mast/blocks.svelte.ts';
 	import { clock } from '#lib/mast/clock.svelte.ts';
-	import { formatDuration } from '#lib/mast/engine.ts';
-	import { titleFor } from '#lib/mast/url.ts';
-	import Favicon from '../chrome/Favicon.svelte';
-	import StartControl from '../StartControl.svelte';
+	import { DAY, startOfDay } from '#lib/mast/engine.ts';
+	import BlockPanel from '../BlockPanel.svelte';
 
 	let q = $state('');
 	const now = $derived(new Date(clock.now));
 	const time = $derived(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
 	const date = $derived(now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }));
 
-	const SHORTCUTS = [
-		'https://github.com/mast-browser/mast',
-		'https://en.wikipedia.org/wiki/Ulysses_pact',
-		'https://youtube.com/',
-		'https://x.com/',
-		'https://reddit.com/',
-		'https://news.ycombinator.com/'
-	];
+	/** The logbook: distractions stopped per day, last seven days. */
+	const week = $derived.by(() => {
+		const today = startOfDay(clock.now);
+		const days = Array.from({ length: 7 }, (_, i) => {
+			const from = today - (6 - i) * DAY;
+			const n = blocks.stoppedBetween(from, from + DAY);
+			return { label: new Date(from).toLocaleDateString([], { weekday: 'narrow' }), n, today: i === 6 };
+		});
+		const max = Math.max(10, ...days.map((d) => d.n));
+		return days.map((d) => ({ ...d, h: d.n / max }));
+	});
+
+	/** Etched sea: horizontal strokes that crowd together toward the horizon. */
+	const SEA = Array.from({ length: 18 }, (_, i) => {
+		const t = (i + 1) / 18;
+		const y = Math.pow(t, 2.2) * 580;
+		let seed = (i + 3) * 9301;
+		const rnd = () => ((seed = (seed * 49297 + 233280) % 233280) / 233280);
+		const dash = Array.from({ length: 10 }, () => [Math.round(20 + rnd() * 180 * (1.4 - t)), Math.round(30 + rnd() * 160 * t)]).flat().join(' ');
+		return { y, dash, o: 0.3 - t * 0.2, off: Math.round(rnd() * 400) };
+	});
 </script>
 
-<div class="ntp" class:running={!!focus.active}>
-	{#if !focus.active}
-		<div class="top">
-			<div class="time tabular">{time}</div>
-			<div class="date">{date}</div>
-		</div>
-	{/if}
-
-	<div class="hero"><StartControl /></div>
-
-	<form
-		class="search"
-		onsubmit={(e) => {
-			e.preventDefault();
-			if (q.trim()) browser.navigate(q);
-		}}
-	>
-		<Search size={18} />
-		<input bind:value={q} placeholder="Search or type a URL" spellcheck="false" />
-	</form>
-
-	<div class="tiles">
-		{#each SHORTCUTS as href}
-			{@const blocked = focus.blocks(href)}
-			<a class="tile" class:blocked {href}>
-				<span class="fav">
-					<Favicon {href} size={26} />
-					{#if blocked}<span class="badge"><Lock size={11} strokeWidth={2.6} /></span>{/if}
-				</span>
-				<span class="name">{titleFor(href)}</span>
-			</a>
+<div class="ntp">
+	<svg class="sea" viewBox="0 0 1600 600" preserveAspectRatio="xMidYMin slice" aria-hidden="true">
+		<line class="sky-line" x1="0" x2="1600" y1="0.5" y2="0.5" />
+		{#each SEA as l}
+			<line x1="0" x2="1600" y1={l.y + 0.5} y2={l.y + 0.5} stroke-dasharray={l.dash} stroke-dashoffset={l.off} style:opacity={l.o} />
 		{/each}
-	</div>
+	</svg>
 
-	{#if focus.focusedToday > 0 || focus.attemptsToday > 0}
-		<div class="today">
-			<span><b class="tabular">{formatDuration(focus.focusedToday)}</b> deep work today</span>
-			<span><b class="tabular">{focus.attemptsToday}</b> distractions blocked</span>
+	<!-- A lone sail on the horizon, and its broken reflection. -->
+	<svg class="boat" viewBox="-12 -22 24 40" aria-hidden="true">
+		<path d="M-2 -14V0H-9.4Q-8.6 -8.5 -2 -14Z" />
+		<path d="M1 -18.5V0H9.4Q8.7 -11.5 1 -18.5Z" />
+		<line x1="-9" x2="10" y1="4" y2="4" />
+		<line x1="-6" x2="7" y1="8.5" y2="8.5" />
+		<line x1="-3" x2="3" y1="13" y2="13" />
+	</svg>
+
+	<header>
+		<div class="when">
+			<span class="mono">{time}</span>
+			<span class="date">{date}</span>
 		</div>
-	{/if}
+		<form
+			class="search"
+			onsubmit={(e) => {
+				e.preventDefault();
+				if (q.trim()) browser.navigate(q);
+			}}
+		>
+			<Search size={15} strokeWidth={1.75} />
+			<input bind:value={q} placeholder="Search Google" spellcheck="false" />
+		</form>
+		<div class="spacer"></div>
+	</header>
+
+	<main><BlockPanel /></main>
+
+	<footer>
+		<div class="log" aria-label="Focus, last 7 days">
+			{#each week as d}
+				<div class="day" class:today={d.today} title="{d.n} stopped">
+					<span class="bar"><span style:height="{Math.max(d.h * 100, 4)}%" class:empty={!d.n}></span></span>
+					<span class="mono">{d.label}</span>
+				</div>
+			{/each}
+		</div>
+		<p>
+			<span class="mono">{blocks.stoppedToday}</span> stopped today&ensp;·&ensp;<span class="mono">{blocks.active.length}</span>
+			{blocks.active.length === 1 ? 'site' : 'sites'} blocked
+		</p>
+	</footer>
 </div>
 
 <style>
 	.ntp {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
+		position: relative;
+		display: grid;
+		grid-template-rows: auto 1fr auto;
 		min-height: 100%;
-		padding: 8vh 24px 48px;
-		background: radial-gradient(70% 40% at 50% 0%, rgb(255 106 61 / 0.06), transparent 70%), var(--bg);
+		padding: 18px 28px 26px;
+		overflow: hidden;
+		background: var(--bg);
+		isolation: isolate;
 	}
-	.ntp.running {
-		padding-top: 12vh;
-		background: radial-gradient(70% 50% at 50% 0%, rgb(255 106 61 / 0.13), transparent 70%), var(--bg);
+	/* Horizon sits at 82% of the page; everything below is etched water. */
+	.sea {
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: 82%;
+		width: 100%;
+		height: 18%;
+		z-index: -1;
+		overflow: visible;
+		mask-image: radial-gradient(42% 90% at 50% 0%, #000 0, rgb(0 0 0 / 0.5) 45%, transparent 100%);
+		stroke: #fff;
+		stroke-width: 1;
 	}
-	.top {
-		text-align: center;
+	.sea .sky-line {
+		stroke: rgb(255 255 255 / 0.5);
+		stroke-dasharray: none;
 	}
-	.time {
-		font-size: 56px;
-		font-weight: 650;
-		letter-spacing: -0.04em;
-		line-height: 1;
+	.ntp::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		z-index: -1;
+		background: radial-gradient(60% 24% at 50% 82%, rgb(255 255 255 / 0.025), transparent 70%);
+		transition: background 1s;
 	}
-	.date {
-		margin-top: 10px;
+	.boat {
+		position: absolute;
+		left: 61%;
+		top: 82%;
+		width: 26px;
+		height: 44px;
+		margin: -24px 0 0 -13px;
+		z-index: -1;
+		stroke: #fff;
+		stroke-width: 0.8;
+	}
+	.boat path {
+		fill: #fff;
+		stroke: none;
+		opacity: 0.6;
+	}
+	.boat line {
+		opacity: 0.25;
+	}
+
+	header {
+		display: grid;
+		grid-template-columns: 1fr minmax(0, 460px) 1fr;
+		align-items: center;
+		gap: 24px;
+	}
+	.when {
+		display: flex;
+		align-items: baseline;
+		gap: 12px;
+		color: var(--faint);
+		font-size: 12.5px;
+		white-space: nowrap;
+	}
+	.when .mono {
 		color: var(--muted);
-	}
-	.hero {
-		margin-top: 44px;
-	}
-	.running .hero {
-		margin-top: 0;
+		font-size: 13px;
 	}
 	.search {
 		display: flex;
 		align-items: center;
-		gap: 12px;
-		width: min(560px, 100%);
-		height: 46px;
-		margin-top: 52px;
-		padding: 0 18px;
-		border-radius: 999px;
-		background: var(--chrome-2);
-		border: 1px solid var(--line-2);
-		color: var(--muted);
+		gap: 10px;
+		height: 36px;
+		padding: 0 12px;
+		border-radius: var(--r);
+		background: var(--chrome);
+		box-shadow: inset 0 0 0 1px var(--line);
+		color: var(--faint);
 	}
 	.search:focus-within {
-		border-color: var(--ember);
-		box-shadow: 0 0 0 3px var(--ember-soft);
+		box-shadow: inset 0 0 0 1px var(--line-3);
 	}
 	.search input {
 		flex: 1;
+		min-width: 0;
 		border: 0;
 		outline: 0;
 		background: none;
 		color: var(--text);
-		font-size: 15px;
+		font-size: 13.5px;
 	}
-	.tiles {
-		display: grid;
-		grid-template-columns: repeat(6, 92px);
-		gap: 8px;
-		margin-top: 24px;
-	}
-	.tile {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 8px;
-		padding: 12px 6px 10px;
-		border-radius: 14px;
-		color: var(--text);
-		text-decoration: none;
-	}
-	.tile:hover {
-		background: var(--chrome-2);
-	}
-	.fav {
-		position: relative;
-		display: grid;
-		place-items: center;
-		width: 48px;
-		height: 48px;
-		border-radius: 14px;
-		background: var(--chrome-2);
-		border: 1px solid var(--line);
-	}
-	.tile.blocked .fav > :global(:first-child) {
-		filter: grayscale(1);
-		opacity: 0.4;
-	}
-	.tile.blocked .name {
+	.search input::placeholder {
 		color: var(--faint);
 	}
-	.badge {
-		position: absolute;
-		right: -5px;
-		bottom: -5px;
+
+	main {
 		display: grid;
-		place-items: center;
-		width: 20px;
-		height: 20px;
-		border-radius: 50%;
-		border: 2px solid var(--bg);
-		background: var(--ember);
-		color: #1a0b05;
+		justify-items: center;
+		align-content: start;
+		padding: 7vh 0 12vh;
 	}
-	.name {
-		font-size: 12.5px;
-		max-width: 100%;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-	.today {
+
+	footer {
 		display: flex;
-		gap: 28px;
-		margin-top: 36px;
-		color: var(--muted);
-		font-size: 13px;
+		align-items: flex-end;
+		gap: 22px;
+		color: var(--faint);
+		font-size: 12.5px;
 	}
-	.today b {
+	footer p {
+		margin: 0 0 1px;
+	}
+	footer p .mono {
+		color: var(--muted);
+	}
+	.log {
+		display: flex;
+		gap: 9px;
+	}
+	.day {
+		display: grid;
+		justify-items: center;
+		gap: 6px;
+	}
+	.bar {
+		display: flex;
+		align-items: flex-end;
+		width: 3px;
+		height: 30px;
+	}
+	.bar span {
+		width: 100%;
+		background: var(--line-3);
+	}
+	.bar span.empty {
+		background: var(--line);
+	}
+	.today .bar span:not(.empty) {
+		background: var(--text);
+	}
+	.day .mono {
+		font-size: 10px;
+	}
+	.today .mono {
 		color: var(--text);
-		font-weight: 650;
 	}
 </style>

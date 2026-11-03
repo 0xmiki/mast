@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Component } from 'svelte';
 	import { browser } from '#lib/mast/browser.svelte.ts';
-	import { focus } from '#lib/mast/focus.svelte.ts';
+	import { blocks } from '#lib/mast/blocks.svelte.ts';
 	import { hostOf, isInternal, parse } from '#lib/mast/url.ts';
 	import { matches } from '#lib/mast/url.ts';
 	import type { SiteProps } from '#lib/sites/types.ts';
@@ -31,7 +31,7 @@
 
 	const href = $derived(browser.url);
 	const url = $derived(parse(href));
-	const blocked = $derived(focus.blocks(href));
+	const blocked = $derived(blocks.blocks(href));
 	const page = $derived(isInternal(href) ? url.host : '');
 	const Site = $derived(SITES.find(([d]) => matches(hostOf(href), d))?.[1] ?? Generic);
 

@@ -1,11 +1,21 @@
+/*
+ * Mast & Sail — the design language.
+ * 1. Structure is straight: right angles, hairlines, tiny radii.
+ * 2. Only what is alive curves: the active tab (a sail) and the running session.
+ * 3. Ember means a promise. Idle Mast is graphite; ember appears only while a session runs.
+ * 4. Read like an instrument: mono numerals, tick-marked scales, small spaced labels.
+ * 5. The horizon: one line between the browser and the web. In a session it burns down like a fuse.
+ */
 :root {
-	--bg: #0c0d0f;
+	--bg: #0b0c0e;
 	--chrome: #141518;
 	--chrome-2: #1b1c20;
 	--raised: #22242a;
 	--raised-2: #2a2c33;
 	--line: rgb(255 255 255 / 0.07);
 	--line-2: rgb(255 255 255 / 0.12);
+	--line-3: rgb(255 255 255 / 0.22);
+	--ash: rgb(255 255 255 / 0.09);
 	--text: #ececef;
 	--muted: #9a9ca5;
 	--faint: #6b6e78;
@@ -18,7 +28,8 @@
 	--warn-soft: rgb(245 184 74 / 0.14);
 	--focus: #7c8cff;
 	--focus-soft: rgb(124 140 255 / 0.15);
-	--radius: 12px;
+	--r: 3px;
+	--r-2: 5px;
 	--font: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 	--mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 	color-scheme: dark;
@@ -55,6 +66,11 @@ textarea {
 	background: rgb(255 106 61 / 0.35);
 }
 
+:focus-visible {
+	outline: 1px solid var(--line-3);
+	outline-offset: 2px;
+}
+
 /* Shared building blocks for Mast's own pages */
 .btn {
 	display: inline-flex;
@@ -64,8 +80,8 @@ textarea {
 	height: 36px;
 	padding: 0 16px;
 	border: 1px solid var(--line-2);
-	border-radius: 10px;
-	background: var(--raised);
+	border-radius: var(--r);
+	background: var(--chrome-2);
 	color: var(--text);
 	font-weight: 550;
 	font-size: 13.5px;
@@ -73,15 +89,15 @@ textarea {
 	text-decoration: none;
 	transition:
 		background 0.15s,
-		border-color 0.15s,
-		transform 0.1s;
+		border-color 0.15s;
 	white-space: nowrap;
 }
 .btn:hover {
-	background: var(--raised-2);
+	background: var(--raised);
+	border-color: var(--line-3);
 }
 .btn:active {
-	transform: scale(0.98);
+	transform: translateY(1px);
 }
 .btn:disabled {
 	opacity: 0.4;
@@ -101,25 +117,26 @@ textarea {
 	color: var(--muted);
 }
 .btn.ghost:hover {
-	background: var(--raised);
+	background: var(--chrome-2);
 	color: var(--text);
 }
 .btn.small {
 	height: 30px;
 	padding: 0 12px;
 	font-size: 12.5px;
-	border-radius: 8px;
 }
 
 .chip {
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
-	height: 24px;
-	padding: 0 10px;
-	border-radius: 999px;
-	font-size: 12px;
+	height: 22px;
+	padding: 0 8px;
+	border-radius: 2px;
+	font-family: var(--mono);
+	font-size: 11px;
 	font-weight: 600;
+	letter-spacing: 0.02em;
 	background: var(--raised);
 	color: var(--muted);
 	white-space: nowrap;
@@ -144,17 +161,24 @@ textarea {
 .card {
 	background: var(--chrome);
 	border: 1px solid var(--line);
-	border-radius: 16px;
+	border-radius: var(--r-2);
 }
 
+/* Instrument labels: small, mono, spaced. */
 .eyebrow {
-	font-size: 11.5px;
-	font-weight: 650;
-	letter-spacing: 0.08em;
+	font-family: var(--mono);
+	font-size: 10.5px;
+	font-weight: 600;
+	letter-spacing: 0.14em;
 	text-transform: uppercase;
 	color: var(--faint);
 }
 
 .tabular {
+	font-variant-numeric: tabular-nums;
+}
+
+.mono {
+	font-family: var(--mono);
 	font-variant-numeric: tabular-nums;
 }

@@ -12,7 +12,7 @@
 		ScrollText
 	} from '@lucide/svelte';
 	import { browser } from '#lib/mast/browser.svelte.ts';
-	import { focus } from '#lib/mast/focus.svelte.ts';
+	import { blocks } from '#lib/mast/blocks.svelte.ts';
 	import { attemptEscape } from '#lib/mast/escapes.ts';
 
 	let { onclose }: { onclose: () => void } = $props();
@@ -30,9 +30,9 @@
 	<button role="menuitem" onclick={() => run(() => browser.toast('New windows open in the real browser.'))}>
 		<AppWindow size={16} /> New window
 	</button>
-	<button role="menuitem" class:locked={!!focus.active} onclick={() => run(() => attemptEscape('incognito'))}>
+	<button role="menuitem" class:locked={blocks.any} onclick={() => run(() => attemptEscape('incognito'))}>
 		<VenetianMask size={16} /> New incognito window
-		{#if !!focus.active}<Lock size={13} class="lock" />{/if}
+		{#if blocks.any}<Lock size={13} class="lock" />{/if}
 	</button>
 	<hr />
 	<button role="menuitem" onclick={() => run(() => browser.navigate('mast://blocklist'))}>
@@ -45,9 +45,9 @@
 	<button role="menuitem" onclick={() => run(() => attemptEscape('extensions'))}>
 		<Puzzle size={16} /> Extensions
 	</button>
-	<button role="menuitem" class:locked={!!focus.active} onclick={() => run(() => attemptEscape('devtools'))}>
+	<button role="menuitem" class:locked={blocks.any} onclick={() => run(() => attemptEscape('devtools'))}>
 		<Code size={16} /> Developer tools
-		{#if !!focus.active}<Lock size={13} class="lock" />{/if}
+		{#if blocks.any}<Lock size={13} class="lock" />{/if}
 	</button>
 	<button role="menuitem" onclick={() => run(() => browser.navigate('mast://settings'))}>
 		<Settings size={16} /> Settings
@@ -85,7 +85,7 @@
 		z-index: 41;
 		width: 260px;
 		padding: 6px;
-		border-radius: 14px;
+		border-radius: var(--r-2);
 		background: var(--chrome);
 		border: 1px solid var(--line-2);
 		box-shadow: 0 18px 50px rgb(0 0 0 / 0.55);
@@ -98,7 +98,7 @@
 		height: 34px;
 		padding: 0 12px;
 		border: 0;
-		border-radius: 8px;
+		border-radius: 2px;
 		background: none;
 		text-align: left;
 		cursor: pointer;

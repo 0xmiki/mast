@@ -54,3 +54,20 @@ export function formatWhen(t: number, now: number): string {
 	if (dayKey(t) === dayKey(now + DAY)) return `tomorrow ${time}`;
 	return new Date(t).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) + ` ${time}`;
 }
+
+/** "forever", "until 6:00 PM", "until midnight", "until tomorrow 9:00 AM", "until Fri 9:00 AM", "until Nov 29" */
+export function untilText(until: number | null, now: number): string {
+	if (until === null) return 'forever';
+	if (until === startOfDay(now) + DAY) return 'until midnight';
+	if (dayKey(until) === dayKey(now)) return `until ${clockTime(until)}`;
+	if (dayKey(until) === dayKey(now + DAY)) return `until tomorrow ${clockTime(until)}`;
+	if (until - now < 6 * DAY) return `until ${new Date(until).toLocaleDateString([], { weekday: 'short' })} ${clockTime(until)}`;
+	return `until ${new Date(until).toLocaleDateString([], { month: 'short', day: 'numeric' })}`;
+}
+
+/** "42m left", "3h 12m left", "6 days left" */
+export function leftText(until: number, now: number): string {
+	const ms = until - now;
+	if (ms >= 2 * DAY) return `${Math.floor(ms / DAY)} days left`;
+	return `${formatDuration(ms)} left`;
+}

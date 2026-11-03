@@ -57,7 +57,7 @@
 		align-items: center;
 		gap: 10px;
 		padding: 10px 16px;
-		border-radius: 12px;
+		border-radius: var(--r);
 		background: #26282e;
 		border: 1px solid var(--line-2);
 		box-shadow: 0 12px 30px rgb(0 0 0 / 0.5);
@@ -69,7 +69,7 @@
 		margin-left: 6px;
 		padding: 4px 10px;
 		border: 0;
-		border-radius: 7px;
+		border-radius: 2px;
 		background: var(--raised-2);
 		color: var(--ember-2);
 		font-weight: 650;
@@ -111,7 +111,7 @@
 		gap: 12px;
 		width: min(440px, calc(100vw - 32px));
 		padding: 30px 28px 24px;
-		border-radius: 20px;
+		border-radius: var(--r-2);
 		background: var(--chrome);
 		border: 1px solid var(--line-2);
 		box-shadow: 0 30px 90px rgb(0 0 0 / 0.6);
@@ -129,7 +129,7 @@
 		place-items: center;
 		width: 52px;
 		height: 52px;
-		border-radius: 50%;
+		border-radius: var(--r);
 		background: var(--ember-soft);
 		color: var(--ember);
 	}

@@ -1,33 +1,41 @@
 <script lang="ts">
-	import { Lock, ArrowLeft } from '@lucide/svelte';
+	import { ArrowLeft } from '@lucide/svelte';
 	import { browser } from '#lib/mast/browser.svelte.ts';
-	import { focus } from '#lib/mast/focus.svelte.ts';
+	import { blocks } from '#lib/mast/blocks.svelte.ts';
 	import { clock } from '#lib/mast/clock.svelte.ts';
-	import { clockTime, countdown } from '#lib/mast/engine.ts';
+	import { leftText, untilText } from '#lib/mast/engine.ts';
 	import { hostOf } from '#lib/mast/url.ts';
-	import Favicon from '../chrome/Favicon.svelte';
 
 	let { href }: { href: string } = $props();
 
 	const host = $derived(hostOf(href));
-	const session = $derived(focus.active!);
-	const tries = $derived(focus.attemptsThisSession());
+	const block = $derived(blocks.forHref(href)!);
+	const left = $derived(
+		block.until === null ? 1 : Math.max(0, Math.min(1, (block.until - clock.now) / (block.until - block.since)))
+	);
+	const since = $derived(new Date(block.since).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }));
+	const tries = $derived(blocks.stoppedFor(block.domain));
 </script>
 
 <div class="wall">
-	<div class="seal"><Lock size={30} /></div>
-	<p class="eyebrow">Deep work</p>
-	<h1><span class="host"><Favicon {href} size={24} /> {host}</span> is blocked.</h1>
+	<p class="eyebrow">Blocked {untilText(block.until, clock.now)}</p>
 
-	<div class="clock">
-		<span class="time tabular">{countdown(session.endsAt - clock.now)}</span>
-		<span class="label">Opens at {clockTime(session.endsAt)}</span>
-	</div>
+	<!-- The site's name, struck through by its own block: a burning fuse, or a solid line for forever. -->
+	<h1 class:forever={block.until === null}>
+		<span class="host">{host}</span>
+		<span class="strike" style:width="{left * 100}%">{#if block.until !== null}<span class="tip"></span>{/if}</span>
+	</h1>
 
-	<button class="btn" onclick={() => browser.leave()}><ArrowLeft size={16} /> Back to work</button>
+	{#if block.until === null}
+		<p class="left">You blocked it on {since}.</p>
+	{:else}
+		<p class="left"><span class="mono">{leftText(block.until, clock.now)}</span></p>
+	{/if}
+
+	<button class="btn" onclick={() => browser.leave()}><ArrowLeft size={15} /> Back</button>
 
 	{#if tries > 1}
-		<p class="note">{tries} distractions blocked this session.</p>
+		<p class="note">Stopped <span class="mono">{tries}</span> times</p>
 	{/if}
 </div>
 
@@ -38,67 +46,66 @@
 		align-items: center;
 		justify-content: center;
 		min-height: 100%;
-		padding: 48px 24px;
+		padding: 48px 24px 12vh;
 		text-align: center;
-		background:
-			radial-gradient(60% 50% at 50% 0%, rgb(255 106 61 / 0.14), transparent 70%),
-			var(--bg);
-	}
-	.seal {
-		display: grid;
-		place-items: center;
-		width: 76px;
-		height: 76px;
-		margin-bottom: 28px;
-		border-radius: 50%;
-		color: var(--ember);
-		background: var(--ember-soft);
-		box-shadow:
-			0 0 0 1px rgb(255 106 61 / 0.35),
-			0 0 0 10px rgb(255 106 61 / 0.06);
-		animation: breathe 4s ease-in-out infinite;
-	}
-	@keyframes breathe {
-		50% {
-			box-shadow:
-				0 0 0 1px rgb(255 106 61 / 0.35),
-				0 0 0 18px rgb(255 106 61 / 0.03);
-		}
+		background: var(--bg);
 	}
 	.eyebrow {
-		margin: 0 0 10px;
-		color: var(--ember);
+		margin: 0 0 22px;
+		color: var(--ember-2);
 	}
 	h1 {
+		position: relative;
 		margin: 0;
-		font-size: 34px;
-		line-height: 1.15;
-		letter-spacing: -0.02em;
-	}
-	.host {
-		display: inline-flex;
-		align-items: center;
-		gap: 10px;
-		vertical-align: top;
-	}
-	.clock {
-		display: grid;
-		gap: 6px;
-		margin: 36px 0 32px;
-	}
-	.time {
-		font-family: var(--mono);
-		font-size: 64px;
+		padding: 0 6px;
+		font-size: clamp(40px, 7vw, 84px);
 		font-weight: 600;
-		line-height: 1;
-		letter-spacing: -0.02em;
+		line-height: 1.1;
+		letter-spacing: -0.045em;
+		color: var(--faint);
 	}
-	.label {
+	.strike {
+		position: absolute;
+		left: 0;
+		top: 54%;
+		height: 3px;
+		background: linear-gradient(90deg, rgb(255 106 61 / 0.5), var(--ember) 70%, var(--ember-2));
+		transition: width 1s linear;
+	}
+	.forever .strike {
+		background: var(--ember);
+	}
+	.tip {
+		position: absolute;
+		right: -3.5px;
+		top: 50%;
+		width: 7px;
+		height: 7px;
+		margin-top: -3.5px;
+		border-radius: 50%;
+		background: #ffd9c4;
+		box-shadow:
+			0 0 5px 1px var(--ember-2),
+			0 0 18px 4px rgb(255 106 61 / 0.5),
+			0 0 50px 12px rgb(255 106 61 / 0.15);
+		animation: smoulder 2.6s ease-in-out infinite;
+	}
+	@keyframes smoulder {
+		50% {
+			opacity: 0.72;
+		}
+	}
+	.left {
+		margin: 26px 0 30px;
+		color: var(--faint);
 		font-size: 13px;
-		color: var(--muted);
+	}
+	.left .mono {
+		color: var(--text);
+		font-size: 15px;
 	}
 	.note {
-		margin: 18px 0 0;
+		margin: 16px 0 0;
 		font-size: 12.5px;
 		color: var(--faint);
 	}

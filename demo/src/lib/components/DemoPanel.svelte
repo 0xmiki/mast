@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { FlaskConical, X, FastForward, RotateCcw, Trash2, DoorOpen } from '@lucide/svelte';
 	import { browser } from '#lib/mast/browser.svelte.ts';
-	import { focus } from '#lib/mast/focus.svelte.ts';
+	import { blocks } from '#lib/mast/blocks.svelte.ts';
 	import { clock } from '#lib/mast/clock.svelte.ts';
-	import { HOUR, MINUTE } from '#lib/mast/engine.ts';
+	import { DAY, HOUR, MINUTE } from '#lib/mast/engine.ts';
 	import { ESCAPES, attemptEscape } from '#lib/mast/escapes.ts';
 
 	let open = $state(false);
@@ -28,7 +28,7 @@
 				<div class="grid">
 					<button onclick={() => clock.advance(10 * MINUTE)}><FastForward size={13} /> +10 min</button>
 					<button onclick={() => clock.advance(HOUR)}><FastForward size={13} /> +1 hour</button>
-					<button onclick={() => clock.advance(30 * MINUTE)}><FastForward size={13} /> +30 min</button>
+					<button onclick={() => clock.advance(DAY)}><FastForward size={13} /> +1 day</button>
 					<button disabled={!clock.travelled} onclick={() => clock.reset()}><RotateCcw size={13} /> Real time</button>
 				</div>
 			</section>
@@ -37,7 +37,7 @@
 				<div class="grid">
 					<button
 						onclick={() => {
-							focus.reset();
+							blocks.reset();
 							clock.reset();
 							browser.resetTabs();
 							browser.toast('Everything reset.');
@@ -65,12 +65,12 @@
 <style>
 	.demo {
 		position: fixed;
-		left: 16px;
+		right: 16px;
 		bottom: 16px;
 		z-index: 80;
 		display: grid;
 		gap: 10px;
-		justify-items: start;
+		justify-items: end;
 	}
 	.fab {
 		position: relative;
@@ -80,7 +80,7 @@
 		height: 34px;
 		padding: 0 14px;
 		border: 1px dashed rgb(255 255 255 / 0.25);
-		border-radius: 999px;
+		border-radius: var(--r);
 		background: rgb(20 21 24 / 0.9);
 		backdrop-filter: blur(8px);
 		color: var(--muted);
@@ -97,7 +97,7 @@
 	.dot {
 		width: 7px;
 		height: 7px;
-		border-radius: 50%;
+		border-radius: 1px;
 		background: var(--focus);
 	}
 	.panel {
@@ -105,7 +105,7 @@
 		max-height: calc(100vh - 140px);
 		overflow-y: auto;
 		padding: 14px;
-		border-radius: 16px;
+		border-radius: var(--r-2);
 		background: rgb(20 21 24 / 0.97);
 		border: 1px dashed rgb(255 255 255 / 0.2);
 		box-shadow: 0 20px 60px rgb(0 0 0 / 0.6);
@@ -137,7 +137,7 @@
 		width: 26px;
 		height: 26px;
 		border: 0;
-		border-radius: 7px;
+		border-radius: 2px;
 		background: none;
 		cursor: pointer;
 	}
@@ -158,7 +158,7 @@
 	.clock {
 		margin-bottom: 8px;
 		padding: 8px 10px;
-		border-radius: 8px;
+		border-radius: 2px;
 		background: var(--chrome-2);
 		font-family: var(--mono);
 		font-size: 12.5px;
@@ -184,7 +184,7 @@
 		height: 32px;
 		padding: 0 10px;
 		border: 1px solid var(--line);
-		border-radius: 8px;
+		border-radius: 2px;
 		background: var(--chrome-2);
 		font-size: 12.5px;
 		cursor: pointer;

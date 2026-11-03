@@ -3,6 +3,8 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+	// The blocklist data lives next to the demo, at the repo root.
+	server: { fs: { allow: ['..'] } },
 	plugins: [
 		sveltekit({
 			compilerOptions: {

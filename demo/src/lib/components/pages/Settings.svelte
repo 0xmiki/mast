@@ -1,12 +1,10 @@
 <script lang="ts">
 	import { Lock, ShieldCheck, VenetianMask, Users, Code, Clock, Trash2, Puzzle, RotateCcw, MonitorSmartphone, Power } from '@lucide/svelte';
 	import { browser } from '#lib/mast/browser.svelte.ts';
-	import { focus } from '#lib/mast/focus.svelte.ts';
-	import { clockTime } from '#lib/mast/engine.ts';
+	import { blocks } from '#lib/mast/blocks.svelte.ts';
 	import { attemptEscape } from '#lib/mast/escapes.ts';
 
-	const locked = $derived(!!focus.active);
-	const lockNote = $derived(focus.active ? `Session running until ${clockTime(focus.active.endsAt)}` : '');
+	const locked = $derived(blocks.any);
 
 	let theme = $state('Dark');
 	let homepage = $state(true);
@@ -28,7 +26,7 @@
 				<Lock size={18} />
 				<div>
 					<strong>Some settings are locked</strong>
-					<span>{lockNote}. They unlock on their own when it ends.</span>
+					<span>While any site is blocked. They unlock when the last timed block ends.</span>
 				</div>
 			</div>
 		{/if}
@@ -39,7 +37,7 @@
 				<span class="ic"><ShieldCheck size={18} /></span>
 				<div class="txt">
 					<strong>Blocking</strong>
-					<span>Built into the browser. A running session has no off switch, on purpose.</span>
+					<span>Built into the browser. A block has no off switch, on purpose.</span>
 				</div>
 				<span class="chip good">Always on</span>
 			</div>
@@ -47,7 +45,7 @@
 				<span class="ic"><Clock size={18} /></span>
 				<div class="txt">
 					<strong>Trusted time</strong>
-					<span>Sessions run on a monotonic clock checked against network time. System clock changes are ignored.</span>
+					<span>Blocks run on a monotonic clock checked against network time. System clock changes are ignored.</span>
 				</div>
 				<span class="chip good">Always on</span>
 			</div>
@@ -63,7 +61,7 @@
 				<span class="ic"><MonitorSmartphone size={18} /></span>
 				<div class="txt">
 					<strong>Mast Guard <em>planned</em></strong>
-					<span>Optional OS companion that closes other browsers during a session.</span>
+					<span>Optional OS companion that closes other browsers while blocks are on.</span>
 				</div>
 				<button class="btn small" onclick={() => attemptEscape('other-browser')}>Learn more</button>
 			</div>
@@ -76,7 +74,7 @@
 					<span class="ic"><item.icon size={18} /></span>
 					<div class="txt">
 						<strong>{item.title}</strong>
-						<span>{locked ? (item.kind === 'devtools' ? 'Off on blocked sites during a session.' : 'Off during a session.') : item.text}</span>
+						<span>{locked ? (item.kind === 'devtools' ? 'Off on blocked sites.' : 'Off while sites are blocked.') : item.text}</span>
 					</div>
 					{#if locked}
 						<button class="toggle locked" aria-label="{item.title} locked" onclick={() => attemptEscape(item.kind)}>
@@ -91,13 +89,13 @@
 				<span class="ic"><Trash2 size={18} /></span>
 				<div class="txt">
 					<strong>Clear browsing data</strong>
-					<span>History, cookies and cache. A running session isn’t affected.</span>
+					<span>History, cookies and cache. Your blocks aren’t affected.</span>
 				</div>
 				<button
 					class="btn small"
 					onclick={() => {
 						browser.clearHistory();
-						browser.toast(locked ? 'Cleared. The session keeps running.' : 'Browsing data cleared.', 'good');
+						browser.toast(locked ? 'Cleared. Your blocks stay.' : 'Browsing data cleared.', 'good');
 					}}>Clear</button
 				>
 			</div>
@@ -109,7 +107,7 @@
 				<span class="ic"><RotateCcw size={18} /></span>
 				<div class="txt">
 					<strong>Reset settings</strong>
-					<span>{locked ? 'Locked during a session.' : 'Restore defaults. Your blocklist stays.'}</span>
+					<span>{locked ? 'Locked while sites are blocked.' : 'Restore defaults. Your list stays.'}</span>
 				</div>
 				<button class="btn small" disabled={locked} onclick={() => browser.toast('Settings reset.')}>{#if locked}<Lock size={12} />{/if} Reset</button>
 			</div>
@@ -117,7 +115,7 @@
 				<span class="ic"><Power size={18} /></span>
 				<div class="txt">
 					<strong>Uninstall Mast</strong>
-					<span>{locked ? 'Held by the system service until the session ends.' : 'Available whenever no session is running.'}</span>
+					<span>{locked ? 'Held by the system service while sites are blocked.' : 'Available whenever nothing is blocked.'}</span>
 				</div>
 				<button class="btn small" onclick={() => attemptEscape('uninstall')}>{#if locked}<Lock size={12} />{/if} Uninstall</button>
 			</div>
@@ -126,7 +124,7 @@
 		<h2 id="appearance">Appearance</h2>
 		<div class="card">
 			<div class="row">
-				<div class="txt"><strong>Theme</strong><span>Never locked. Sessions only lock what could break them.</span></div>
+				<div class="txt"><strong>Theme</strong><span>Never locked. Blocks only lock what could break them.</span></div>
 				<div class="seg">
 					{#each ['Dark', 'Light', 'System'] as t}
 						<button class:on={theme === t} onclick={() => (theme = t)}>{t}</button>
@@ -134,7 +132,7 @@
 				</div>
 			</div>
 			<div class="row">
-				<div class="txt"><strong>Show today’s stats on the new tab page</strong><span>Deep work time and distractions blocked.</span></div>
+				<div class="txt"><strong>Show stats on the new tab page</strong><span>Distractions stopped this week.</span></div>
 				<button class="toggle" class:on={homepage} aria-label="Toggle" onclick={() => (homepage = !homepage)}></button>
 			</div>
 		</div>
@@ -164,7 +162,7 @@
 	}
 	nav a {
 		padding: 8px 12px;
-		border-radius: 999px;
+		border-radius: 2px;
 		color: var(--muted);
 		text-decoration: none;
 		font-size: 13.5px;
@@ -179,7 +177,7 @@
 		gap: 14px;
 		align-items: center;
 		padding: 14px 18px;
-		border-radius: 14px;
+		border-radius: var(--r-2);
 		background: var(--ember-soft);
 		border: 1px solid rgb(255 106 61 / 0.3);
 		color: var(--ember-2);
@@ -225,7 +223,7 @@
 	.txt em {
 		margin-left: 6px;
 		padding: 1px 6px;
-		border-radius: 4px;
+		border-radius: 2px;
 		background: var(--raised-2);
 		font-style: normal;
 		font-size: 11px;
@@ -243,7 +241,7 @@
 		width: 36px;
 		height: 20px;
 		border: 0;
-		border-radius: 99px;
+		border-radius: 2px;
 		background: var(--raised-2);
 		cursor: pointer;
 		flex: none;
@@ -255,7 +253,7 @@
 		left: 3px;
 		width: 14px;
 		height: 14px;
-		border-radius: 50%;
+		border-radius: 1px;
 		background: var(--muted);
 		transition: transform 0.15s;
 	}
@@ -280,14 +278,14 @@
 		display: inline-flex;
 		gap: 2px;
 		padding: 3px;
-		border-radius: 10px;
+		border-radius: var(--r);
 		background: var(--chrome-2);
 	}
 	.seg button {
 		height: 28px;
 		padding: 0 12px;
 		border: 0;
-		border-radius: 7px;
+		border-radius: 2px;
 		background: none;
 		color: var(--muted);
 		cursor: pointer;

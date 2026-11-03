@@ -1,11 +1,9 @@
 /**
- * Every way a determined user might try to get around a session, and how Mast answers.
+ * Every way a determined user might try to get around a block, and how Mast answers.
  * Shared by the browser menu and the demo drawer's "try to escape" list.
  */
 import { browser, type Dialog } from './browser.svelte';
-import { focus } from './focus.svelte';
-import { formatWhen } from './engine';
-import { clock } from './clock.svelte';
+import { blocks } from './blocks.svelte';
 import { hostOf } from './url';
 
 export type EscapeKind =
@@ -29,15 +27,11 @@ export const ESCAPES: { kind: EscapeKind; label: string }[] = [
 	{ kind: 'other-browser', label: 'Open a different browser' }
 ];
 
-function blockedUntil() {
-	return `Blocked until ${formatWhen(focus.active!.endsAt, clock.now)}.`;
-}
-
 const ANSWERS: Record<EscapeKind, Dialog> = {
 	incognito: {
 		icon: 'lock',
 		title: 'Private windows are off',
-		body: 'During a session, incognito and guest windows are turned off. Blocking covers every window and every profile, so there is no unwatched room to slip into.'
+		body: 'While any site is blocked, incognito and guest windows are off. Blocking covers every window and every profile, so there is no unwatched room to slip into.'
 	},
 	extensions: {
 		icon: 'puzzle',
@@ -52,42 +46,42 @@ const ANSWERS: Record<EscapeKind, Dialog> = {
 	clock: {
 		icon: 'clock',
 		title: 'Clock change ignored',
-		body: 'Mast keeps its own time from a monotonic clock checked against network time. Moving the system clock doesn’t end a session early.'
+		body: 'Mast keeps its own time from a monotonic clock checked against network time. Moving the system clock doesn’t end a block early.'
 	},
 	clear: {
 		icon: 'trash',
-		title: 'The session survives this',
-		body: 'Clearing history, cookies and cache works as usual. The running session and your blocklist live in a signed store outside the profile, so they stay.'
+		title: 'Your blocks survive this',
+		body: 'Clearing history, cookies and cache works as usual. Your blocks live in a signed store outside the profile, so they stay.'
 	},
 	profile: {
 		icon: 'shield',
-		title: 'Sessions cover every profile',
-		body: 'Adding or switching profiles is off during a session, so there is no clean slate to escape into.'
+		title: 'Blocks cover every profile',
+		body: 'While any site is blocked, adding or switching profiles is off, so there is no clean slate to escape into.'
 	},
 	uninstall: {
 		icon: 'lock',
 		title: 'Uninstall is held',
-		body: 'During a session, the Mast system service declines to uninstall. It lets go on its own when the session ends.',
+		body: 'While any site is blocked, the Mast system service declines to uninstall. It lets go on its own when the last timed block ends. With a forever block, that is never.',
 		note: 'Platform-specific. The Chromium fork ships this as an OS service.'
 	},
 	'other-browser': {
 		icon: 'door',
 		title: 'The one door Mast can’t close alone',
-		body: 'A browser can’t stop you from opening a different browser. The plan is Mast Guard, an optional OS companion that closes other browsers during a session. Without it, Mast relies on the friction of switching.',
+		body: 'A browser can’t stop you from opening a different browser. The plan is Mast Guard, an optional OS companion that closes other browsers while blocks are on. Without it, Mast relies on the friction of switching.',
 		tag: 'Open question'
 	}
 };
 
 export function attemptEscape(kind: EscapeKind) {
-	if (kind === 'devtools' && focus.active && !focus.blocks(browser.url)) {
+	if (kind === 'devtools' && blocks.any && !blocks.blocks(browser.url)) {
 		const host = hostOf(browser.url) || 'this page';
 		browser.toast(`DevTools would open on ${host}. It isn’t blocked.`, 'info');
 		return;
 	}
-	if (!focus.active && kind !== 'other-browser') {
-		browser.toast('No session running, so this is allowed right now.', 'info');
+	if (!blocks.any && kind !== 'other-browser') {
+		browser.toast('Nothing is blocked, so this is allowed right now.', 'info');
 		return;
 	}
 	const answer = ANSWERS[kind];
-	browser.dialog = { ...answer, note: answer.note ?? (focus.active ? blockedUntil() : undefined) };
+	browser.dialog = answer;
 }

@@ -1,38 +1,26 @@
-/** Known distractions, blocked by every session. Users can add their own on top. */
-export const PRESETS: { group: string; sites: string[] }[] = [
-	{
-		group: 'Social',
-		sites: [
-			'x.com',
-			'twitter.com',
-			'facebook.com',
-			'instagram.com',
-			'tiktok.com',
-			'reddit.com',
-			'snapchat.com',
-			'threads.net',
-			'bsky.app',
-			'pinterest.com',
-			'tumblr.com',
-			'discord.com'
-		]
-	},
-	{
-		group: 'Video & streaming',
-		sites: ['youtube.com', 'netflix.com', 'twitch.tv', 'kick.com', 'primevideo.com', 'disneyplus.com', 'hulu.com', 'max.com']
-	},
-	{
-		group: 'News & forums',
-		sites: ['news.ycombinator.com', 'cnn.com', 'foxnews.com', 'bbc.com', 'nytimes.com', 'buzzfeed.com', '9gag.com']
-	},
-	{
-		group: 'Shopping',
-		sites: ['amazon.com', 'ebay.com', 'aliexpress.com', 'temu.com', 'etsy.com', 'shein.com']
-	},
-	{
-		group: 'Games',
-		sites: ['chess.com', 'lichess.org', 'roblox.com', 'store.steampowered.com', 'poki.com']
-	}
-];
+/**
+ * Known distractions, grouped. Users can add their own under "Your sites".
+ * The data lives in /blocklist/blocklist.json at the repo root, shared with the Chromium build.
+ */
+import data from '../../../../blocklist/blocklist.json';
+import { matches } from './url';
+
+export interface Service {
+	name: string;
+	domains: string[];
+	/** Subdomains left open, e.g. aws.amazon.com under amazon.com. */
+	except?: string[];
+}
+
+export const CATEGORIES: { id: string; name: string; services: Service[] }[] = data.categories;
+
+export const PRESETS = CATEGORIES.map((c) => ({ group: c.name, sites: c.services.flatMap((s) => s.domains) }));
 
 export const PRESET_SITES = PRESETS.flatMap((g) => g.sites);
+
+const EXCEPT = CATEGORIES.flatMap((c) => c.services.flatMap((s) => s.except ?? []));
+
+/** Hosts a block never covers, because work depends on them. */
+export function isException(host: string) {
+	return EXCEPT.some((e) => matches(host, e));
+}

@@ -1,5 +1,5 @@
 /** Tabs, navigation and transient UI (panel, menu, toasts, dialogs). */
-import { focus } from './focus.svelte';
+import { blocks } from './blocks.svelte';
 import { clock } from './clock.svelte';
 import { normalizeInput } from './url';
 
@@ -88,7 +88,7 @@ class Browser {
 		const at = this.tabs.findIndex((t) => t.id === this.activeId);
 		this.tabs.splice(at < 0 ? this.tabs.length : at + 1, 0, tab);
 		if (activate) this.activeId = tab.id;
-		if (href !== 'mast://newtab') focus.recordAttempt(href);
+		if (href !== 'mast://newtab') blocks.recordAttempt(href);
 		if (activate && href === 'mast://newtab') this.omniboxFocus++;
 		this.#save();
 		return tab;
@@ -113,7 +113,7 @@ class Browser {
 		tab.history = [...tab.history.slice(0, tab.index + 1), href];
 		tab.index = tab.history.length - 1;
 		this.history.push({ href, at: clock.now });
-		focus.recordAttempt(href);
+		blocks.recordAttempt(href);
 		this.#save();
 	}
 
@@ -129,7 +129,7 @@ class Browser {
 
 	reload() {
 		this.reloads++;
-		focus.recordAttempt(this.url);
+		blocks.recordAttempt(this.url);
 	}
 
 	/** Leave a blocked page: go back if possible, otherwise to a new tab page. */

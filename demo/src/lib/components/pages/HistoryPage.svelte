@@ -11,7 +11,7 @@
 <div class="page">
 	<div class="wrap">
 		<h1>History</h1>
-		<p class="sub">Clearing history works as usual. It never touches a running session.</p>
+		<p class="sub">Clearing history works as usual. It never touches your blocks.</p>
 		<div class="card">
 			{#each entries as e}
 				<a href={e.href}>
@@ -63,7 +63,7 @@
 		align-items: center;
 		gap: 12px;
 		padding: 8px 12px;
-		border-radius: 8px;
+		border-radius: var(--r);
 		color: var(--text);
 		text-decoration: none;
 		font-size: 13px;
