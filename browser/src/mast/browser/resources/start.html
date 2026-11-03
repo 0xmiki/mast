@@ -1,426 +1,253 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <title>{{TITLE}}</title>
-<style>
-:root {
-  color-scheme: dark;
-  --text: #ececef; --muted: #a9abb3; --faint: #7d8089; --dim: #5c5f68;
-  --glass: rgb(14 15 18 / .55); --edge: rgb(255 255 255 / .09); --edge-2: rgb(255 255 255 / .16);
-  --ember: #ff6a3d; --ember-2: #ff8f5e; --soft: rgb(255 106 61 / .16);
-  --font: "Inter Variable", Inter, "Noto Sans", "DejaVu Sans", system-ui, sans-serif;
-  --mono: "JetBrains Mono", "DejaVu Sans Mono", ui-monospace, monospace;
-}
-* { box-sizing: border-box }
-html, body { margin: 0; height: 100%; overflow: hidden; background: #0a0b0f; color: var(--text);
-  font: 14px/1.45 var(--font); -webkit-font-smoothing: antialiased }
-button, input { font: inherit; color: inherit }
-[hidden] { display: none !important }
-
-/* ---- scene ------------------------------------------------------------ */
-#scene { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0 }
-#scene .reflect line { animation: shimmer 7s ease-in-out infinite }
-#scene .reflect line:nth-child(2n) { animation-delay: -3s }
-@keyframes shimmer { 50% { opacity: .35 } }
-.veil { position: fixed; inset: 0; z-index: 1; pointer-events: none; transition: opacity .6s;
-  background: radial-gradient(120% 80% at 50% 38%, transparent 35%, rgb(0 0 0 / .5)),
-              linear-gradient(rgb(0 0 0 / .3), transparent 32%, transparent 70%, rgb(0 0 0 / .45)) }
-.warm { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0; transition: opacity 1.2s;
-  background: radial-gradient(60% 50% at 50% 42%, rgb(255 106 61 / .12), transparent 70%) }
-body.running .warm { opacity: 1 }
-
-/* ---- layout ----------------------------------------------------------- */
-main { position: relative; z-index: 2; height: 100%; display: grid; grid-template-rows: auto 1fr auto;
-  padding: 22px 28px 26px }
-header { display: flex; align-items: center; justify-content: space-between; gap: 24px }
-.brand { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 15px;
-  text-shadow: 0 1px 8px rgb(0 0 0 / .5) }
-.time { font-size: 15px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 10px rgb(0 0 0 / .6) }
-
-form.search { display: flex; align-items: center; gap: 12px; width: min(560px, 60vw); height: 44px;
-  padding: 0 18px; border-radius: 999px; background: var(--glass); border: 1px solid var(--edge);
-  backdrop-filter: blur(20px) saturate(1.2) }
-form.search:focus-within { border-color: rgb(255 106 61 / .55); box-shadow: 0 0 0 4px var(--soft) }
-form.search svg { flex: none; color: var(--faint) }
-form.search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font-size: 14.5px }
-form.search input::placeholder { color: var(--faint) }
-
-.stage { display: grid; place-items: center; padding-bottom: 6vh }
-
-/* idle: "Focus for 50 min" */
-.setup { display: flex; flex-direction: column; align-items: center; text-align: center;
-  text-shadow: 0 2px 24px rgb(0 0 0 / .55) }
-.phrase { margin: 0; font-size: clamp(40px, 6.2vw, 68px); font-weight: 650; letter-spacing: -.035em; line-height: 1.05 }
-.phrase .len { color: var(--ember-2); font-variant-numeric: tabular-nums }
-.ends { margin: 14px 0 0; color: var(--muted); font-size: 15px }
-.ends b { color: var(--text); font-weight: 600 }
-
-.slider { position: relative; width: min(460px, 78vw); margin-top: 34px }
-.slider input { width: 100%; margin: 0; height: 28px; background: none; -webkit-appearance: none; cursor: pointer }
-.slider input:focus { outline: none }
-.slider input::-webkit-slider-runnable-track { height: 6px; border-radius: 99px;
-  background: linear-gradient(90deg, var(--ember) 0 var(--fill), rgb(255 255 255 / .14) var(--fill) 100%) }
-.slider input::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; margin-top: -8px;
-  border-radius: 50%; background: #fff; border: 0; box-shadow: 0 0 0 6px rgb(255 106 61 / .28), 0 4px 14px rgb(0 0 0 / .4);
-  transition: box-shadow .15s }
-.slider input:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 8px rgb(255 106 61 / .45), 0 4px 14px rgb(0 0 0 / .4) }
-/* Labels sit under their real slider positions (11px = half the thumb, the
-   track's usable inset at each end). */
-.ticks { position: relative; height: 20px; margin: 8px 11px 0; font-size: 11.5px; color: var(--dim) }
-.ticks button { position: absolute; transform: translateX(-50%); border: 0; background: none; padding: 2px 4px;
-  color: inherit; cursor: pointer; border-radius: 6px; white-space: nowrap }
-.ticks button:hover { color: var(--text) }
-
-.go { margin-top: 30px; height: 54px; padding: 0 44px; border: 0; border-radius: 16px; background: var(--ember);
-  color: #1a0b05; font-size: 16px; font-weight: 700; cursor: pointer; letter-spacing: -.01em;
-  box-shadow: 0 14px 44px rgb(255 106 61 / .32); transition: background .15s, transform .1s, box-shadow .15s }
-.go:hover { background: var(--ember-2); box-shadow: 0 16px 50px rgb(255 106 61 / .42) }
-.go:active { transform: scale(.985) }
-.go kbd { margin-left: 10px; padding: 2px 6px; border-radius: 5px; font: 600 11px var(--font);
-  background: rgb(26 11 5 / .16); color: rgb(26 11 5 / .7) }
-.scope { margin: 16px 0 0; font-size: 13px; color: var(--faint) }
-.scope button { border: 0; background: none; padding: 0; color: var(--muted); text-decoration: underline;
-  text-underline-offset: 3px; cursor: pointer }
-.scope button:hover { color: var(--text) }
-
-/* running: the ring */
-.session { display: flex; flex-direction: column; align-items: center; text-align: center }
-.ring { position: relative; width: min(300px, 56vh); aspect-ratio: 1; container-type: inline-size;
-  border-radius: 50%; background: radial-gradient(circle, rgb(10 11 15 / .55) 55%, transparent 71%);
-  box-shadow: 0 0 60px rgb(255 106 61 / .18), inset 0 0 40px rgb(255 106 61 / .08) }
-.ring svg { width: 100%; height: 100%; transform: rotate(-90deg) }
-.ring .track { stroke: rgb(255 255 255 / .1) }
-.ring .arc { stroke: var(--ember); stroke-linecap: round; transition: stroke-dashoffset .9s linear }
-.ring .inner { position: absolute; inset: 0; display: grid; place-content: center; gap: 6px }
-.ring .label { font-size: 12px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--ember-2) }
-.ring .cd { font-family: var(--mono); font-size: 19cqi; font-weight: 600; letter-spacing: -.03em;
-  line-height: 1; font-variant-numeric: tabular-nums }
-.ring .cd.long { font-size: 14.5cqi }
-.ring .until { font-size: 13px; color: var(--muted) }
-.actions { display: flex; gap: 10px; margin-top: 26px }
-.btn { height: 38px; padding: 0 18px; border-radius: 11px; border: 1px solid var(--edge-2); background: var(--glass);
-  backdrop-filter: blur(16px); font-weight: 600; cursor: pointer }
-.btn:hover { background: rgb(40 41 47 / .7) }
-.btn.quiet { border-color: transparent; background: none; backdrop-filter: none; color: var(--muted) }
-
-/* footer: today + week, quietly */
-footer { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px }
-.today { display: flex; align-items: flex-end; gap: 22px; text-shadow: 0 1px 10px rgb(0 0 0 / .6) }
-.week { display: flex; align-items: flex-end; gap: 6px; height: 46px }
-.week .d { display: flex; flex-direction: column; align-items: center; gap: 5px; width: 14px }
-.week .bar { width: 6px; border-radius: 3px; background: rgb(255 255 255 / .18); min-height: 3px; transition: height .4s }
-.week .d.today .bar { background: var(--ember) }
-.week .d span { font-size: 10px; color: var(--dim) }
-.week .d.today span { color: var(--muted) }
-.line { font-size: 13px; color: var(--muted); padding-bottom: 1px }
-.line b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums }
-.list { border: 0; background: none; color: var(--faint); font-size: 13px; cursor: pointer; padding: 0;
-  text-shadow: 0 1px 10px rgb(0 0 0 / .6) }
-.list:hover { color: var(--text) }
-
-/* blocklist sheet */
-.sheet { position: fixed; inset: 0; z-index: 10; display: none; place-items: center; background: rgb(0 0 0 / .5) }
-.sheet.open { display: grid }
-.panel { width: min(680px, 94vw); max-height: 80vh; overflow: auto; padding: 22px 24px; border-radius: 18px;
-  background: rgb(16 17 20 / .9); border: 1px solid var(--edge); backdrop-filter: blur(24px);
-  box-shadow: 0 30px 80px rgb(0 0 0 / .5) }
-.panel h2 { margin: 0; font-size: 18px }
-.panel .lead { margin: 4px 0 16px; color: var(--muted) }
-.panel form { display: flex; gap: 8px }
-.panel input { flex: 1; height: 38px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--edge-2);
-  background: rgb(0 0 0 / .3); outline: 0 }
-.panel input:focus { border-color: var(--ember) }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px }
-.chip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 9px;
-  background: rgb(255 255 255 / .05); border: 1px solid var(--edge); color: var(--muted); font-size: 13px }
-.chip.mine { color: var(--text); background: rgb(255 255 255 / .08) }
-.chip button { border: 0; background: none; color: var(--muted); padding: 0 2px; font-size: 15px; cursor: pointer }
-.hint { margin: 10px 0 0; font-size: 12.5px; color: var(--ember-2) }
-.close { float: right }
+<style>{{STYLE}}
+/* New tab: the blocklist, nothing else. The address bar already searches. */
+.ntp { max-width: 760px; margin: 0 auto; padding: 56px 32px 96px; }
+header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 20px; }
+h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+.meta { color: var(--text-3); }
+.meta b { color: var(--text-2); font-weight: 500; }
+ul { margin: 0; padding: 0; list-style: none; }
+.cats { border-top: 1px solid var(--line); }
+.cat { border-bottom: 1px solid var(--line); }
+.row { display: flex; align-items: center; gap: 14px; height: 52px; padding: 0 4px; }
+.name { display: flex; align-items: baseline; gap: 8px; flex: 1; min-width: 0; padding: 0; border: 0; background: none;
+  text-align: left; font-size: 15px; font-weight: 500; }
+.name .n { color: var(--text-3); font-size: 13px; font-weight: 400; }
+.exp { display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 50%; background: none; color: var(--text-3); }
+.exp:hover { background: var(--field); color: var(--text); }
+.exp svg { transition: transform .15s; }
+.cat.open .exp svg { transform: rotate(180deg); }
+.check { display: grid; place-items: center; width: 16px; height: 16px; padding: 0; border: 1.5px solid var(--text-3);
+  border-radius: 4px; background: none; color: var(--surface); flex: none; }
+.check:hover:not(:disabled) { border-color: var(--text-2); }
+.check.on, .check.mixed { border-color: var(--text); background: var(--text); }
+.check:disabled { cursor: default; border-color: var(--line); }
+.services { padding: 0 4px 12px 34px; }
+.services li { display: flex; align-items: center; gap: 14px; min-height: 32px; }
+.svc { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 10px; }
+.svc .s { color: var(--text-2); white-space: nowrap; }
+.services li.is-blocked .svc .s { color: var(--text); }
+.svc .d { overflow: hidden; color: var(--text-3); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.rm { display: grid; place-items: center; width: 20px; height: 20px; border: 0; border-radius: 50%; background: none; color: var(--text-3); }
+.rm:hover { background: var(--field); color: var(--text); }
+.add { flex: 1; height: 28px; padding: 0 10px; border: 0; border-radius: 4px; outline: 0; background: var(--field); }
+.add:focus { box-shadow: 0 0 0 1px var(--text-3); }
+.action { position: sticky; bottom: 0; display: grid; grid-template-columns: 1fr auto; gap: 10px 16px; align-items: center;
+  margin-top: 8px; padding: 20px 0 24px; background: linear-gradient(transparent, var(--surface) 18px); }
+.action .label { grid-column: 1 / -1; color: var(--text-3); }
+.action .end { grid-column: 1 / -1; min-height: 19px; color: var(--text-3); }
+.action .end.warn { color: var(--signal); }
+.seg { display: grid; grid-template-columns: repeat(6, 1fr); padding: 2px; border-radius: var(--r); background: var(--seg); }
+.seg button { height: 30px; padding: 0 6px; border: 0; border-radius: 4px; background: none; color: var(--text-2); font-weight: 500; white-space: nowrap; }
+.seg button:hover { color: var(--text); }
+.seg button.on { background: var(--seg-on); color: var(--text); box-shadow: 0 1px 2px rgb(0 0 0/.25), 0 0 0 1px var(--line); }
+.toast { position: fixed; left: 50%; bottom: 24px; z-index: 30; transform: translateX(-50%); display: flex; align-items: center;
+  gap: 14px; padding: 10px 10px 10px 16px; border-radius: 10px; background: var(--surface); box-shadow: var(--shadow); white-space: nowrap; }
+.toast.plain { padding-right: 16px; }
+.toast button { height: 28px; padding: 0 12px; border: 0; border-radius: 4px; background: var(--field); font-weight: 500; }
+.toast button:hover { background: var(--pressed); }
+.toast .secs { margin-left: 4px; color: var(--text-3); }
 </style>
 </head>
 <body>
-<svg id="scene" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-  <defs>
-    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#07080d"/><stop offset=".45" stop-color="#151320"/>
-      <stop offset=".66" stop-color="#2c1a22"/><stop offset=".72" stop-color="#4a2420"/>
-    </linearGradient>
-    <radialGradient id="sun" cx="1150" cy="760" r="420" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#ff8a55" stop-opacity=".9"/><stop offset=".12" stop-color="#ff6a3d" stop-opacity=".55"/>
-      <stop offset=".45" stop-color="#c2300f" stop-opacity=".16"/><stop offset="1" stop-color="#c2300f" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#1b1219"/><stop offset=".35" stop-color="#110e15"/><stop offset="1" stop-color="#08090c"/>
-    </linearGradient>
-  </defs>
-  <rect width="1920" height="1080" fill="url(#sky)"/>
-  <g fill="#fff" opacity=".55">
-    <circle cx="210" cy="120" r="1.2"/><circle cx="420" cy="230" r=".9"/><circle cx="640" cy="90" r="1.1"/>
-    <circle cx="880" cy="180" r=".8"/><circle cx="1320" cy="110" r="1.2"/><circle cx="1510" cy="250" r=".9"/>
-    <circle cx="1720" cy="140" r="1.1"/><circle cx="1040" cy="60" r=".8"/><circle cx="300" cy="330" r=".7"/>
-    <circle cx="1820" cy="330" r=".7"/><circle cx="760" cy="300" r=".6"/><circle cx="1220" cy="300" r=".6"/>
-  </g>
-  <rect width="1920" height="1080" fill="url(#sun)"/>
-  <circle cx="1150" cy="776" r="46" fill="#ff7a48" opacity=".9"/>
-  <path d="M0 742 L140 716 L300 728 L420 704 L560 722 L700 735 L760 745 L0 745Z" fill="#120d14"/>
-  <path d="M1400 745 L1480 728 L1590 712 L1700 724 L1820 706 L1920 716 L1920 745Z" fill="#110c13"/>
-  <rect y="744" width="1920" height="336" fill="url(#sea)"/>
-  <g class="reflect" stroke="#ff7a48" stroke-linecap="round">
-    <line x1="1090" y1="760" x2="1210" y2="760" stroke-width="3" opacity=".7"/>
-    <line x1="1070" y1="778" x2="1230" y2="778" stroke-width="2.5" opacity=".5"/>
-    <line x1="1105" y1="798" x2="1195" y2="798" stroke-width="2" opacity=".45"/>
-    <line x1="1060" y1="822" x2="1240" y2="822" stroke-width="2" opacity=".3"/>
-    <line x1="1115" y1="852" x2="1185" y2="852" stroke-width="1.6" opacity=".28"/>
-    <line x1="1080" y1="890" x2="1220" y2="890" stroke-width="1.4" opacity=".18"/>
-    <line x1="1120" y1="940" x2="1180" y2="940" stroke-width="1.2" opacity=".12"/>
-  </g>
-  <g transform="translate(1005 704) scale(1.25)" fill="#0b0a0e">
-    <path d="M14 10.5V24.5H6.6Q7.4 16 14 10.5Z"/><path d="M17 6V24.5H25.4Q24.7 13 17 6Z"/>
-    <path d="M4 26.4H28L25.5 30H7Z"/>
-  </g>
-</svg>
-<div class="veil"></div>
-<div class="warm"></div>
-
-<main>
-  <header>
-    <div class="brand">{{LOGO}} Mast</div>
-    <form class="search" id="search">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="q" placeholder="Search Google or type a URL" spellcheck="false" autocomplete="off">
-    </form>
-    <div class="time" id="time">--:--</div>
-  </header>
-
-  <div class="stage">
-    <section class="setup" id="setup">
-      <h1 class="phrase">Focus for <span class="len" id="len">50 min</span></h1>
-      <p class="ends">Ends at <b id="ends">--:--</b></p>
-      <div class="slider">
-        <input type="range" id="range" min="0" max="11" step="1" aria-label="Focus length">
-        <div class="ticks" id="ticks"></div>
-      </div>
-      <button class="go" id="go">Start focusing<kbd>Enter</kbd></button>
-      <p class="scope"><span id="scope">38 sites</span> blocked until it ends · <button id="openList">edit list</button></p>
-    </section>
-
-    <section class="session" id="session" hidden>
-      <div class="ring">
-        <svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="54" fill="none" stroke-width="4"/>
-          <circle class="arc" id="arc" cx="60" cy="60" r="54" fill="none" stroke-width="4"/></svg>
-        <div class="inner">
-          <span class="label">Focusing</span>
-          <span class="cd" id="cd">00:00</span>
-          <span class="until" id="until"></span>
-        </div>
-      </div>
-      <div class="actions">
-        <button class="btn" id="extend">+ 30 min</button>
-        <button class="btn quiet" id="undo" hidden></button>
-      </div>
-    </section>
-  </div>
-
-  <footer>
-    <div class="today">
-      <div class="week" id="week" title="Deep work, last 7 days"></div>
-      <div class="line" id="line"></div>
-    </div>
-    <button class="list" id="openList2">Blocklist</button>
-  </footer>
-</main>
-
-<div class="sheet" id="sheet">
-  <div class="panel">
-    <button class="btn quiet close" id="closeList">Done</button>
-    <h2>Blocklist</h2>
-    <p class="lead">Every focus session blocks all of these.</p>
-    <form id="add"><input id="site" placeholder="Add a site, e.g. espn.com" spellcheck="false"><button class="btn">Add</button></form>
-    <div class="chips" id="mine"></div>
-    <p class="hint" id="lockhint" hidden>While you’re focusing you can add sites, not remove them.</p>
-    <div class="chips" id="presets"></div>
-  </div>
-</div>
-
+<div class="ntp" id="app"></div>
+<div id="toast"></div>
 <script>
-'use strict';
-// Snap points for the slider (minutes); ticks show a readable subset.
-const STEPS = [15, 25, 30, 45, 50, 60, 75, 90, 120, 150, 180, 240];
-const TICKS = [15, 30, 60, 90, 120, 180, 240];
-const $ = (id) => document.getElementById(id);
-const pad = (n) => String(n).padStart(2, '0');
-const human = (m) => m < 60 ? m + ' min' : (m % 60 ? Math.floor(m / 60) + ' h ' + m % 60 + ' min' : m / 60 + (m === 60 ? ' hour' : ' hours'));
-const short = (m) => m < 60 ? m + 'm' : (m % 60 ? Math.floor(m / 60) + 'h' + m % 60 : m / 60 + 'h');
-const clock = (t) => new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-const countdown = (ms) => {
-  const s = Math.max(0, Math.ceil(ms / 1000)), h = Math.floor(s / 3600);
-  return (h ? h + ':' : '') + pad(Math.floor(s % 3600 / 60)) + ':' + pad(s % 60);
-};
-const hm = (ms) => {
-  const m = Math.floor(ms / 60000), h = Math.floor(m / 60);
-  return h ? `${h}h ${pad(m % 60)}m` : `${m}m`;
-};
-const send = (msg, args) => chrome.send(msg, args || []);
-
+const D = 864e5;
+const DUR = [
+  ['1h', '1 hour'], ['4h', '4 hours'], ['today', 'Today'], ['week', '1 week'], ['month', '1 month'], ['forever', 'Forever'],
+];
 let state = null;
-let step = null;           // index into STEPS; survives polling
-const minutes = () => STEPS[step];
-const isActive = () => state && state.active && Date.now() < state.endsAt;
+let selected = new Set();  // service keys "<category>/<service>"
+const open = new Set();
+let dur = null;
+let toastTimer = 0;
+let pending = '';  // what the last Block press was for, e.g. "YouTube" or "8 sites"
 
-// ---- controls are built once; polling only updates text ------------------
-const range = $('range');
-for (const m of TICKS) {
-  const b = document.createElement('button');
-  b.textContent = short(m);
-  b.style.left = (STEPS.indexOf(m) / (STEPS.length - 1)) * 100 + '%';
-  b.addEventListener('click', () => setStep(STEPS.indexOf(m)));
-  $('ticks').append(b);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const hm = (t) => new Date(t).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+const day = (t) => new Date(t).toLocaleDateString([], {month: 'short', day: 'numeric'});
+const midnight = () => { const d = new Date(); d.setHours(24, 0, 0, 0); return d.getTime(); };
+function untilText(u) {
+  if (u === null) return 'Blocked forever';
+  if (u === midnight()) return 'Until midnight';
+  if (new Date(u).toDateString() === new Date().toDateString()) return 'Until ' + hm(u);
+  if (u - Date.now() < 2 * D) return 'Until tomorrow ' + hm(u);
+  return 'Until ' + day(u);
 }
-function setStep(i) {
-  step = Math.max(0, Math.min(STEPS.length - 1, i));
-  range.value = step;
-  range.style.setProperty('--fill', (step / (STEPS.length - 1)) * 100 + '%');
-  $('len').textContent = human(minutes());
-  paintEnds();
+function untilFor(id) {
+  const now = Date.now();
+  return {'1h': now + 36e5, '4h': now + 4 * 36e5, today: midnight(), week: now + 7 * D, month: now + 30 * D, forever: null}[id];
 }
-function paintEnds() {
-  if (step !== null) $('ends').textContent = clock(Date.now() + minutes() * 60000);
-}
-range.addEventListener('input', () => setStep(Number(range.value)));
-$('setup').addEventListener('wheel', (e) => { e.preventDefault(); setStep(step + (e.deltaY < 0 ? 1 : -1)); }, { passive: false });
-const start = () => { if (!isActive() && step !== null) send('start', [minutes()]); };
-$('go').addEventListener('click', start);
-document.addEventListener('keydown', (e) => {
-  if ($('sheet').classList.contains('open')) { if (e.key === 'Escape') closeList(); return; }
-  if (document.activeElement === $('q') || isActive()) return;
-  if (e.key === 'Enter') { e.preventDefault(); start(); }
-  if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); setStep(step + 1); }
-  if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); setStep(step - 1); }
-});
-$('extend').addEventListener('click', () => send('extend', [30]));
-$('undo').addEventListener('click', () => send('undo'));
-const openList = () => $('sheet').classList.add('open');
-const closeList = () => $('sheet').classList.remove('open');
-$('openList').addEventListener('click', openList);
-$('openList2').addEventListener('click', openList);
-$('closeList').addEventListener('click', closeList);
-$('sheet').addEventListener('click', (e) => { if (e.target === $('sheet')) closeList(); });
-$('add').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const v = $('site').value.trim();
-  if (v) send('addSite', [v]);
-  $('site').value = '';
-});
-$('search').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const q = $('q').value.trim();
-  if (!q) return;
-  const looksLikeUrl = /^[\w-]+(\.[\w-]+)+(:\d+)?(\/\S*)?$/.test(q) && !q.includes(' ');
-  location.href = /^https?:\/\//i.test(q) ? q : looksLikeUrl ? 'https://' + q
-      : 'https://www.google.com/search?q=' + encodeURIComponent(q);
-});
+const ind = (b) => `<i class="ind ${b ? (b.until === null ? 'forever' : 'timed') : ''}"></i>`;
+const tick = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 5.2l2 2 4-4.4"/></svg>';
+const dash = '<svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" stroke-width="2"><path d="M2.5 5h5"/></svg>';
+const chevron = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4.5l3 3 3-3"/></svg>';
+const cross = '<svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.4"><path d="M2 2l6 6M8 2l-6 6"/></svg>';
 
-// ---- data from the browser -----------------------------------------------
+function categories() {
+  return [...state.categories, {id: 'yours', name: 'Your sites', custom: true,
+    services: state.custom.map((d) => ({name: d, domains: [d], custom: true}))}];
+}
+// A service is blocked when all its domains are; it shows the block that ends first.
+function serviceBlock(s) {
+  const bs = s.domains.map((d) => state.blocks[d]).filter(Boolean);
+  if (!bs.length) return null;
+  if (bs.length < s.domains.length) return {partial: true, until: bs[0].until};
+  return bs.reduce((a, b) => (a.until === null ? b : b.until === null ? a : b.until < a.until ? b : a));
+}
+const isForever = (b) => b && !b.partial && b.until === null;
+const key = (c, s) => c.id + '/' + s.name;
+
+function render() {
+  const cats = categories();
+  let blockedServices = 0;
+  const rows = cats.map((c) => {
+    const blocks = c.services.map(serviceBlock);
+    const n = blocks.filter((b) => b && !b.partial).length;
+    blockedServices += n;
+    const free = c.services.filter((s, i) => !isForever(blocks[i]));
+    const picked = free.filter((s) => selected.has(key(c, s))).length;
+    const allForever = c.services.length > 0 && !free.length;
+    const state_ = allForever ? '' : picked && picked === free.length ? 'on' : picked ? 'mixed' : '';
+    let status;
+    if (c.services.length && n === c.services.length) {
+      const first = blocks.reduce((a, b) => (a.until === null ? b : b.until === null ? a : b.until < a.until ? b : a));
+      status = `<span class="status blocked">${ind(first)}${untilText(first.until)}</span>`;
+    } else if (n) {
+      status = `<span class="status blocked">${ind({until: 1})}${n} of ${c.services.length} blocked</span>`;
+    } else {
+      status = `<span class="status">${ind(null)}Open</span>`;
+    }
+    const list = !open.has(c.id) ? '' : `<ul class="services">${c.services.map((s, i) => {
+      const b = blocks[i];
+      const fv = isForever(b);
+      const k = key(c, s);
+      return `<li class="${b ? 'is-blocked' : ''}">
+        <button class="check ${selected.has(k) ? 'on' : ''}" ${fv ? 'disabled title="Blocked forever"' : ''} data-svc="${esc(k)}" aria-label="Select ${esc(s.name)}">${selected.has(k) ? tick : ''}</button>
+        <span class="svc"><span class="s">${esc(s.name)}</span>${s.custom ? '' : `<span class="d">${esc(s.domains.join(', '))}</span>`}</span>
+        ${b ? `<span class="status blocked">${ind(b)}${b.partial ? 'Partly blocked' : b.until === null ? 'Forever' : untilText(b.until)}</span>`
+            : `<span class="status">Open</span>`}
+        ${s.custom && !b ? `<button class="rm" data-rm="${esc(s.name)}" aria-label="Remove ${esc(s.name)}">${cross}</button>` : ''}
+      </li>`;
+    }).join('')}${c.custom ? `<li><span class="check" style="visibility:hidden"></span><input class="add" id="addSite" placeholder="Add a site, e.g. espn.com" spellcheck="false"></li>` : ''}</ul>`;
+    return `<li class="cat ${open.has(c.id) ? 'open' : ''}">
+      <div class="row">
+        <button class="check ${state_}" ${allForever ? 'disabled title="Blocked forever"' : ''} data-cat="${esc(c.id)}" aria-label="Select ${esc(c.name)}"
+          ${c.services.length ? '' : 'disabled'}>${state_ === 'on' ? tick : state_ === 'mixed' ? dash : ''}</button>
+        <button class="name" data-toggle="${esc(c.id)}">${esc(c.name)}<span class="n">${c.services.length}</span></button>
+        ${status}
+        <button class="exp" data-toggle="${esc(c.id)}" aria-label="Show sites">${chevron}</button>
+      </div>${list}
+    </li>`;
+  }).join('');
+
+  const domains = selectedDomains();
+  const count = selected.size;
+  const u = untilFor(dur);
+  const end = !count ? 'Select categories or sites, then choose how long.'
+    : u === null ? 'Forever has no end. After 10 seconds it can’t be undone.'
+    : `Ends ${endsText(u)}. Blocks can be extended, never shortened.`;
+  // Keep a half-typed site across re-renders.
+  const input = document.getElementById('addSite');
+  const focused = input && document.activeElement === input;
+  const typed = input ? input.value : '';
+  document.getElementById('app').innerHTML = `
+    <header><h1>Blocklist</h1><span class="meta"><b>${blockedServices}</b> blocked · <b>${state.stopped}</b> stopped today</span></header>
+    <ul class="cats">${rows}</ul>
+    <div class="action">
+      <span class="label">How long</span>
+      <div class="seg">${DUR.map(([id, label]) => `<button data-dur="${id}" class="${id === dur ? 'on' : ''}">${label}</button>`).join('')}</div>
+      <button class="primary" id="block" ${domains.length ? '' : 'disabled'}>${count ? `Block ${count === 1 ? [...selected][0].split('/').slice(1).join('/') : count + ' sites'}` : 'Block'}</button>
+      <span class="end ${count && u === null ? 'warn' : ''}">${end}</span>
+    </div>`;
+  const next = document.getElementById('addSite');
+  if (next) { next.value = typed; if (focused) next.focus(); }
+}
+function endsText(u) {
+  if (u === midnight()) return 'at midnight';
+  const t = untilText(u);
+  if (t.startsWith('Until tomorrow ')) return 'tomorrow at ' + t.slice(15);
+  if (u - Date.now() < D) return 'at ' + hm(u);
+  return 'on ' + day(u);
+}
+function selectedDomains() {
+  const out = [];
+  for (const c of categories()) for (const s of c.services) if (selected.has(key(c, s))) out.push(...s.domains);
+  return out;
+}
+
+function toast(text, undo) {
+  clearInterval(toastTimer);
+  const el = document.getElementById('toast');
+  const started = Date.now();
+  const paint = () => {
+    const left = Math.ceil((10e3 - (Date.now() - started)) / 1e3);
+    if (undo && left <= 0) { el.innerHTML = ''; clearInterval(toastTimer); return; }
+    el.innerHTML = `<div class="toast ${undo ? '' : 'plain'}">${esc(text)}${undo ? `<button id="undo">Undo<span class="secs">${left}</span></button>` : ''}</div>`;
+  };
+  paint();
+  toastTimer = setInterval(paint, 250);
+  if (!undo) setTimeout(() => { clearInterval(toastTimer); el.innerHTML = ''; }, 2600);
+}
+
 window.mastState = (s) => {
+  const first = !state;
   state = s;
-  if (step === null) {
-    const i = STEPS.indexOf(s.lastMinutes);
-    setStep(i >= 0 ? i : STEPS.indexOf(50));
+  if (first) dur = s.lastDuration || 'today';
+  const r = s.result || {};
+  if (r.undone) toast('Undone.');
+  else if ('changed' in r) {
+    if (!r.changed) toast('Already blocked at least that long.');
+    else toast(`Blocked ${pending} ${r.until === null ? 'forever' : untilText(r.until).toLowerCase()}.`, true);
   }
-  paintList();
-  paintWeek();
-  tick();
+  // Drop selections that became forever.
+  for (const c of categories()) for (const sv of c.services) if (isForever(serviceBlock(sv))) selected.delete(key(c, sv));
+  render();
 };
 
-let listKey = '';
-function paintList() {
-  const active = isActive();
-  $('scope').textContent = (state.presets.length + state.custom.length) + ' sites';
-  const key = active + '|' + state.custom.join();
-  if (key !== listKey) {
-    listKey = key;
-    const mine = $('mine');
-    mine.textContent = '';
-    for (const d of state.custom) {
-      const c = document.createElement('span');
-      c.className = 'chip mine'; c.textContent = d;
-      if (!active) {
-        const x = document.createElement('button');
-        x.textContent = '×'; x.title = 'Remove';
-        x.addEventListener('click', () => send('removeSite', [d]));
-        c.append(x);
-      }
-      mine.append(c);
-    }
-    $('lockhint').hidden = !active;
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('button');
+  if (!t || !state) return;
+  if (t.dataset.cat) {
+    const c = categories().find((c) => c.id === t.dataset.cat);
+    const free = c.services.filter((s) => !isForever(serviceBlock(s))).map((s) => key(c, s));
+    const all = free.every((k) => selected.has(k));
+    free.forEach((k) => (all ? selected.delete(k) : selected.add(k)));
+  } else if (t.dataset.svc) {
+    selected.has(t.dataset.svc) ? selected.delete(t.dataset.svc) : selected.add(t.dataset.svc);
+  } else if (t.dataset.toggle) {
+    open.has(t.dataset.toggle) ? open.delete(t.dataset.toggle) : open.add(t.dataset.toggle);
+  } else if (t.dataset.dur) {
+    dur = t.dataset.dur;
+  } else if (t.dataset.rm) {
+    selected.delete('yours/' + t.dataset.rm);
+    return chrome.send('removeSite', [t.dataset.rm]);
+  } else if (t.id === 'block') {
+    const domains = selectedDomains();
+    pending = selected.size === 1 ? [...selected][0].split('/').slice(1).join('/') : selected.size + ' sites';
+    selected.clear();
+    return chrome.send('block', [domains, dur]);
+  } else if (t.id === 'undo') {
+    clearInterval(toastTimer);
+    document.getElementById('toast').innerHTML = '';
+    return chrome.send('undo');
+  } else return;
+  render();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.target.id === 'addSite') {
+    const v = e.target.value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+    if (v) { selected.add('yours/' + v); e.target.value = ''; chrome.send('addSite', [v]); }
   }
-  if (!$('presets').childElementCount) {
-    for (const d of state.presets) {
-      const c = document.createElement('span');
-      c.className = 'chip'; c.textContent = d;
-      $('presets').append(c);
-    }
-  }
-}
+});
 
-let weekKey = '';
-function paintWeek() {
-  const week = (state.stats && state.stats.week) || [];
-  const key = JSON.stringify(week);
-  if (key === weekKey) return;
-  weekKey = key;
-  const max = Math.max(45 * 60000, ...week.map((d) => d.ms));
-  const box = $('week');
-  box.textContent = '';
-  week.forEach((d, i) => {
-    const col = document.createElement('div');
-    col.className = 'd' + (i === week.length - 1 ? ' today' : '');
-    col.title = d.label + ': ' + hm(d.ms);
-    col.innerHTML = '<div class="bar"></div><span></span>';
-    col.querySelector('.bar').style.height = Math.max(3, Math.round((d.ms / max) * 30)) + 'px';
-    col.querySelector('span').textContent = d.label.charAt(0);
-    box.append(col);
-  });
-}
-
-// ---- every 250 ms: text only ----------------------------------------------
-function tick() {
-  $('time').textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  if (!state) return;
-  const active = isActive();
-  document.body.classList.toggle('running', active);
-  $('setup').hidden = active;
-  $('session').hidden = !active;
-  paintEnds();
-  if (active) {
-    const total = state.endsAt - state.startedAt, left = state.endsAt - Date.now();
-    $('cd').textContent = countdown(left);
-    $('cd').classList.toggle('long', left >= 3600000);
-    $('until').textContent = 'until ' + clock(state.endsAt);
-    const c = 2 * Math.PI * 54;
-    $('arc').style.strokeDasharray = c;
-    $('arc').style.strokeDashoffset = c * (1 - Math.max(0, Math.min(1, left / total)));
-    const undoLeft = Math.ceil((state.startedAt + 10000 - Date.now()) / 1000);
-    $('undo').hidden = undoLeft <= 0;
-    $('undo').textContent = 'Undo · ' + undoLeft + 's';
-  }
-  const st = state.stats || {};
-  // st.focusMs is today's total as of st.at (browser time); add what has passed since.
-  const focusMs = (st.focusMs || 0) + (active ? Math.max(0, Date.now() - (st.at || Date.now())) : 0);
-  const parts = [`<b>${hm(focusMs)}</b> focused today`];
-  if (st.blocked) parts.push(`<b>${st.blocked}</b> distraction${st.blocked === 1 ? '' : 's'} stopped`);
-  $('line').innerHTML = parts.join(' · ');
-  if (state.wasActive && !active) { state.wasActive = false; paintList(); send('getState'); }
-  if (active) state.wasActive = true;
-}
-
-send('getState');
-tick();
-setInterval(tick, 250);
-setInterval(() => send('getState'), 3000);
+chrome.send('getState');
+setInterval(() => document.visibilityState === 'visible' && chrome.send('getState'), 30e3);
 </script>
 </body>
 </html>

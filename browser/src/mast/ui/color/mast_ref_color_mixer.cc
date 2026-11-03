@@ -21,23 +21,26 @@ void AddMastRefColorMixer(ui::ColorProvider* provider,
   }
   ui::ColorMixer& mixer = provider->AddMixer();
 
-  // Ember. Dark mode uses tone 80 as "primary" and tone 20 as text on it.
+  // Primary is neutral: Chromium's accent (default buttons, toggles, links,
+  // focus) reads as warm off-white on graphite. The signal colour is reserved
+  // for Mast's own blocking UI, which sets it explicitly. Dark mode uses tone
+  // 80 as "primary" and tone 20 as text on it.
   mixer[ui::kColorRefPrimary0] = {SkColorSetRGB(0x00, 0x00, 0x00)};
-  mixer[ui::kColorRefPrimary10] = {SkColorSetRGB(0x16, 0x08, 0x03)};
-  mixer[ui::kColorRefPrimary20] = {SkColorSetRGB(0x1A, 0x0B, 0x05)};
-  mixer[ui::kColorRefPrimary25] = {SkColorSetRGB(0x3A, 0x14, 0x07)};
-  mixer[ui::kColorRefPrimary30] = {SkColorSetRGB(0x5C, 0x22, 0x10)};
-  mixer[ui::kColorRefPrimary40] = {SkColorSetRGB(0xAB, 0x2F, 0x0C)};
-  mixer[ui::kColorRefPrimary50] = {SkColorSetRGB(0xC9, 0x3A, 0x12)};
-  mixer[ui::kColorRefPrimary60] = {SkColorSetRGB(0xE2, 0x47, 0x1C)};
-  mixer[ui::kColorRefPrimary70] = {SkColorSetRGB(0xF2, 0x58, 0x2B)};
-  mixer[ui::kColorRefPrimary80] = {SkColorSetRGB(0xFF, 0x6A, 0x3D)};
-  mixer[ui::kColorRefPrimary90] = {SkColorSetRGB(0xFF, 0xD3, 0xC4)};
-  mixer[ui::kColorRefPrimary95] = {SkColorSetRGB(0xFF, 0xE9, 0xE1)};
-  mixer[ui::kColorRefPrimary99] = {SkColorSetRGB(0xFF, 0xF8, 0xF6)};
+  mixer[ui::kColorRefPrimary10] = {SkColorSetRGB(0x14, 0x14, 0x14)};
+  mixer[ui::kColorRefPrimary20] = {SkColorSetRGB(0x1C, 0x1C, 0x1C)};
+  mixer[ui::kColorRefPrimary25] = {SkColorSetRGB(0x26, 0x26, 0x26)};
+  mixer[ui::kColorRefPrimary30] = {SkColorSetRGB(0x3B, 0x3A, 0x38)};
+  mixer[ui::kColorRefPrimary40] = {SkColorSetRGB(0x5F, 0x5C, 0x57)};
+  mixer[ui::kColorRefPrimary50] = {SkColorSetRGB(0x7A, 0x77, 0x71)};
+  mixer[ui::kColorRefPrimary60] = {SkColorSetRGB(0x96, 0x93, 0x8D)};
+  mixer[ui::kColorRefPrimary70] = {SkColorSetRGB(0xB8, 0xB5, 0xAF)};
+  mixer[ui::kColorRefPrimary80] = {SkColorSetRGB(0xE9, 0xE7, 0xE3)};
+  mixer[ui::kColorRefPrimary90] = {SkColorSetRGB(0xF1, 0xEF, 0xEB)};
+  mixer[ui::kColorRefPrimary95] = {SkColorSetRGB(0xF6, 0xF5, 0xF2)};
+  mixer[ui::kColorRefPrimary99] = {SkColorSetRGB(0xFC, 0xFB, 0xFA)};
   mixer[ui::kColorRefPrimary100] = {SkColorSetRGB(0xFF, 0xFF, 0xFF)};
 
-  // Tertiary follows the accent.
+  // Tertiary follows primary.
   mixer[ui::kColorRefTertiary0] = {ui::kColorRefPrimary0};
   mixer[ui::kColorRefTertiary10] = {ui::kColorRefPrimary10};
   mixer[ui::kColorRefTertiary20] = {ui::kColorRefPrimary20};
@@ -52,24 +55,24 @@ void AddMastRefColorMixer(ui::ColorProvider* provider,
   mixer[ui::kColorRefTertiary99] = {ui::kColorRefPrimary99};
   mixer[ui::kColorRefTertiary100] = {ui::kColorRefPrimary100};
 
-  // Secondary: the demo's cool greys (Chromium's is blue). Selected rows,
-  // tonal buttons and chips read as raised grey, with ember reserved for accents.
+  // Secondary: warm neutral greys (Chromium's is blue). Selected rows, tonal
+  // buttons and chips read as raised grey; the signal colour stays for blocking.
   mixer[ui::kColorRefSecondary0] = {SkColorSetRGB(0x00, 0x00, 0x00)};
-  mixer[ui::kColorRefSecondary10] = {SkColorSetRGB(0x14, 0x15, 0x18)};
-  mixer[ui::kColorRefSecondary12] = {SkColorSetRGB(0x1B, 0x1C, 0x20)};
-  mixer[ui::kColorRefSecondary15] = {SkColorSetRGB(0x22, 0x24, 0x2A)};
-  mixer[ui::kColorRefSecondary20] = {SkColorSetRGB(0x27, 0x29, 0x30)};
-  mixer[ui::kColorRefSecondary25] = {SkColorSetRGB(0x2A, 0x2C, 0x33)};
-  mixer[ui::kColorRefSecondary30] = {SkColorSetRGB(0x33, 0x35, 0x3D)};
-  mixer[ui::kColorRefSecondary35] = {SkColorSetRGB(0x3B, 0x3D, 0x46)};
-  mixer[ui::kColorRefSecondary40] = {SkColorSetRGB(0x4E, 0x50, 0x59)};
-  mixer[ui::kColorRefSecondary50] = {SkColorSetRGB(0x6B, 0x6E, 0x78)};
-  mixer[ui::kColorRefSecondary60] = {SkColorSetRGB(0x7F, 0x81, 0x8C)};
-  mixer[ui::kColorRefSecondary70] = {SkColorSetRGB(0x9A, 0x9C, 0xA5)};
-  mixer[ui::kColorRefSecondary80] = {SkColorSetRGB(0xC2, 0xC3, 0xCC)};
-  mixer[ui::kColorRefSecondary90] = {SkColorSetRGB(0xDA, 0xDB, 0xE5)};
-  mixer[ui::kColorRefSecondary95] = {SkColorSetRGB(0xEC, 0xEC, 0xEF)};
-  mixer[ui::kColorRefSecondary99] = {SkColorSetRGB(0xF9, 0xFA, 0xFC)};
+  mixer[ui::kColorRefSecondary10] = {SkColorSetRGB(0x14, 0x14, 0x14)};
+  mixer[ui::kColorRefSecondary12] = {SkColorSetRGB(0x1C, 0x1C, 0x1C)};
+  mixer[ui::kColorRefSecondary15] = {SkColorSetRGB(0x22, 0x22, 0x21)};
+  mixer[ui::kColorRefSecondary20] = {SkColorSetRGB(0x26, 0x26, 0x26)};
+  mixer[ui::kColorRefSecondary25] = {SkColorSetRGB(0x2C, 0x2C, 0x2C)};
+  mixer[ui::kColorRefSecondary30] = {SkColorSetRGB(0x33, 0x33, 0x32)};
+  mixer[ui::kColorRefSecondary35] = {SkColorSetRGB(0x3B, 0x3A, 0x38)};
+  mixer[ui::kColorRefSecondary40] = {SkColorSetRGB(0x4E, 0x4C, 0x49)};
+  mixer[ui::kColorRefSecondary50] = {SkColorSetRGB(0x6F, 0x6C, 0x67)};
+  mixer[ui::kColorRefSecondary60] = {SkColorSetRGB(0x86, 0x83, 0x7E)};
+  mixer[ui::kColorRefSecondary70] = {SkColorSetRGB(0xA2, 0x9F, 0x99)};
+  mixer[ui::kColorRefSecondary80] = {SkColorSetRGB(0xC6, 0xC3, 0xBE)};
+  mixer[ui::kColorRefSecondary90] = {SkColorSetRGB(0xDD, 0xDA, 0xD5)};
+  mixer[ui::kColorRefSecondary95] = {SkColorSetRGB(0xE9, 0xE7, 0xE3)};
+  mixer[ui::kColorRefSecondary99] = {SkColorSetRGB(0xF8, 0xF7, 0xF5)};
   mixer[ui::kColorRefSecondary100] = {SkColorSetRGB(0xFF, 0xFF, 0xFF)};
 }
 

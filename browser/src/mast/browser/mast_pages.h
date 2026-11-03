@@ -6,14 +6,15 @@
 #include <string>
 #include <string_view>
 
-#include "base/time/time.h"
 
 namespace mast {
 
-// The block page shown in place of a blocked site.
-std::string BlockPageHtml(std::string_view host, base::Time session_end);
+struct BlockMatch;
 
-// chrome://mast: start a session, watch it, manage the blocklist.
+// The block page shown in place of a blocked site.
+std::string BlockPageHtml(std::string_view host, const BlockMatch& match);
+
+// chrome://mast: the blocklist. Also the new tab page.
 // `as_new_tab` titles it "New Tab" so tabs and history read naturally.
 std::string StartPageHtml(bool as_new_tab);
 

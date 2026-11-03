@@ -5,66 +5,86 @@
 #include "base/strings/escape.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
+#include "mast/browser/mast_blocklist.h"
+#include "mast/browser/mast_blocks.h"
 
 namespace mast {
 
 namespace {
 
-// Shared look: matches the Mast demo (dark, ember accent).
+// The shared tokens (mirrors mast_palette.h and the Rams proposal). One signal
+// colour, used only for blocking and the state of being blocked.
 constexpr char kStyle[] = R"MAST(
-:root { color-scheme: dark; --bg:#0c0d0f; --chrome:#141518; --raised:#22242a;
-  --line:rgb(255 255 255/.08); --text:#ececef; --muted:#9a9ca5; --faint:#6b6e78;
-  --ember:#ff6a3d; --ember2:#ff8f5e; --soft:rgb(255 106 61/.14); }
+:root { color-scheme: dark; --bg:#141414; --surface:#1c1c1c; --field:#262626; --pressed:#303030;
+  --seg:#262626; --seg-on:#1c1c1c; --line:#2c2c2c; --text:#e9e7e3; --text-2:#a29f99; --text-3:#6f6c67;
+  --signal:#ff6a3d; --signal-text:#1a0d07; --r:6px;
+  --shadow:0 8px 28px rgb(0 0 0/.45),0 0 0 1px var(--line); }
 * { box-sizing:border-box }
-html,body { margin:0; min-height:100%; background:var(--bg); color:var(--text);
-  font:14px/1.45 "Inter Variable",Inter,"Noto Sans","DejaVu Sans",system-ui,sans-serif; -webkit-font-smoothing:antialiased }
-button { font:inherit; color:inherit; cursor:pointer }
-.eyebrow { margin:0 0 12px; font-size:11.5px; font-weight:650; letter-spacing:.08em; text-transform:uppercase; color:var(--faint) }
-.btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; height:38px; padding:0 18px;
-  border:1px solid rgb(255 255 255/.12); border-radius:10px; background:var(--raised); font-weight:600 }
-.btn:hover { background:#2a2c33 }
-.btn.primary { background:var(--ember); border-color:transparent; color:#1a0b05 }
-.btn.primary:hover { background:var(--ember2) }
-.btn.ghost { background:none; border-color:transparent; color:var(--muted) }
-.time { font-family:"JetBrains Mono","DejaVu Sans Mono","Noto Sans Mono",ui-monospace,monospace; font-weight:600; letter-spacing:-.02em; font-variant-numeric:tabular-nums }
+html,body { margin:0; min-height:100%; background:var(--surface); color:var(--text);
+  font:13px/1.45 Inter,"Inter Variable","Noto Sans","DejaVu Sans",system-ui,sans-serif;
+  font-feature-settings:'tnum' 1; -webkit-font-smoothing:antialiased }
+button, input { font:inherit; color:inherit }
+button { cursor:pointer }
+:focus-visible { outline:2px solid var(--text-2); outline-offset:2px }
+.primary, .secondary { display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  height:36px; padding:0 18px; border:0; border-radius:var(--r); font-weight:600 }
+.primary { background:var(--signal); color:var(--signal-text) }
+.primary:hover:not(:disabled) { filter:brightness(1.06) }
+.primary:active:not(:disabled) { filter:brightness(.94) }
+.primary:disabled { background:var(--field); color:var(--text-3); cursor:default }
+.secondary { background:var(--field) }
+.secondary:hover { background:var(--pressed) }
+.ind { display:inline-block; width:8px; height:8px; border-radius:50%; flex:none; box-shadow:inset 0 0 0 1.5px var(--text-3) }
+.ind.timed { box-shadow:inset 0 0 0 1.5px var(--signal) }
+.ind.forever { background:var(--signal); box-shadow:none }
+.status { display:flex; align-items:center; gap:8px; color:var(--text-3); white-space:nowrap }
+.status.blocked { color:var(--signal) }
 )MAST";
-
-constexpr char kLogo[] = R"MAST(<svg width="28" height="28" viewBox="0 0 32 32" aria-label="Mast"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6a3d"/><stop offset="1" stop-color="#c2300f"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#g)"/><path d="M14 10.5V24.5H6.6Q7.4 16 14 10.5Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/><path d="M17 6V24.5H25.4Q24.7 13 17 6Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>)MAST";
 
 constexpr char kBlockPage[] = R"MAST(<!doctype html>
 <html><head><meta charset="utf-8"><title>{{HOST}} is blocked</title><style>{{STYLE}}
-body { display:grid; place-items:center; min-height:100vh; padding:48px 24px; text-align:center;
-  background:radial-gradient(60% 50% at 50% 0%,rgb(255 106 61/.14),transparent 70%),var(--bg) }
-.seal { display:grid; place-items:center; width:76px; height:76px; margin:0 auto 28px; border-radius:50%;
-  color:var(--ember); background:var(--soft); box-shadow:0 0 0 1px rgb(255 106 61/.35),0 0 0 10px rgb(255 106 61/.06);
-  animation:breathe 4s ease-in-out infinite }
-@keyframes breathe { 50% { box-shadow:0 0 0 1px rgb(255 106 61/.35),0 0 0 18px rgb(255 106 61/.03) } }
-.eyebrow { color:var(--ember) }
-h1 { margin:0; font-size:34px; line-height:1.15; letter-spacing:-.02em }
-.time { display:block; margin:36px 0 6px; font-size:64px; line-height:1 }
-.label { color:var(--muted); font-size:13px }
-.btn { margin-top:32px }
-</style></head><body><main>
-<div class="seal"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
-<p class="eyebrow">Deep work</p>
-<h1>{{HOST}} is blocked.</h1>
-<span class="time" id="t">--:--</span>
-<span class="label" id="l"></span><br>
-<button class="btn" id="back" onclick="history.back()">&larr; Back to work</button>
+body { display:grid; place-content:center; min-height:100vh; padding:40px 32px 12vh }
+.card { width:min(520px,100%) }
+.status { font-weight:500 }
+h1 { margin:10px 0 6px; font-size:40px; font-weight:600; letter-spacing:-.025em; line-height:1.1; overflow-wrap:anywhere }
+dl { display:grid; grid-template-columns:auto 1fr; gap:6px 24px; margin:24px 0 28px; padding:16px 0;
+  border-top:1px solid var(--line); border-bottom:1px solid var(--line) }
+dt { color:var(--text-3) } dd { margin:0 } dd.signal { color:var(--signal) }
+</style></head><body><main class="card">
+<span class="status blocked"><i class="ind" id="ind"></i><span id="state"></span></span>
+<h1>{{HOST}}</h1>
+<dl><dt>List</dt><dd>{{LIST}}</dd><dt>Since</dt><dd id="since"></dd><dt>Ends</dt><dd id="ends"></dd></dl>
+<button class="secondary" id="back" onclick="history.back()"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 8H3M7 4L3 8l4 4"/></svg> Back</button>
 </main><script>
-const end = {{END}};
-const t = document.getElementById('t');
-document.getElementById('l').textContent =
-  'Opens at ' + new Date(end).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
-if (history.length < 2) document.getElementById('back').style.display = 'none';
-function pad(n) { return String(n).padStart(2, '0'); }
-function tick() {
-  const s = Math.max(0, Math.ceil((end - Date.now()) / 1000));
-  const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60);
-  t.textContent = (h ? h + ':' : '') + pad(m) + ':' + pad(s % 60);
-  if (s === 0) location.reload();
+const since = {{SINCE}}, until = {{UNTIL}};
+const D = 864e5;
+const hm = (t) => new Date(t).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+const day = (t) => new Date(t).toLocaleDateString([], {month: 'short', day: 'numeric'});
+const midnight = () => { const d = new Date(); d.setHours(24, 0, 0, 0); return d.getTime(); };
+function untilText(u) {
+  if (u === midnight()) return 'until midnight';
+  if (new Date(u).toDateString() === new Date().toDateString()) return 'until ' + hm(u);
+  if (u - Date.now() < 2 * D) return 'until tomorrow ' + hm(u);
+  return 'until ' + day(u);
 }
-tick(); setInterval(tick, 250);
+function left(u) {
+  const ms = u - Date.now();
+  if (ms >= 2 * D) return Math.floor(ms / D) + ' days left';
+  const h = Math.floor(ms / 36e5), m = Math.max(1, Math.ceil((ms % 36e5) / 6e4));
+  return (h ? h + ' h ' : '') + m + ' min left';
+}
+function paint() {
+  const forever = until === null;
+  document.getElementById('ind').className = 'ind ' + (forever ? 'forever' : 'timed');
+  document.getElementById('state').textContent = forever ? 'Blocked forever' : 'Blocked ' + untilText(until);
+  document.getElementById('since').textContent = day(since) + ', ' + hm(since);
+  const ends = document.getElementById('ends');
+  ends.textContent = forever ? 'Never' : untilText(until).replace(/^until /, '').replace(/^./, (c) => c.toUpperCase()) + ' · ' + left(until);
+  ends.className = forever ? 'signal' : '';
+  if (!forever && Date.now() >= until) location.reload();
+}
+if (history.length < 2) document.getElementById('back').style.display = 'none';
+paint(); setInterval(paint, 15000);
 </script></body></html>)MAST";
 
 // resources/start.html, embedded at build time (remote/embed-pages.py writes the
@@ -75,19 +95,26 @@ constexpr char kStartPage[] =
 
 std::string Fill(std::string page) {
   base::ReplaceSubstringsAfterOffset(&page, 0, "{{STYLE}}", kStyle);
-  base::ReplaceSubstringsAfterOffset(&page, 0, "{{LOGO}}", kLogo);
   return page;
 }
 
 }  // namespace
 
-std::string BlockPageHtml(std::string_view host, base::Time session_end) {
+std::string BlockPageHtml(std::string_view host, const BlockMatch& match) {
   std::string page = Fill(kBlockPage);
+  std::string list = CategoryNameOf(match.domain);
   base::ReplaceSubstringsAfterOffset(&page, 0, "{{HOST}}",
                                      base::EscapeForHTML(host));
   base::ReplaceSubstringsAfterOffset(
-      &page, 0, "{{END}}",
-      base::NumberToString(session_end.InMillisecondsSinceUnixEpoch()));
+      &page, 0, "{{LIST}}", base::EscapeForHTML(list.empty() ? "Your sites" : list));
+  base::ReplaceSubstringsAfterOffset(
+      &page, 0, "{{SINCE}}",
+      base::NumberToString(match.block.since.InMillisecondsSinceUnixEpoch()));
+  base::ReplaceSubstringsAfterOffset(
+      &page, 0, "{{UNTIL}}",
+      match.block.until
+          ? base::NumberToString(match.block.until->InMillisecondsSinceUnixEpoch())
+          : std::string("null"));
   return page;
 }
 

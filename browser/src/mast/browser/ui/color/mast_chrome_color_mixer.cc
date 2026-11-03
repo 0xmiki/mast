@@ -24,7 +24,7 @@ void AddMastChromeColorMixer(ui::ColorProvider* provider,
   ui::ColorMixer& mixer = provider->AddPostprocessingMixer();
 
   // Frame and tab strip: the darkest layer. Tabs sit on it; the active tab is
-  // the toolbar's colour so it flows into the toolbar (the demo's flared tab).
+  // the toolbar's colour so it flows into the toolbar.
   mixer[ui::kColorFrameActive] = {p::kBg};
   mixer[ui::kColorFrameInactive] = {p::kBg};
   mixer[kColorTabBackgroundInactiveFrameActive] = {p::kBg};
@@ -34,11 +34,11 @@ void AddMastChromeColorMixer(ui::ColorProvider* provider,
   mixer[kColorTabBackgroundActiveFrameInactive] = {p::kChrome};
   mixer[kColorTabForegroundActiveFrameActive] = {p::kText};
   mixer[kColorTabForegroundInactiveFrameActive] = {p::kMuted};
-  mixer[kColorTabDividerFrameActive] = {p::kLine};
+  mixer[kColorTabDividerFrameActive] = {SK_ColorTRANSPARENT};
   mixer[kColorTabStrokeFrameActive] = {SK_ColorTRANSPARENT};
   mixer[kColorNewTabButtonBackgroundFrameActive] = {SK_ColorTRANSPARENT};
 
-  // Toolbar: one calm surface, no separators.
+  // Toolbar: one calm surface; a single hairline above the page.
   mixer[kColorToolbar] = {p::kChrome};
   mixer[kColorToolbarButtonIcon] = {p::kMuted};
   mixer[kColorToolbarButtonText] = {p::kText};
@@ -48,13 +48,14 @@ void AddMastChromeColorMixer(ui::ColorProvider* provider,
   mixer[kColorBookmarkBarBackground] = {p::kChrome};
   mixer[kColorInfoBarBackground] = {p::kChrome};
 
-  // Omnibox: the pill and its dropdown.
+  // Omnibox: a field, and its dropdown.
   mixer[kColorLocationBarBackground] = {p::kChrome2};
   mixer[kColorLocationBarBackgroundHovered] = {p::kRaised};
   mixer[kColorOmniboxText] = {p::kText};
   mixer[kColorOmniboxResultsBackground] = {p::kChrome};
   mixer[kColorOmniboxResultsBackgroundHovered] = {p::kRaised};
   mixer[kColorOmniboxResultsBackgroundSelected] = {p::kRaised2};
+  mixer[kColorLocationBarBorder] = {SK_ColorTRANSPARENT};
 
   // Menus, bubbles, dialogs, focus.
   mixer[ui::kColorMenuBackground] = {p::kChrome};
@@ -64,10 +65,11 @@ void AddMastChromeColorMixer(ui::ColorProvider* provider,
   mixer[ui::kColorDialogBackground] = {p::kChrome};
   mixer[ui::kColorPrimaryBackground] = {p::kChrome};
   mixer[ui::kColorTextfieldBackground] = {p::kChrome2};
-  mixer[ui::kColorFocusableBorderFocused] = {p::kEmber};
+  // Focus is neutral: the signal colour means blocked, nothing else.
+  mixer[ui::kColorFocusableBorderFocused] = {p::kMuted};
 
-  // Text selection: a deep ember wash with normal text, not solid orange.
-  constexpr SkColor kSelection = SkColorSetRGB(0x5C, 0x2A, 0x1B);
+  // Text selection: neutral too.
+  constexpr SkColor kSelection = SkColorSetRGB(0x45, 0x43, 0x40);
   mixer[ui::kColorTextSelectionBackground] = {kSelection};
   mixer[ui::kColorTextSelectionForeground] = {p::kText};
   mixer[kColorOmniboxSelectionBackground] = {kSelection};

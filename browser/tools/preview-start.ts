@@ -1,30 +1,38 @@
-// Build a local preview of resources/start.html with a fake chrome.send, for design work
-// without the builder.   bun tools/preview-start.ts [out.html]
+// Build a local preview of resources/start.html (the new tab page) with a fake chrome.send,
+// for design work without the builder.   bun tools/preview-start.ts [out.html]
 const root = import.meta.dir + '/../src/mast/browser/resources/';
 const out = process.argv[2] ?? '/tmp/mast-start-preview.html';
 
-const logo = `<svg width="26" height="26" viewBox="0 0 32 32"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6a3d"/><stop offset="1" stop-color="#c2300f"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#lg)"/><path d="M14 10.5V24.5H6.6Q7.4 16 14 10.5Z" fill="#fff"/><path d="M17 6V24.5H25.4Q24.7 13 17 6Z" fill="#fff"/></svg>`;
+// The shared tokens live in mast_pages.cc; lift them out so the preview matches.
+const pages = await Bun.file(import.meta.dir + '/../src/mast/browser/mast_pages.cc').text();
+const style = pages.match(/kStyle\[\] = R"MAST\(([\s\S]*?)\)MAST"/)![1];
+const list = await Bun.file(import.meta.dir + '/../../blocklist/blocklist.json').json();
 
 // Fake browser side: same messages and state shape as mast_ui.cc.
 const mock = `<script>
 (() => {
-  const presets = ['x.com','twitter.com','facebook.com','instagram.com','tiktok.com','reddit.com',
-    'youtube.com','netflix.com','twitch.tv','news.ycombinator.com','amazon.com','chess.com'];
-  const s = { active: false, startedAt: 0, endsAt: 0, lastMinutes: 50, presets, custom: ['espn.com'],
-    stats: { focusMs: 83 * 60000, blocked: 12, sessions: 3,
-      week: ['Fri','Sat','Sun','Mon','Tue','Wed','Thu'].map((label, i) =>
-        ({ label, ms: [95, 0, 30, 140, 75, 160, 83][i] * 60000 })) } };
-  const reply = () => setTimeout(() => window.mastState(
-      JSON.parse(JSON.stringify({ ...s, stats: { ...s.stats, at: Date.now() } }))), 30);
+  const now = Date.now(), H = 36e5, D = 864e5;
+  const midnight = () => { const d = new Date(); d.setHours(24, 0, 0, 0); return d.getTime(); };
+  const cats = ${JSON.stringify(list.categories.map((c: any) => ({ id: c.id, name: c.name, services: c.services.map((s: any) => ({ name: s.name, domains: s.domains })) })))};
+  const blocks = {};
+  for (const s of cats[0].services) for (const d of s.domains) blocks[d] = { since: now - 12 * D, until: null };
+  for (const s of cats[1].services) for (const d of s.domains) blocks[d] = { since: now - 3 * H, until: midnight() };
+  blocks['news.ycombinator.com'] = { since: now - 2 * D, until: now + 5 * D };
+  const s = { categories: cats, custom: ['espn.com'], blocks, lastDuration: 'today', canUndo: false, stopped: 4 };
+  let recent = null;
+  const until = (id) => ({ '1h': Date.now() + H, '4h': Date.now() + 4 * H, today: midnight(), week: Date.now() + 7 * D, month: Date.now() + 30 * D, forever: null })[id];
+  const outlasts = (a, b) => a === null || (b !== null && a >= b);
+  const reply = (result = {}) => setTimeout(() => window.mastState(JSON.parse(JSON.stringify({ ...s, now: Date.now(), result }))), 30);
   window.chrome = window.chrome || {};
   chrome.send = (m, a = []) => {
-    if (m === 'start' && !s.active) {
-      Object.assign(s, { active: true, startedAt: Date.now(), endsAt: Date.now() + a[0] * 60000, lastMinutes: a[0] });
-      s.stats.sessions++;
+    if (m === 'block') {
+      const u = until(a[1]); const before = {}; let changed = 0;
+      for (const d of a[0]) { const cur = s.blocks[d]; if (cur && outlasts(cur.until, u)) continue; before[d] = cur ?? null; s.blocks[d] = { since: cur?.since ?? Date.now(), until: u }; changed++; }
+      recent = { at: Date.now(), before }; s.lastDuration = a[1];
+      return reply({ changed, until: u });
     }
-    if (m === 'extend') s.endsAt += a[0] * 60000;
-    if (m === 'undo') { s.active = false; s.stats.sessions--; }
-    if (m === 'addSite') s.custom.push(a[0]);
+    if (m === 'undo' && recent) { for (const [d, b] of Object.entries(recent.before)) b ? (s.blocks[d] = b) : delete s.blocks[d]; recent = null; return reply({ undone: true }); }
+    if (m === 'addSite' && !s.custom.includes(a[0])) s.custom.push(a[0]);
     if (m === 'removeSite') s.custom = s.custom.filter((d) => d !== a[0]);
     reply();
   };
@@ -32,6 +40,6 @@ const mock = `<script>
 </script>`;
 
 let html = await Bun.file(root + 'start.html').text();
-html = html.replace('{{TITLE}}', 'New Tab').replace('{{LOGO}}', logo).replace('<script>', mock + '\n<script>');
+html = html.replace('{{TITLE}}', 'New Tab').replace('{{STYLE}}', style).replace('<script>', mock + '\n<script>');
 await Bun.write(out, html);
 console.log(out);
