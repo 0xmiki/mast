@@ -13,7 +13,7 @@ namespace mast {
 
 inline constexpr char kMastHost[] = "mast";
 
-// chrome://mast — start a session, watch the countdown, manage the blocklist.
+// chrome://mast — the blocklist: pick categories or sites, choose how long, block.
 // Also serves the new tab page (chrome://new-tab-page[-third-party]).
 class MastUI : public content::WebUIController {
  public:

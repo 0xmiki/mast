@@ -3,10 +3,13 @@
 #include "mast/browser/mast_ui.h"
 
 #include <memory>
+#include <optional>
 #include <string>
+#include <vector>
 
 #include "base/functional/bind.h"
 #include "base/memory/ref_counted_memory.h"
+#include "base/no_destructor.h"
 #include "base/values.h"
 #include "content/public/browser/web_contents.h"
 #include "content/public/browser/web_ui.h"
@@ -15,7 +18,7 @@
 #include "content/public/common/url_constants.h"
 #include "mast/browser/mast_blocklist.h"
 #include "mast/browser/mast_pages.h"
-#include "mast/browser/mast_session.h"
+#include "mast/browser/mast_blocks.h"
 #include "services/network/public/mojom/content_security_policy.mojom.h"
 #include "url/gurl.h"
 
@@ -23,22 +26,48 @@ namespace mast {
 
 namespace {
 
-int IntArg(const base::ListValue& args, int fallback) {
-  if (args.empty()) {
-    return fallback;
-  }
-  if (args[0].is_int()) {
-    return args[0].GetInt();
-  }
-  if (args[0].is_double()) {
-    return static_cast<int>(args[0].GetDouble());
-  }
-  return fallback;
+std::string StringArg(const base::ListValue& args, size_t i = 0) {
+  return args.size() > i && args[i].is_string() ? args[i].GetString()
+                                                 : std::string();
 }
 
-std::string StringArg(const base::ListValue& args) {
-  return !args.empty() && args[0].is_string() ? args[0].GetString()
-                                              : std::string();
+double Ms(base::Time t) {
+  return static_cast<double>(t.InMillisecondsSinceUnixEpoch());
+}
+
+base::Value BlockValue(const Block& block) {
+  base::DictValue v;
+  v.Set("since", Ms(block.since));
+  if (block.until) {
+    v.Set("until", Ms(*block.until));
+  } else {
+    v.Set("until", base::Value());
+  }
+  return base::Value(std::move(v));
+}
+
+// The curated categories never change while the browser runs; build them once.
+const base::ListValue& CategoriesValue() {
+  static const base::NoDestructor<base::ListValue> kValue([] {
+    base::ListValue categories;
+    for (const Category& c : Categories()) {
+      base::ListValue services;
+      for (const Service& s : c.services) {
+        base::ListValue domains;
+        for (const std::string& d : s.domains) {
+          domains.Append(d);
+        }
+        services.Append(base::DictValue().Set("name", s.name).Set(
+            "domains", std::move(domains)));
+      }
+      categories.Append(base::DictValue()
+                            .Set("id", c.id)
+                            .Set("name", c.name)
+                            .Set("services", std::move(services)));
+    }
+    return categories;
+  }());
+  return *kValue;
 }
 
 class MastHandler : public content::WebUIMessageHandler {
@@ -51,12 +80,10 @@ class MastHandler : public content::WebUIMessageHandler {
   // content::WebUIMessageHandler:
   void RegisterMessages() override {
     On("getState", &MastHandler::HandleGetState);
-    On("start", &MastHandler::HandleStart);
-    On("extend", &MastHandler::HandleExtend);
+    On("block", &MastHandler::HandleBlock);
     On("undo", &MastHandler::HandleUndo);
     On("addSite", &MastHandler::HandleAddSite);
     On("removeSite", &MastHandler::HandleRemoveSite);
-
   }
 
  private:
@@ -69,65 +96,64 @@ class MastHandler : public content::WebUIMessageHandler {
 
   void HandleGetState(const base::ListValue& args) { SendState(); }
 
-  void HandleStart(const base::ListValue& args) {
-    MastSession::Get().Start(IntArg(args, MastSession::Get().last_minutes()));
-    SendState();
-  }
-
-  void HandleExtend(const base::ListValue& args) {
-    MastSession::Get().Extend(IntArg(args, 30));
-    SendState();
+  // ["block", [domains...], durationId]
+  void HandleBlock(const base::ListValue& args) {
+    MastBlocks& blocks = MastBlocks::Get();
+    std::vector<std::string> domains;
+    if (!args.empty() && args[0].is_list()) {
+      for (const base::Value& d : args[0].GetList()) {
+        if (d.is_string()) {
+          domains.push_back(d.GetString());
+        }
+      }
+    }
+    const std::optional<Duration> duration = DurationFromId(StringArg(args, 1));
+    base::DictValue result;
+    if (duration && !domains.empty()) {
+      const std::optional<base::Time> until =
+          UntilFor(*duration, base::Time::Now());
+      blocks.set_last_duration(DurationId(*duration));
+      result.Set("changed", blocks.BlockSites(domains, until));
+      result.Set("until", until ? base::Value(Ms(*until)) : base::Value());
+    }
+    SendState(std::move(result));
   }
 
   void HandleUndo(const base::ListValue& args) {
-    MastSession::Get().Undo();
-    SendState();
+    MastBlocks::Get().Undo();
+    SendState(base::DictValue().Set("undone", true));
   }
 
   void HandleAddSite(const base::ListValue& args) {
-    MastSession::Get().AddSite(StringArg(args));
+    MastBlocks::Get().AddSite(StringArg(args));
     SendState();
   }
 
   void HandleRemoveSite(const base::ListValue& args) {
-    MastSession::Get().RemoveSite(StringArg(args));
+    MastBlocks::Get().RemoveSite(StringArg(args));
     SendState();
   }
 
-  void SendState() {
+  void SendState(base::DictValue result = {}) {
     AllowJavascript();
-    MastSession& session = MastSession::Get();
-    base::ListValue presets;
-    for (const std::string& site : PresetSites()) {
-      presets.Append(site);
+    MastBlocks& blocks = MastBlocks::Get();
+    base::DictValue active;
+    for (const auto& [domain, block] : blocks.Active()) {
+      active.Set(domain, BlockValue(block));
     }
     base::ListValue custom;
-    for (const std::string& site : session.CustomSites()) {
+    for (const std::string& site : blocks.CustomSites()) {
       custom.Append(site);
     }
     base::DictValue state;
-    state.Set("active", session.IsActive());
-    state.Set("startedAt", static_cast<double>(
-                               session.start_time().InMillisecondsSinceUnixEpoch()));
-    state.Set("endsAt", static_cast<double>(
-                            session.end_time().InMillisecondsSinceUnixEpoch()));
-    state.Set("lastMinutes", session.last_minutes());
-    state.Set("presets", std::move(presets));
+    state.Set("categories", CategoriesValue().Clone());
     state.Set("custom", std::move(custom));
-    const TodayStats today = session.Today();
-    base::ListValue week;
-    for (const DayFocus& d : session.Week()) {
-      week.Append(base::DictValue().Set("label", d.label).Set(
-          "ms", d.focus.InMillisecondsF()));
-    }
-    state.Set("stats",
-              base::DictValue()
-                  .Set("week", std::move(week))
-                  .Set("focusMs", today.focus.InMillisecondsF())
-                  .Set("blocked", today.blocked)
-                  .Set("sessions", today.sessions)
-                  .Set("at", static_cast<double>(
-                                 base::Time::Now().InMillisecondsSinceUnixEpoch())));
+    state.Set("blocks", std::move(active));
+    state.Set("lastDuration", blocks.last_duration());
+    state.Set("canUndo", blocks.CanUndo());
+    state.Set("stopped", blocks.StoppedToday());
+    state.Set("now", Ms(base::Time::Now()));
+    state.Set("result", std::move(result));
     CallJavascriptFunction("mastState", base::Value(std::move(state)));
   }
 };

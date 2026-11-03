@@ -3,11 +3,12 @@
 #include "mast/browser/mast_navigation_throttle.h"
 
 #include <memory>
+#include <optional>
 
 #include "content/public/browser/navigation_handle.h"
 #include "mast/browser/mast_blocklist.h"
 #include "mast/browser/mast_pages.h"
-#include "mast/browser/mast_session.h"
+#include "mast/browser/mast_blocks.h"
 #include "net/base/net_errors.h"
 #include "url/gurl.h"
 
@@ -16,7 +17,7 @@ namespace mast {
 // static
 void MastNavigationThrottle::MaybeCreateAndAdd(
     content::NavigationThrottleRegistry& registry) {
-  // Always added: a session can start while a navigation is already pending.
+  // Always added: a site can be blocked while a navigation is already pending.
   registry.AddThrottle(std::make_unique<MastNavigationThrottle>(registry));
 }
 
@@ -43,16 +44,16 @@ const char* MastNavigationThrottle::GetNameForLogging() {
 content::NavigationThrottle::ThrottleCheckResult
 MastNavigationThrottle::Check() {
   const GURL& url = navigation_handle()->GetURL();
-  MastSession& session = MastSession::Get();
-  if (!session.IsBlocked(url)) {
+  MastBlocks& blocks = MastBlocks::Get();
+  const std::optional<BlockMatch> match = blocks.ForUrl(url);
+  if (!match) {
     return PROCEED;
   }
   if (navigation_handle()->IsInPrimaryMainFrame()) {
-    session.RecordBlocked();
+    blocks.RecordBlocked();
   }
-  return ThrottleCheckResult(
-      CANCEL, net::ERR_BLOCKED_BY_CLIENT,
-      BlockPageHtml(NormalizeHost(url.host()), session.end_time()));
+  return ThrottleCheckResult(CANCEL, net::ERR_BLOCKED_BY_CLIENT,
+                             BlockPageHtml(NormalizeHost(url.host()), *match));
 }
 
 }  // namespace mast

@@ -6,12 +6,12 @@ source_set("browser") {
   sources = [
     "mast_blocklist.cc",
     "mast_blocklist.h",
+    "mast_blocks.cc",
+    "mast_blocks.h",
     "mast_navigation_throttle.cc",
     "mast_navigation_throttle.h",
     "mast_pages.cc",
     "mast_pages.h",
-    "mast_session.cc",
-    "mast_session.h",
     "mast_ui.cc",
     "mast_ui.h",
   ]

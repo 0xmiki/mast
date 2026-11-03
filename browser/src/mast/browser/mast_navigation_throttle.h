@@ -7,8 +7,7 @@
 
 namespace mast {
 
-// Cancels navigations to blocked sites during a session and shows the Mast
-// block page instead. Not part of the web page, so there is nothing in the DOM
+// Cancels navigations to blocked sites and shows the Mast block page instead. Not part of the web page, so there is nothing in the DOM
 // to delete, and no extension can see or skip it.
 class MastNavigationThrottle : public content::NavigationThrottle {
  public:

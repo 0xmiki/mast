@@ -2,32 +2,95 @@
 
 #include "mast/browser/mast_blocklist.h"
 
+#include <optional>
+
+#include "base/check.h"
+#include "base/json/json_reader.h"
 #include "base/no_destructor.h"
 #include "base/strings/string_util.h"
+#include "base/values.h"
 #include "url/gurl.h"
 
 namespace mast {
 
-const std::vector<std::string>& PresetSites() {
-  static const base::NoDestructor<std::vector<std::string>> kSites({
-      // Social
-      "x.com", "twitter.com", "facebook.com", "instagram.com", "tiktok.com",
-      "reddit.com", "snapchat.com", "threads.net", "bsky.app", "pinterest.com",
-      "tumblr.com", "discord.com",
-      // Video & streaming
-      "youtube.com", "netflix.com", "twitch.tv", "kick.com", "primevideo.com",
-      "disneyplus.com", "hulu.com", "max.com",
-      // News & forums
-      "news.ycombinator.com", "cnn.com", "foxnews.com", "bbc.com",
-      "nytimes.com", "buzzfeed.com", "9gag.com",
-      // Shopping
-      "amazon.com", "ebay.com", "aliexpress.com", "temu.com", "etsy.com",
-      "shein.com",
-      // Games
-      "chess.com", "lichess.org", "roblox.com", "store.steampowered.com",
-      "poki.com",
-  });
-  return *kSites;
+namespace {
+
+// blocklist/blocklist.json, embedded by remote/embed-pages.py. Edit the JSON, not this.
+constexpr char kBlocklistJson[] =
+#include "mast/browser/resources/blocklist_json.inc"
+    ;
+
+std::vector<std::string> Strings(const base::ListValue* list) {
+  std::vector<std::string> out;
+  if (list) {
+    for (const base::Value& v : *list) {
+      if (v.is_string()) {
+        out.push_back(v.GetString());
+      }
+    }
+  }
+  return out;
+}
+
+std::vector<Category> Parse() {
+  std::optional<base::Value> root = base::JSONReader::Read(kBlocklistJson, base::JSON_PARSE_RFC);
+  CHECK(root && root->is_dict()) << "blocklist.json is not valid JSON";
+  std::vector<Category> categories;
+  const base::ListValue* list = root->GetDict().FindList("categories");
+  CHECK(list);
+  for (const base::Value& c : *list) {
+    const base::DictValue& dict = c.GetDict();
+    Category category;
+    category.id = *dict.FindString("id");
+    category.name = *dict.FindString("name");
+    if (const base::ListValue* services = dict.FindList("services")) {
+      for (const base::Value& s : *services) {
+        const base::DictValue& sd = s.GetDict();
+        category.services.push_back({*sd.FindString("name"),
+                                     Strings(sd.FindList("domains")),
+                                     Strings(sd.FindList("except"))});
+      }
+    }
+    categories.push_back(std::move(category));
+  }
+  return categories;
+}
+
+}  // namespace
+
+const std::vector<Category>& Categories() {
+  static const base::NoDestructor<std::vector<Category>> kCategories(Parse());
+  return *kCategories;
+}
+
+bool IsExcepted(std::string_view host) {
+  for (const Category& c : Categories()) {
+    for (const Service& s : c.services) {
+      for (const std::string& e : s.except) {
+        if (HostMatches(host, e)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+std::string CategoryNameOf(std::string_view domain) {
+  for (const Category& c : Categories()) {
+    for (const Service& s : c.services) {
+      for (const std::string& d : s.domains) {
+        if (d == domain) {
+          return c.name;
+        }
+      }
+    }
+  }
+  return std::string();
+}
+
+bool IsListed(std::string_view domain) {
+  return !CategoryNameOf(domain).empty();
 }
 
 std::string NormalizeHost(std::string_view host) {
