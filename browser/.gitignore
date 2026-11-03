@@ -1,6 +1,6 @@
 .state/
 dist/
-.profile/
+.profile*/
 result
 shots/
 __pycache__/
