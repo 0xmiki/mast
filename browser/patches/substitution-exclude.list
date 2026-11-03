@@ -1,0 +1,4 @@
+# Files kept out of ungoogled-chromium's domain substitution (substring match on the path).
+# Mast's own code (mast/) is never in the list: it isn't part of upstream.
+# (None needed yet: the search engine definitions aren't in ungoogled's list. Google search's
+# base URL is restored by mast-ungoogled.patch instead.)

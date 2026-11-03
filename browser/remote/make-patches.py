@@ -1,4 +1,5 @@
-"""Regenerate Mast's upstream patches against pristine Chromium (git HEAD).
+"""Regenerate Mast's upstream patches against the base tree (git HEAD in src: Chromium plus
+ungoogled-chromium's core patches and domain substitution; see remote/ungoogle.sh).
 
 Run on the builder: python3 ~/mast/remote/make-patches.py  -> /root/pw/*.patch
 Each edit asserts its anchor is found exactly once, so a Chromium upgrade that
@@ -55,14 +56,14 @@ edit(H, "chrome/browser/BUILD.gn", lambda t: add_dep(t, 'source_set("core") {', 
 
 edit(H, "chrome/browser/prefs/browser_prefs.cc", lambda t: once(once(t,
     '#include "chrome/browser/prefs/incognito_mode_prefs.h"\n',
-    '#include "chrome/browser/prefs/incognito_mode_prefs.h"\n#include "mast/browser/mast_session.h"\n'),
+    '#include "chrome/browser/prefs/incognito_mode_prefs.h"\n#include "mast/browser/mast_blocks.h"\n'),
     '  BrowserProcessImpl::RegisterPrefs(registry);\n',
-    '  BrowserProcessImpl::RegisterPrefs(registry);\n  mast::MastSession::RegisterLocalStatePrefs(registry);\n'))
+    '  BrowserProcessImpl::RegisterPrefs(registry);\n  mast::MastBlocks::RegisterLocalStatePrefs(registry);\n'))
 edit(H, "chrome/browser/prefs/incognito_mode_prefs.cc", lambda t: once(once(t,
     '#include "chrome/browser/prefs/incognito_mode_prefs.h"\n',
-    '#include "chrome/browser/prefs/incognito_mode_prefs.h"\n\n#include "mast/browser/mast_session.h"\n'),
+    '#include "chrome/browser/prefs/incognito_mode_prefs.h"\n\n#include "mast/browser/mast_blocks.h"\n'),
     '    GetAvailabilityMode mode) {\n  DCHECK(profile);\n',
-    '    GetAvailabilityMode mode) {\n  DCHECK(profile);\n  // Mast: no private windows during a deep-work session.\n  if (mast::IsSessionActive()) {\n    return policy::IncognitoModeAvailability::kDisabled;\n  }\n'))
+    '    GetAvailabilityMode mode) {\n  DCHECK(profile);\n  // Mast: no private windows while any site is blocked.\n  if (mast::AnyBlockActive()) {\n    return policy::IncognitoModeAvailability::kDisabled;\n  }\n'))
 edit(H, "chrome/browser/prefs/BUILD.gn", lambda t: add_dep(t, 'source_set("impl") {', "//mast/browser"))
 
 # chrome://mast, and Mast's page as the new tab page (both NTP hosts, so the
@@ -78,7 +79,7 @@ edit(H, "chrome/browser/ui/webui/chrome_web_ui_configs.cc", lambda t: once(once(
     '  map.AddWebUIConfig(std::make_unique<mast::MastUIConfig>(\n      chrome::kChromeUINewTabPageThirdPartyHost));\n'))
 edit(H, "chrome/browser/ui/webui/BUILD.gn", lambda t: add_dep(t, 'source_set("configs") {', "//mast/browser"))
 
-# Toolbar: the Block button / live countdown, just before the avatar.
+# Toolbar: the Block button for the current site, just before the avatar.
 edit(H, "chrome/browser/ui/views/toolbar/toolbar_view.cc", lambda t: once(once(t,
     '#include "chrome/browser/ui/views/toolbar/toolbar_view.h"\n',
     '#include "chrome/browser/ui/views/toolbar/toolbar_view.h"\n\n#include "mast/browser/ui/mast_toolbar_button.h"\n'),
@@ -90,6 +91,14 @@ edit(H, "chrome/browser/ui/views/toolbar/BUILD.gn", lambda t: add_dep(once(t,
     '    "toolbar_view.cc",\n',
     '    "toolbar_view.cc",\n    "//mast/browser/ui/mast_toolbar_button.cc",\n    "//mast/browser/ui/mast_toolbar_button.h",\n'),
     'source_set("impl") {', "//mast/browser"))
+
+# The toolbar Block bubbles subclass BubbleDialogDelegateView, whose constructor is
+# limited to a friend list (like the home button's undo bubble).
+edit(H, "ui/views/bubble/bubble_dialog_delegate_view.h", lambda t: once(once(t,
+    'class HomePageUndoBubble;\n',
+    'class HomePageUndoBubble;\nnamespace mast {\nclass MastBlockBubble;\nclass MastUndoBubble;\n}  // namespace mast\n'),
+    '  friend class ::HomePageUndoBubble;\n',
+    '  friend class ::HomePageUndoBubble;\n  friend class ::mast::MastBlockBubble;\n  friend class ::mast::MastUndoBubble;\n'))
 
 # Theme: dark and not the GTK theme on Linux. The colours themselves come from
 # Mast's palette (mast-theme.patch), so no seeded user colour.
@@ -163,6 +172,23 @@ edit(B, "chrome/common/chrome_paths_linux.cc", lambda t: once(t,
 edit(B, "chrome/browser/ui/startup/infobar_utils.cc", lambda t: once(t,
     '  if (!google_apis::HasAPIKeyConfigured()) {\n',
     '  // Mast doesn\'t use Google API keys, so never nag about missing ones.\n  if (false) {\n'))
+
+# ---------------------------------------------------------------- ungoogled adjustments
+U = "mast-ungoogled.patch"
+
+# Google stays the default search engine. Domain substitution rewrote kGoogleHomepageURL
+# (to a dead *.qjz9zk host), and the Google engine's search and suggest URLs are built from
+# this one value. Only searches the user types go to Google; background services stay off.
+edit(U, "components/search_engines/search_terms_data.cc", lambda t: once(t,
+    '  return google_util::kGoogleHomepageURL;\n',
+    '  // Mast: searches the user types still go to Google (see mast-ungoogled.patch).\n  return "https://www.google.com/";\n'))
+
+# Page preloading off by default. With Google as the search engine, Chromium otherwise
+# prefetches Google's results page (and its trackers) while you type in the omnibox.
+# People can still turn it on in Settings > Performance.
+edit(U, "chrome/browser/preloading/preloading_prefs.cc", lambda t: once(t,
+    '      static_cast<int>(NetworkPredictionOptions::kDefault),\n',
+    '      static_cast<int>(NetworkPredictionOptions::kDisabled),  // Mast\n'))
 
 for patch in PATCHES:
     out = subprocess.run(["diff", "-ruN", "a", "b"], cwd=os.path.join(WORK, patch + ".d"),

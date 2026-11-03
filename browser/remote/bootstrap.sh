@@ -6,7 +6,7 @@ export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a
 M=$HOME/mast
 
 sudo apt-get update
-sudo -E apt-get install -y git python3 curl lsb-release zstd rsync file
+sudo -E apt-get install -y git python3 curl lsb-release zstd rsync file patch
 
 # Optional self-shutdown (AWS-style hosts where a stopped machine isn't billed).
 # On Hetzner a powered-off server is still billed, so the laptop-side guard deletes it instead.

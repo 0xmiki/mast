@@ -3,3 +3,4 @@ dist/
 .profile/
 result
 shots/
+__pycache__/

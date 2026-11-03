@@ -1,0 +1,3 @@
+# ungoogled-chromium patches Mast skips (matched by file name). See docs/DEGOOGLE.md.
+# Google stays the default search engine (a user-visible choice, not a background service).
+replace-google-search-engine-with-nosearch.patch

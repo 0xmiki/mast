@@ -1,0 +1,4 @@
+# ungoogled-chromium "extra" patches Mast takes deliberately (matched by file name).
+# The rest of "extra" is optional UI flags and privacy defaults we'd otherwise have to rebase.
+# Needed by ungoogled's flags.gn (enable_mdns=false, enable_service_discovery=false).
+fix-building-without-mdns-and-service-discovery.patch

@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-# Build Mast on the builder: sync Chromium to the pinned version (only when it changes),
-# apply patches/series (only when they change), copy src/mast in, build, package.
+# Build Mast on the builder. Each stage only reruns when its inputs change:
+#   1. sync Chromium to the pinned version
+#   2. the de-Googled base (ungoogled-chromium core patches + domain substitution)
+#   3. Mast's hook patches, regenerated against that base
+#   4. Mast's own code, pages and blocklist; build; package.
 set -euo pipefail
 export PATH=$HOME/depot_tools:$PATH
 M=$HOME/mast
@@ -8,6 +11,7 @@ C=$HOME/chromium
 S=$C/src
 OUT=$S/out/Mast
 VERSION=$(cat "$M/chromium_version.txt")
+UG_TAG=$(cat "$M/ungoogled_version.txt")
 say() { printf '\n== %s\n' "$*"; }
 
 cd "$C"
@@ -16,21 +20,37 @@ cd "$C"
 if [ "$(cat .mast-version 2>/dev/null)" != "$VERSION" ]; then
 	say "Syncing Chromium $VERSION (slow the first time)"
 	git -C src reset --hard -q || true
-	rm -f .mast-patches
+	rm -f .mast-base .mast-patches
 	# Fetch only this tag, then sync by commit hash: gclient skips its own fetch when the
 	# commit is already present (a tag ref makes it fetch every branch with full history).
 	git -C src fetch --depth 1 origin "+refs/tags/$VERSION:refs/tags/$VERSION"
 	REV=$(git -C src rev-parse "refs/tags/$VERSION^{commit}")
-	gclient sync --nohooks --no-history -D --force --revision "src@$REV"
+	gclient sync --nohooks --no-history -D --force --reset --revision "src@$REV"
 	gclient runhooks
 	echo "$VERSION" > .mast-version
 fi
 
-# 2. Patches — re-applied from a clean tree only when the series or a patch changes
+# 2. De-Googled base, committed in src so Mast's patches have a fixed starting point
+BASE=$( { echo "$VERSION $UG_TAG"; cat "$M/patches/ungoogled-drop.list" "$M/patches/ungoogled-extra.list" \
+	"$M/patches/substitution-exclude.list" \
+	"$M/remote/ungoogle.sh"; } | sha256sum | cut -d' ' -f1)
+if [ "$(cat .mast-base 2>/dev/null)" != "$BASE" ]; then
+	bash "$M/remote/ungoogle.sh"
+	echo "$BASE" > "$C/.mast-base"
+	rm -f "$C/.mast-patches"
+fi
+cd "$C"
+
+# 3. Mast's hook patches: regenerated from make-patches.py against the base (it reads git
+# HEAD, not the working tree), so they always match. The generated files are copied into
+# patches/ and pulled back to the repo. Re-applied from a clean base only when they change.
+python3 "$M/remote/make-patches.py"
+cp /root/pw/*.patch "$M/patches/"
 mapfile -t PATCHES < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$M/patches/series")
 SUM=$( { cat "$M/patches/series"; for p in "${PATCHES[@]}"; do cat "$M/patches/$p"; done; } | sha256sum | cut -d' ' -f1)
 if [ "$(cat .mast-patches 2>/dev/null)" != "$SUM" ]; then
-	say "Applying ${#PATCHES[@]} patch(es)"
+	say "Applying ${#PATCHES[@]} Mast patch(es)"
+	python3 "$M/remote/keep-mtimes.py" save "$S" /root/mast-mtimes.json
 	git -C src reset --hard -q
 	for p in "${PATCHES[@]}"; do
 		echo "  $p"
@@ -39,7 +59,7 @@ if [ "$(cat .mast-patches 2>/dev/null)" != "$SUM" ]; then
 	echo "$SUM" > .mast-patches
 fi
 
-# 3. Mast's own code (rsync keeps mtimes, so unchanged files don't rebuild), and
+# 4. Mast's own code (rsync keeps mtimes, so unchanged files don't rebuild), and
 # whole-file overrides of upstream files (branding, icons). --checksum so an
 # override only touches mtimes when its content really differs.
 mkdir -p "$S/mast"
@@ -47,23 +67,38 @@ rsync -a --delete "$M/src/mast/" "$S/mast/"
 if [ -d "$M/src/overrides" ]; then
 	rsync -a --checksum "$M/src/overrides/" "$S/"
 fi
-# Mast's HTML pages -> C++ strings, in the generated-sources dir so the rsync of
-# src/mast above never deletes them (unchanged pages keep their mtime).
-python3 "$M/remote/embed-pages.py" "$S/mast/browser/resources" "$OUT/gen/mast/browser/resources"
+# Mast's HTML pages and the blocklist -> C++ strings, in the generated-sources dir so the
+# rsync of src/mast above never deletes them (unchanged files keep their mtime).
+python3 "$M/remote/embed-pages.py" "$S/mast/browser/resources" "$OUT/gen/mast/browser/resources" \
+	"$M/blocklist/blocklist.json"
 # Product name in every UI string file (only rewrites files that change).
 python3 "$M/remote/substitute-names.py" "$S"
+# Files that came back byte-identical keep their old timestamps (no needless recompiles).
+python3 "$M/remote/keep-mtimes.py" restore "$S" /root/mast-mtimes.json
+# The blocklist must never have gone through domain substitution.
+if grep -q qjz9zk "$M/blocklist/blocklist.json" "$S"/mast/browser/*.cc; then
+	echo "domain substitution reached Mast's own code"; exit 1
+fi
 
-# 4. Configure + build
+# 5. Configure + build: ungoogled-chromium's flags, then Mast's (Mast wins on conflicts).
 mkdir -p "$OUT"
-cmp -s "$M/remote/args.gn" "$OUT/args.gn" || cp "$M/remote/args.gn" "$OUT/args.gn"
+python3 "$M/remote/merge-args.py" "$OUT/args.gn" "$HOME/ungoogled/flags.gn" "$M/remote/args.gn"
 cd "$S"
 say "gn gen"
 gn gen "$OUT"
+# Preflight: compile Mast's own sources first, so a mistake there fails in minutes rather
+# than after the whole browser has built.
+# (Some compile inside upstream targets, e.g. the toolbar button, so match by file name.)
+mapfile -t OWN < <(ninja -C "$OUT" -t targets all 2>/dev/null | grep -oE '^obj/[^:]*mast_[a-z_]+\.o' | sort -u)
+if ((${#OWN[@]})); then
+	say "Preflight: ${#OWN[@]} Mast object(s)"
+	autoninja -C "$OUT" -k 0 "${OWN[@]}"
+fi
 say "Building chrome"
 # -k 0: keep going past failures so one pass reports every error.
 time autoninja -C "$OUT" -k 0 chrome
 
-# 5. Package only what the browser needs at runtime
+# 6. Package only what the browser needs at runtime
 say "Packaging"
 cd "$OUT"
 keep=()

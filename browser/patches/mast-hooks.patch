@@ -35,15 +35,15 @@ diff -ruN a/chrome/browser/prefs/browser_prefs.cc b/chrome/browser/prefs/browser
  #include "chrome/browser/platform_experience/prefs.h"
  #include "chrome/browser/prefs/chrome_pref_service_factory.h"
  #include "chrome/browser/prefs/incognito_mode_prefs.h"
-+#include "mast/browser/mast_session.h"
++#include "mast/browser/mast_blocks.h"
  #include "chrome/browser/prefs/session_startup_pref.h"
  #include "chrome/browser/preloading/prefetch/prefetch_service/prefetch_origin_decider.h"
  #include "chrome/browser/preloading/prefetch/search_prefetch/search_prefetch_service.h"
-@@ -1532,6 +1533,7 @@
+@@ -1530,6 +1531,7 @@
    breadcrumbs::RegisterPrefs(registry);
    browser_shutdown::RegisterPrefs(registry);
    BrowserProcessImpl::RegisterPrefs(registry);
-+  mast::MastSession::RegisterLocalStatePrefs(registry);
++  mast::MastBlocks::RegisterLocalStatePrefs(registry);
    ChromeContentBrowserClient::RegisterLocalStatePrefs(registry);
  #if BUILDFLAG(CHROME_FOR_TESTING)
    chrome_for_testing::RegisterPrefs(registry);
@@ -65,7 +65,7 @@ diff -ruN a/chrome/browser/prefs/incognito_mode_prefs.cc b/chrome/browser/prefs/
  
  #include "chrome/browser/prefs/incognito_mode_prefs.h"
  
-+#include "mast/browser/mast_session.h"
++#include "mast/browser/mast_blocks.h"
 +
  #include <stdint.h>
  
@@ -74,8 +74,8 @@ diff -ruN a/chrome/browser/prefs/incognito_mode_prefs.cc b/chrome/browser/prefs/
      const Profile* profile,
      GetAvailabilityMode mode) {
    DCHECK(profile);
-+  // Mast: no private windows during a deep-work session.
-+  if (mast::IsSessionActive()) {
++  // Mast: no private windows while any site is blocked.
++  if (mast::AnyBlockActive()) {
 +    return policy::IncognitoModeAvailability::kDisabled;
 +  }
  
@@ -188,7 +188,7 @@ diff -ruN a/chrome/browser/ui/webui/chrome_web_ui_configs.cc b/chrome/browser/ui
    map.AddWebUIConfig(std::make_unique<CustomizeChromeUIConfig>());
  #endif  // BUILDFLAG(ENABLE_WEBUI_NTP)
  
-@@ -384,7 +387,8 @@
+@@ -383,7 +386,8 @@
            multistep_filter_internals::MultistepFilterInternalsUIConfig>());
  #if BUILDFLAG(ENABLE_WEBUI_NTP)
    map.AddWebUIConfig(std::make_unique<NewTabFooterUIConfig>());
@@ -198,3 +198,26 @@ diff -ruN a/chrome/browser/ui/webui/chrome_web_ui_configs.cc b/chrome/browser/ui
  #endif  // BUILDFLAG(ENABLE_WEBUI_NTP)
    map.AddWebUIConfig(std::make_unique<NewTabUIConfig>());
    map.AddWebUIConfig(std::make_unique<OmniboxEverywhereUIConfig>());
+diff -ruN a/ui/views/bubble/bubble_dialog_delegate_view.h b/ui/views/bubble/bubble_dialog_delegate_view.h
+--- a/ui/views/bubble/bubble_dialog_delegate_view.h
++++ b/ui/views/bubble/bubble_dialog_delegate_view.h
+@@ -66,6 +66,10 @@
+ class FlyingIndicator;
+ class GlobalErrorBubbleView;
+ class HomePageUndoBubble;
++namespace mast {
++class MastBlockBubble;
++class MastUndoBubble;
++}  // namespace mast
+ class MediaDialogView;
+ class HatsNextWebDialog;
+ class IncognitoClearBrowsingDataDialog;
+@@ -883,6 +887,8 @@
+   friend class ::FlyingIndicator;
+   friend class ::GlobalErrorBubbleView;
+   friend class ::HomePageUndoBubble;
++  friend class ::mast::MastBlockBubble;
++  friend class ::mast::MastUndoBubble;
+   friend class ::IOSPromoBubbleView;
+   friend class ::MediaDialogView;
+   friend class ::HatsNextWebDialog;

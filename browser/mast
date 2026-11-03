@@ -214,18 +214,21 @@ cmd__guard() {
 	while exists; do
 		HOST=$(server_ip)
 		if awk -v s="$(spent)" -v b="$MAST_BUDGET" 'BEGIN { exit !(s >= b * 0.95) }'; then
-			log "$(date) budget nearly spent (\$$(spent)): deleting builder"
+			log "$(date) budget nearly spent (\$$(spent)): snapshotting, then deleting builder"
 			echo $$ > "$STATE/guard.pid"
-			cmd_down
+			cmd_down --keep
 			exit 0
 		fi
 		if (($(cat "$STATE/hold" 2>/dev/null || echo 0) > $(date +%s))) ||
-			rssh "pgrep -f 'mast/remote/(bootstrap|build)\.sh' >/dev/null || [ -n \"\$(who)\" ]" 2>/dev/null; then
+			# Jobs run as "bash remote/<job>.sh" from ~/mast, so match on remote/<job>.sh.
+			rssh "pgrep -f 'remote/(bootstrap|build|ungoogle|shots)\.sh' >/dev/null || [ -n \"\$(who)\" ]" 2>/dev/null; then
 			idle_since=$(date +%s)
 		elif (($(date +%s) - idle_since > MAST_IDLE_MINUTES * 60)); then
-			log "$(date) idle for ${MAST_IDLE_MINUTES}m: deleting builder (no snapshot)"
+			# Snapshot first: a laptop that slept through the end of a build must not
+			# throw away the tree and build cache.
+			log "$(date) idle for ${MAST_IDLE_MINUTES}m: snapshotting, then deleting builder"
 			echo $$ > "$STATE/guard.pid"
-			cmd_down
+			cmd_down --keep
 			exit 0
 		fi
 		sleep 120
@@ -238,7 +241,8 @@ cmd__guard() {
 push() {
 	log "pushing code"
 	rsync -az --timeout=120 --delete -e "ssh ${SSH_OPTS[*]}" \
-		"$ROOT/remote" "$ROOT/patches" "$ROOT/src" "$ROOT/chromium_version.txt" "root@$HOST:mast/"
+		"$ROOT/remote" "$ROOT/patches" "$ROOT/src" "$ROOT/chromium_version.txt" "$ROOT/ungoogled_version.txt" \
+		"$ROOT/../blocklist" "root@$HOST:mast/"
 }
 
 # Run remote/<job>.sh detached on the builder (survives your laptop disconnecting), then follow its log.
@@ -290,11 +294,17 @@ cmd_fetch() {
 	log "browser in dist/mast (Chromium $(cat "$ROOT/dist/VERSION")). Run: ./mast run"
 }
 
+# The builder regenerates Mast's patches against the de-Googled base; keep the repo's copy current.
+pull_patches() {
+	rsync -az --timeout=120 -e "ssh ${SSH_OPTS[*]}" "root@$HOST:mast/patches/*.patch" "$ROOT/patches/" || true
+}
+
 cmd_build() {
 	cmd_up
 	HOST=$(server_ip)
 	push
-	job build || die "build failed. Inspect with: ./mast ssh  (or ./mast down to stop paying)"
+	job build || { pull_patches; die "build failed. Inspect with: ./mast ssh  (or ./mast down to stop paying)"; }
+	pull_patches
 	[[ -n ${MAST_SKIP_FETCH:-} ]] || cmd_fetch
 	log "builder still running for quick rebuilds. When done: ./mast down [--keep]"
 }
