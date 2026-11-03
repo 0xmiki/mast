@@ -11,10 +11,11 @@ Research as of 2026-10-28 (Chromium M156). Paths are relative to `chromium/src`;
 - Keep Mast's code in its own directory (Brave-style), with ~20–40 small hooks into
   upstream. Upstream releases a new version every 4 weeks, and fewer hooks means cheaper
   rebases.
-- **Start from vanilla Chromium, not Helium or ungoogled-chromium.** Helium carries 370
-  patches (all GPL-3.0) and, like ungoogled-chromium, removes network time, which we want
-  for clock-tamper resistance. Borrow their *tooling* (a quilt patch series) and pick
-  individual patches only if needed.
+- **Start from vanilla Chromium plus ungoogled-chromium's `core` series, not Helium.**
+  (*Revised 2026-11-03, see [DEGOOGLE.md](../../browser/docs/DEGOOGLE.md).*) Helium carries 370 patches (all
+  GPL-3.0). ungoogled-chromium is BSD-3 and its maintainers rebase it every release. We pin it
+  as a submodule and skip a few patches, notably `disable-network-time-tracker`, since we want
+  network time for clock-tamper resistance (served from our own time server).
 - **The hard truth:** a browser can only lock itself. Another browser, a fresh
   `--user-data-dir`, or a reinstall all bypass it. Only a small admin-level **OS helper**
   closes those doors. The same helper can also lock stock Chrome/Edge/Brave via enterprise
