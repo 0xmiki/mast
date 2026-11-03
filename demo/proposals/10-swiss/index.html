@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<!--
+  Proposal 10 · Swiss — riskiest pieces to port to the Chromium fork (Views on Linux, then macOS/Windows):
+  1. Grid-locked tab strip. Tabs are sized to two columns of the same 12-column grid the WebUI pages use
+     (margin 24, gutter 16), shifted one column right on macOS. Chromium's TabStripLayoutHelper has its own
+     width model (standard/min widths, pinned tabs, animation); it needs a column-snapping layout that reads
+     the same grid tokens as WebUI, plus the over-capacity fallback (equal shares).
+  2. Typographic tabs with no favicon and no shape. Index numeral + title + a top rule that carries state
+     (1px rest, 2px active, ember blocked). Requires a custom TabStyleViews/Tab painter; the favicon,
+     throbber, audio and crash indicators must get typographic replacements (numeral states).
+  3. Unboxed omnibox. LocationBarView without background/border, a single bottom rule that thickens on
+     focus, an inline right-aligned "Blocked until …" label, and a flat (no radius, no shadow) omnibox popup.
+  4. One bundled variable typeface (Inter Tight 400/500/700) driving every native label, with weight as a
+     state signal and tabular figures. gfx::FontList / Skia need the bundled font on all three platforms and
+     a way to request 'tnum'; weight changes must not jitter Views layout.
+  5. Flat bubbles and menus. The Block popover and app menu are square, shadowless, hairline-bordered
+     surfaces with an ink top rule. Views BubbleBorder and MenuConfig default to rounded, shadowed frames,
+     and native macOS menus can't be restyled at all (keep NSMenu there).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mast · Proposal 10 · Swiss</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* =====================================================================
+   TOKENS
+   ===================================================================== */
+:root{
+  /* colour */
+  --bg:#0b0b0b; --surface:#151514; --surface-2:#1f1f1d;
+  --rule:#262624; --rule-2:#3b3b38;
+  --ink-4:#4d4c49; --ink-3:#7d7c77; --ink-2:#aaa9a3; --ink-1:#f3f2ee;
+  --ember:#ff6a3d; --ember-hover:#ff8159; --ember-press:#e2532a; --on-ember:#0b0b0b;
+  /* grid */
+  --m:24px; --g:16px; --u:8px;
+  --col:calc((100vw - 2*var(--m) - 11*var(--g)) / 12);
+  --cg:calc(var(--col) + var(--g));
+  /* type */
+  --f:"Inter Tight","Inter",system-ui,sans-serif;
+  --t1:128px; --t2:56px; --t3:28px; --t4:20px; --t5:15px; --t6:13px; --t7:11px;
+  /* motion */
+  --ease:120ms cubic-bezier(.2,0,0,1);
+}
+@media (max-width:1400px){ :root{ --t1:104px; --t2:48px; } }
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:var(--f);font-size:var(--t6);line-height:16px;color:var(--ink-1);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+button,input{font:inherit;color:inherit;background:none;border:0;border-radius:0;outline:0;text-align:left}
+button{cursor:pointer}
+button:disabled,[aria-disabled="true"]{cursor:not-allowed}
+:focus-visible{outline:2px solid var(--ink-1);outline-offset:2px}
+.tnum{font-variant-numeric:tabular-nums}
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--g);padding:0 var(--m)}
+.sub{display:grid;grid-template-columns:subgrid}
+.lab{font-size:var(--t7);line-height:16px;font-weight:500;color:var(--ink-3)}
+.sq{display:inline-block;width:8px;height:8px;border:1px solid currentColor;flex:none;vertical-align:baseline}
+.sq.on{background:var(--ember);border-color:var(--ember)}
+svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:square;stroke-linejoin:miter;display:block}
+
+/* =====================================================================
+   BUTTONS — primary (ember field), secondary (ink hairline), quiet (text)
+   ===================================================================== */
+.b1{display:flex;align-items:center;gap:16px;height:56px;padding:0 16px;background:var(--ember);color:var(--on-ember);font-size:var(--t4);line-height:24px;font-weight:700;letter-spacing:-.01em;transition:background var(--ease)}
+.b1 .n{font-size:var(--t6);font-weight:500;opacity:.72;letter-spacing:0}
+.b1:hover,.b1.is-hover{background:var(--ember-hover)}
+.b1:active,.b1.is-press{background:var(--ember-press)}
+.b1:disabled,.b1.is-off{background:var(--surface-2);color:var(--ink-4);cursor:not-allowed}
+.b1.sm{height:48px;font-size:var(--t5);}
+.b2{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;box-shadow:inset 0 0 0 1px var(--ink-2);color:var(--ink-1);font-size:var(--t5);line-height:24px;font-weight:500;transition:background var(--ease),color var(--ease)}
+.b2:hover,.b2.is-hover{background:var(--ink-1);color:var(--bg);box-shadow:inset 0 0 0 1px var(--ink-1)}
+.b2:active,.b2.is-press{background:var(--ink-2);color:var(--bg)}
+.b2:disabled,.b2.is-off{background:none;color:var(--ink-4);box-shadow:inset 0 0 0 1px var(--rule-2)}
+.bq{display:inline-flex;align-items:center;gap:8px;height:28px;padding:0 8px;color:var(--ink-1);font-weight:500;transition:background var(--ease)}
+.bq:hover,.bq.is-hover{background:var(--surface-2)}
+.bq:active,.bq.is-press{background:var(--rule-2)}
+.bq:disabled,.bq.is-off{color:var(--ink-4);background:none}
+
+/* field: a hairline, never a box */
+.fld{position:relative;display:flex;align-items:center;height:32px}
+.fld::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--rule-2);transition:height var(--ease),background var(--ease)}
+.fld:hover::after{background:var(--ink-3)}
+.fld:focus-within::after,.fld.is-focus::after{height:2px;background:var(--ink-1)}
+.fld input{flex:1;min-width:0;height:100%;font-size:var(--t5)}
+.fld input::placeholder{color:var(--ink-3)}
+
+/* checkbox: a square */
+.cb{width:12px;height:12px;box-shadow:inset 0 0 0 1px var(--ink-2);flex:none}
+.cb.on{background:var(--ink-1);box-shadow:none}
+.cb.off-d{box-shadow:inset 0 0 0 1px var(--ink-4)}
+
+/* option row — the universal selectable: state lives on the top rule */
+.opt{position:relative;display:grid;grid-template-columns:subgrid;grid-column:1/-1;align-items:center;height:32px;border-top:1px solid var(--rule-2);color:var(--ink-2);font-size:var(--t5);line-height:24px;transition:color var(--ease),border-color var(--ease)}
+.opt::before{content:"";position:absolute;left:0;right:0;top:-1px;height:2px;background:transparent}
+.opt .l{grid-column:1/3}
+.opt .e{grid-column:3;font-size:var(--t6);color:var(--ink-3);font-variant-numeric:tabular-nums}
+.opt:hover,.opt.is-hover{border-top-color:var(--ink-3);color:var(--ink-1)}
+.opt.on{color:var(--ink-1);font-weight:700}
+.opt.on::before{background:var(--ink-1)}
+.opt.on.ever{color:var(--ember)}
+.opt.on.ever::before{background:var(--ember)}
+.opt:disabled{color:var(--ink-4);border-top-color:var(--rule)}
+.opt:disabled .e{color:var(--ink-4)}
+.optlist{display:grid;grid-template-columns:subgrid;grid-column:1/-1;border-bottom:1px solid var(--rule)}
+
+/* =====================================================================
+   WINDOW
+   ===================================================================== */
+.win{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg)}
+.chrome{flex:none;position:relative;z-index:5;background:var(--bg)}
+.strip{height:40px;position:relative;-webkit-app-region:drag}
+.tabs{grid-column:1/12;display:grid;grid-template-columns:subgrid;-webkit-app-region:no-drag;min-width:0}
+[data-platform="mac"] .tabs{grid-column:2/13}
+[data-platform="win"] .tabs.dense{grid-column:1/11}
+.tabs.dense{display:flex;gap:var(--g)}
+.tabs.dense .tab{flex:1 1 0}
+.tab{grid-column:span 2;position:relative;height:32px;margin-top:8px;display:flex;align-items:center;gap:8px;padding:0 0 0 0;border-top:1px solid var(--rule-2);color:var(--ink-2);min-width:0;transition:color var(--ease),border-color var(--ease);user-select:none}
+.tab::before{content:"";position:absolute;left:0;right:0;top:-1px;height:2px;background:transparent}
+.tab .n{width:16px;flex:none;font-size:var(--t7);font-weight:500;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.tab .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:400}
+.tab .x{width:20px;height:20px;display:grid;place-items:center;color:var(--ink-3);visibility:hidden;flex:none}
+.tab .x svg{width:10px;height:10px;stroke-width:1.25}
+.tab .x:hover{background:var(--surface-2);color:var(--ink-1)}
+.tab:hover,.tab.is-hover{border-top-color:var(--ink-3);color:var(--ink-1)}
+.tab:hover .x,.tab.is-hover .x,.tab.active .x{visibility:visible}
+.tab.active{color:var(--ink-1)}
+.tab.active .t{font-weight:500}
+.tab.active .n{color:var(--ink-1)}
+.tab.active::before{background:var(--ink-1)}
+.tab.blk{color:var(--ember);border-top-color:var(--ember)}
+.tab.blk .n{color:var(--ember)}
+.tab.blk.active::before{background:var(--ember)}
+.newtab{grid-column:span 1;height:32px;margin-top:8px;width:28px;display:grid;place-items:center;color:var(--ink-2)}
+.newtab:hover{background:var(--surface-2);color:var(--ink-1)}
+.newtab:disabled{color:var(--ink-4);background:none}
+
+/* native window controls — exempt from the grid's shape rules */
+.wc{position:absolute;top:0;display:none;-webkit-app-region:no-drag}
+.wc-mac{left:16px;top:14px;gap:8px}
+.wc-mac i{width:12px;height:12px;border-radius:50%;display:block;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.25)}
+.wc-mac i:nth-child(1){background:#ff5f57}.wc-mac i:nth-child(2){background:#febc2e}.wc-mac i:nth-child(3){background:#28c840}
+.wc-win{right:0}
+.wc-win button{width:46px;height:32px;display:grid;place-items:center;color:var(--ink-1)}
+.wc-win button:hover{background:rgba(255,255,255,.08)}
+.wc-win button.close:hover{background:#c42b1c;color:#fff}
+.wc-win svg{width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:1}
+.wc-gnome{right:10px;top:8px;gap:12px}
+.wc-gnome button{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;color:var(--ink-1)}
+.wc-gnome button:hover{background:rgba(255,255,255,.16)}
+.wc-gnome svg{width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:1.5}
+[data-platform="mac"] .wc-mac,[data-platform="win"] .wc-win,[data-platform="linux"] .wc-gnome{display:flex}
+
+/* toolbar */
+.toolbar{height:48px;align-items:center;border-bottom:1px solid var(--rule)}
+.nav{grid-column:1;display:flex;gap:0;margin-left:-6px}
+.ib{width:28px;height:28px;display:grid;place-items:center;color:var(--ink-2);transition:background var(--ease),color var(--ease)}
+.ib:hover{background:var(--surface-2);color:var(--ink-1)}
+.ib:active{background:var(--rule-2)}
+.ib:disabled{color:var(--ink-4);background:none}
+.omni{grid-column:2/11}
+.omni .fmt{position:absolute;inset:0 0 1px 0;display:flex;align-items:center;gap:0;font-size:var(--t5);line-height:24px;pointer-events:none;white-space:nowrap;overflow:hidden}
+.omni .fmt .h{color:var(--ink-1);font-weight:500}
+.omni .fmt .p{color:var(--ink-3)}
+.omni .fmt .ph{color:var(--ink-3)}
+.omni input{opacity:0}
+.omni.editing input{opacity:1}
+.omni.editing .fmt{display:none}
+.omni .tag{position:absolute;right:0;top:0;bottom:1px;display:flex;align-items:center;gap:8px;font-size:var(--t7);font-weight:500;color:var(--ember);pointer-events:none;background:var(--bg);padding-left:16px}
+.omni.editing .tag,.omni .tag[hidden]{display:none}
+.tbb{grid-column:11;justify-self:start;margin-left:-8px}
+.tbb.blk{color:var(--ember)}
+.tbm{grid-column:12;justify-self:start;margin-left:-8px}
+.tbb.open,.tbm.open{background:var(--rule-2)}
+
+/* content */
+.content{flex:1;position:relative;overflow:hidden}
+.view{position:absolute;inset:0;overflow:auto;display:none}
+.view.on{display:block}
+
+/* =====================================================================
+   NEW TAB PAGE
+   ===================================================================== */
+.ntp{padding-top:24px;padding-bottom:96px;align-content:start}
+.ntp-head{grid-column:1/-1;align-items:end;padding-bottom:24px;border-bottom:1px solid var(--ink-1)}
+.brand{grid-column:1/4}
+.brand svg{width:24px;height:24px;display:block;margin-bottom:24px}
+.disp{font-size:var(--t2);line-height:.73;font-weight:700;letter-spacing:-.03em}
+.num{font-size:var(--t1);line-height:.73;font-weight:700;letter-spacing:-.045em}
+.ntp-head .lab{margin-top:16px}
+.stat-a{grid-column:7/9}
+.stat-b{grid-column:9/13}
+.ntp-body{grid-column:1/-1;align-items:start;padding-top:24px}
+
+.ctrl{grid-column:1/4;align-content:start}
+.ctrl > *{grid-column:1/-1}
+.selsum{margin-top:8px;font-size:var(--t4);line-height:24px;font-weight:500;letter-spacing:-.01em;min-height:24px}
+.selsum.empty{color:var(--ink-3);font-weight:400}
+.selsub{margin-top:8px;font-size:var(--t6);line-height:16px;color:var(--ink-2);min-height:32px}
+.ctrl .lab.d{margin-top:24px;margin-bottom:8px}
+.ctrl .b1{margin-top:24px}
+.note{margin-top:16px;font-size:var(--t7);line-height:16px;color:var(--ink-3);max-width:28em}
+
+.tbl{grid-column:4/13}
+.tbl-h{grid-column:1/-1;padding-bottom:8px}
+.tbl-h .c1{grid-column:1/4}.tbl-h .c2{grid-column:4/6}.tbl-h .c3{grid-column:6/10}
+.row{grid-column:1/-1;display:grid;grid-template-columns:subgrid;position:relative;border-top:1px solid var(--rule-2);padding:8px 0 16px;align-items:first baseline;transition:border-color var(--ease)}
+.row:last-child{border-bottom:1px solid var(--rule)}
+.row::before{content:"";position:absolute;left:0;right:0;top:-1px;height:2px;background:transparent}
+.row .name{grid-column:1/4;justify-self:start;font-size:var(--t3);line-height:32px;font-weight:400;letter-spacing:-.015em;color:var(--ink-2);transition:color var(--ease)}
+.row .st{grid-column:4/6}
+.row .sites{grid-column:6/10;line-height:24px}
+.row.pick:has(.name:hover){border-top-color:var(--ink-3)}
+.row.pick .name:hover{color:var(--ink-1)}
+.row.part{border-top-color:var(--ink-1)}
+.row.part .name{color:var(--ink-1);font-weight:500}
+.row.sel::before{background:var(--ink-1)}
+.row.sel .name{color:var(--ink-1);font-weight:700}
+.row.blk{border-top-color:var(--ember)}
+.row.blk .name,.row.blk .name:hover{color:var(--ember)}
+.row.blk.sel::before{background:var(--ember)}
+.row.blk.part{border-top-color:var(--ember)}
+.row.ever .name{cursor:not-allowed}
+.st .m{display:flex;align-items:baseline;gap:8px;font-size:var(--t5);line-height:24px;font-weight:500;color:var(--ink-3)}
+.st.blk .m{color:var(--ember)}
+.st .s{font-size:var(--t6);line-height:16px;color:var(--ink-3)}
+.site{font-size:var(--t6);line-height:24px;color:var(--ink-2);margin-right:16px;white-space:nowrap;text-underline-offset:5px;text-decoration-thickness:1px;transition:color var(--ease)}
+.site:hover{color:var(--ink-1);text-decoration:underline;text-decoration-color:var(--ink-3)}
+.site.blk{color:var(--ember)}
+.site.blk:hover{text-decoration-color:var(--ember)}
+.site.ever:hover{text-decoration:none}
+.site.sel{color:var(--ink-1);font-weight:500;text-decoration:underline;text-decoration-color:var(--ink-1)}
+.site.blk.sel{color:var(--ember);text-decoration-color:var(--ember)}
+.add{display:inline-flex;width:140px;height:24px;vertical-align:top}
+.add input{font-size:var(--t6)}
+
+/* toast — the one inverted surface */
+.toast{position:absolute;left:calc(var(--m) + 3*var(--cg));width:calc(6*var(--col) + 5*var(--g));bottom:24px;z-index:20;background:var(--ink-1);color:var(--bg);display:flex;align-items:baseline;gap:16px;padding:16px 16px 18px;font-size:var(--t5);line-height:24px;font-weight:500;opacity:0;pointer-events:none;transition:opacity var(--ease)}
+.toast.on{opacity:1;pointer-events:auto}
+.toast .msg{flex:1;min-width:0}
+.toast .u{font-weight:700;text-decoration:underline;text-underline-offset:4px;text-decoration-thickness:1px;padding:0 4px;margin:0 -4px}
+.toast .u:hover{background:rgba(0,0,0,.08)}
+.toast .s{font-size:var(--t6);color:#0b0b0b99;font-variant-numeric:tabular-nums;width:24px}
+.toast .pr{position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--ember);transform-origin:left}
+.toast.run .pr{animation:drain 10s linear forwards}
+.toast.static{position:relative;left:auto;bottom:auto;width:100%;opacity:1}
+.toast.static .pr{transform:scaleX(.6)}
+@keyframes drain{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+
+/* popovers */
+.pop{position:absolute;top:88px;right:var(--m);z-index:30;background:var(--surface);box-shadow:inset 0 0 0 1px var(--rule-2);border-top:1px solid var(--ink-1);display:none}
+.pop.on{display:block}
+.pop.blockpop{width:calc(3*var(--col) + 2*var(--g));min-width:296px;padding:16px 16px 16px;right:calc(var(--m) + var(--cg))}
+.blockpop .in{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:var(--g)}
+.blockpop .in > *{grid-column:1/-1}
+.blockpop .h{margin-top:8px;font-size:var(--t3);line-height:32px;font-weight:500;letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blockpop .stl{margin-top:8px;margin-bottom:16px;display:flex;align-items:baseline;gap:8px;color:var(--ink-3)}
+.blockpop .stl.blk{color:var(--ember)}
+.blockpop .b1{margin-top:16px}
+.blockpop .note{margin-top:12px}
+.pop.menu{width:calc(2*var(--col) + var(--g));min-width:256px;padding:8px 0}
+.mi{display:flex;align-items:center;gap:12px;width:100%;height:32px;padding:0 16px;font-size:var(--t6);color:var(--ink-1)}
+.mi:hover,.mi.is-hover{background:var(--surface-2)}
+.mi .k{margin-left:auto;color:var(--ink-3);font-variant-numeric:tabular-nums;font-size:var(--t7)}
+.mi .cb{margin-right:-4px}
+.msep{height:1px;background:var(--rule);margin:8px 0}
+.mzoom{display:flex;align-items:center;height:32px;padding:0 8px 0 16px;font-size:var(--t6)}
+.mzoom .z{margin-left:auto;display:flex;align-items:center}
+.mzoom .z span{width:48px;text-align:center;color:var(--ink-2);font-variant-numeric:tabular-nums}
+
+/* =====================================================================
+   BLOCKED PAGE — timed: dark with ember signal; forever: the ember field
+   ===================================================================== */
+.bp{min-height:100%;grid-template-rows:auto 1fr auto auto auto;padding-top:24px;padding-bottom:32px}
+.bp-top{grid-column:1/-1;align-items:baseline}
+.bp-top .k{grid-column:1/4;display:flex;align-items:baseline;gap:8px;font-weight:500;color:var(--ember)}
+.bp-top .c{grid-column:4/7;color:var(--ink-2)}
+.bp-top .u{grid-column:7/13;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bp-host{grid-column:1/-1;align-self:end;font-size:var(--t1);line-height:.73;font-weight:700;letter-spacing:-.045em;white-space:nowrap;padding-top:48px}
+.bp-until{grid-column:1/-1;margin-top:48px;font-size:var(--t2);line-height:.73;font-weight:700;letter-spacing:-.03em;color:var(--ember)}
+.bp-facts{grid-column:1/-1;margin-top:64px;padding-top:16px;border-top:1px solid var(--ink-1);align-items:start}
+.bp-facts .f{grid-column:span 3}
+.bp-facts .v{margin-top:8px;font-size:var(--t4);line-height:24px;font-weight:500;letter-spacing:-.01em}
+.bp-facts .v2{font-size:var(--t6);line-height:16px;color:var(--ink-3);margin-top:4px}
+.bp-acts{grid-column:1/-1;margin-top:32px;display:flex;gap:8px;align-items:center}
+.blkv.ever{background:#ff6a3d;
+  --ink-1:#0b0b0b; --ink-2:#0b0b0bd0; --ink-3:#0b0b0b99; --ink-4:#0b0b0b55; --rule:#0b0b0b33; --rule-2:#0b0b0b55;
+  --ember:#0b0b0b; --surface-2:#0b0b0b1a; --bg:#ff6a3d; color:var(--ink-1)}
+.blkv.ever .bp-until{color:var(--ink-1)}
+.blkv.ever :focus-visible{outline-color:#0b0b0b}
+
+/* =====================================================================
+   ORDINARY SITES — rendered as the sites render themselves
+   ===================================================================== */
+.gh{background:#0d1117;color:#e6edf3;font:14px/1.5 -apple-system,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif;min-height:100%}
+.gh a{color:#4493f8;text-decoration:none}
+.gh-top{background:#010409;border-bottom:1px solid #30363d;padding:12px 24px;display:flex;align-items:center;gap:12px}
+.gh-oct{width:32px;height:32px;border-radius:50%;background:#e6edf3;display:grid;place-items:center}
+.gh-oct i{width:14px;height:14px;border-radius:50%;background:#010409}
+.gh-crumb{font-size:14px;font-weight:600}.gh-crumb span{color:#7d8590;font-weight:400;margin:0 4px}
+.gh-search{margin-left:auto;width:280px;height:32px;border:1px solid #30363d;border-radius:6px;padding:0 10px;color:#7d8590;display:flex;align-items:center;font-size:13px}
+.gh-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#2f81f7,#a371f7)}
+.gh-tabs{background:#010409;border-bottom:1px solid #30363d;padding:0 24px;display:flex;gap:8px}
+.gh-tabs span{padding:10px 8px 12px;color:#e6edf3;font-size:14px;border-bottom:2px solid transparent}
+.gh-tabs span.on{border-bottom-color:#f78166;font-weight:600}
+.gh-tabs b{background:#30363d;border-radius:20px;padding:0 6px;font-size:12px;font-weight:500;margin-left:6px}
+.gh-main{max-width:1280px;margin:0 auto;padding:24px 32px;display:grid;grid-template-columns:1fr 296px;gap:24px}
+.gh-title{grid-column:1/-1;display:flex;align-items:center;gap:8px;font-size:20px;font-weight:600;padding-bottom:16px;border-bottom:1px solid #30363d}
+.gh-pill{font-size:12px;font-weight:500;color:#7d8590;border:1px solid #30363d;border-radius:20px;padding:0 7px}
+.gh-bar{display:flex;gap:8px;margin-bottom:16px}
+.gh-btn{height:32px;padding:0 12px;border:1px solid #30363d;border-radius:6px;background:#21262d;display:flex;align-items:center;font-size:14px;font-weight:500;color:#e6edf3}
+.gh-btn.g{background:#238636;border-color:#2ea043;color:#fff;margin-left:auto}
+.gh-box{border:1px solid #30363d;border-radius:6px;overflow:hidden}
+.gh-box .hd{background:#161b22;padding:12px 16px;display:flex;gap:10px;align-items:center;font-size:13px;border-bottom:1px solid #30363d}
+.gh-box .hd .av{width:20px;height:20px;border-radius:50%;background:#3fb950}
+.gh-box .hd .mut{color:#7d8590;margin-left:auto}
+.gh-row{display:grid;grid-template-columns:20px 220px 1fr auto;gap:12px;padding:8px 16px;border-top:1px solid #21262d;font-size:14px;align-items:center}
+.gh-row:first-of-type{border-top:0}
+.gh-row .fi{width:16px;height:12px;background:#7d8590;border-radius:2px;opacity:.9}
+.gh-row .m{color:#7d8590;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gh-row .t{color:#7d8590;font-size:13px}
+.gh-side h3{font-size:16px;font-weight:600;margin-bottom:12px}
+.gh-side p{margin-bottom:16px}
+.gh-topics{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.gh-topics span{background:#121d2f;color:#4493f8;border-radius:20px;padding:0 10px;font-size:12px;font-weight:500;line-height:22px}
+.gh-side .st{color:#7d8590;font-size:14px;line-height:28px}
+
+.wk{background:#fff;color:#202122;font:14px/1.6 -apple-system,"Segoe UI","Helvetica Neue",Arial,sans-serif;min-height:100%}
+.wk a{color:#3366cc;text-decoration:none}
+.wk-top{display:flex;align-items:center;gap:20px;padding:10px 32px;border-bottom:1px solid #eaecf0}
+.wk-logo{display:flex;align-items:center;gap:10px}
+.wk-logo .w{width:40px;height:40px;border-radius:50%;border:1px solid #c8ccd1;display:grid;place-items:center;font-family:Georgia,"Linux Libertine",serif;font-size:22px;background:#f8f9fa}
+.wk-logo .wm{font-family:Georgia,"Linux Libertine",serif;font-size:18px;letter-spacing:.12em;line-height:1}
+.wk-logo .wm small{display:block;font-size:11px;letter-spacing:0;font-style:italic;margin-top:3px}
+.wk-search{display:flex;margin-left:24px}
+.wk-search span{width:360px;height:32px;border:1px solid #a2a9b1;border-radius:2px 0 0 2px;padding:0 10px;display:flex;align-items:center;color:#72777d}
+.wk-search b{height:32px;padding:0 12px;border:1px solid #a2a9b1;border-left:0;background:#f8f9fa;font-weight:700;display:flex;align-items:center;border-radius:0 2px 2px 0}
+.wk-top .r{margin-left:auto;display:flex;gap:16px;font-size:14px}
+.wk-body{display:grid;grid-template-columns:200px minmax(0,1fr);gap:32px;padding:16px 32px 64px;max-width:1440px}
+.wk-toc{font-size:14px;padding-top:56px}
+.wk-toc h4{font-size:14px;font-weight:700;border-bottom:1px solid #a2a9b1;padding-bottom:4px;margin-bottom:8px}
+.wk-toc a{display:block;padding:3px 0}
+.wk-toc a.sub{padding-left:12px}
+.wk h1{font-family:"Linux Libertine",Georgia,"Times",serif;font-weight:400;font-size:28.8px;line-height:1.3;border-bottom:1px solid #a2a9b1;padding-bottom:2px;margin-top:8px}
+.wk-tabs{display:flex;gap:16px;font-size:14px;border-bottom:1px solid #a2a9b1;padding:6px 0 0;margin-bottom:12px}
+.wk-tabs span{padding-bottom:6px}.wk-tabs span.on{border-bottom:2px solid #202122;font-weight:600}
+.wk-tabs .sp{margin-left:auto}
+.wk .from{font-size:12.6px;color:#54595d;margin-bottom:12px}
+.wk p{margin-bottom:10px;max-width:none}
+.wk h2{font-family:"Linux Libertine",Georgia,"Times",serif;font-weight:400;font-size:21px;border-bottom:1px solid #a2a9b1;margin:20px 0 8px}
+.wk-ib{float:right;width:300px;margin:0 0 16px 24px;border:1px solid #a2a9b1;background:#f8f9fa;font-size:12.6px;line-height:1.5;padding:4px}
+.wk-ib .tt{text-align:center;font-weight:700;font-size:15px;padding:4px}
+.wk-ib .sp{background:#fff;border:1px solid #eaecf0;text-align:center;padding:12px 0;font-family:Helvetica,Arial,sans-serif;font-size:44px;line-height:1.1;margin:4px 0;color:#000}
+.wk-ib table{width:100%;border-collapse:collapse}
+.wk-ib th{text-align:left;vertical-align:top;padding:3px 6px;width:42%}
+.wk-ib td{padding:3px 6px}
+
+/* =====================================================================
+   CAPTION
+   ===================================================================== */
+.cap{position:fixed;right:16px;bottom:16px;z-index:60;width:344px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--rule-2);border-top:1px solid var(--ink-1);padding:12px 16px 16px}
+.cap-h{display:flex;align-items:center;gap:8px;font-weight:700}
+.cap-h svg{width:16px;height:16px}
+.cap-h .bq{margin-left:auto;margin-right:-8px;color:var(--ink-2)}
+.cap p{margin-top:8px;color:var(--ink-2)}
+.cap-r{display:flex;align-items:flex-start;gap:16px;margin-top:16px}
+.seg{flex:1;display:grid;grid-template-columns:repeat(3,1fr);column-gap:8px}
+.seg button{position:relative;height:32px;border-top:1px solid var(--rule-2);color:var(--ink-2);transition:color var(--ease),border-color var(--ease)}
+.seg button::before{content:"";position:absolute;left:0;right:0;top:-1px;height:2px}
+.seg button:hover{border-top-color:var(--ink-3);color:var(--ink-1)}
+.seg button.on{color:var(--ink-1);font-weight:700}
+.seg button.on::before{background:var(--ink-1)}
+.cap .b2{height:32px;font-size:var(--t6);padding:0 12px}
+.cap.min{width:auto;padding:8px 8px 8px 16px}
+.cap.min p,.cap.min .cap-r{display:none}
+.cap.min .cap-h .bq{margin-right:0}
+
+/* =====================================================================
+   SYSTEM SHEET
+   ===================================================================== */
+.sheet{position:fixed;inset:0;z-index:80;background:var(--bg);overflow:auto;display:none}
+.sheet.on{display:block}
+.sh-bar{position:sticky;top:0;z-index:2;height:48px;align-items:center;background:var(--bg);border-bottom:1px solid var(--rule)}
+.sh-bar .a{grid-column:1/4;display:flex;align-items:center;gap:8px;font-weight:700}
+.sh-bar .a svg{width:16px;height:16px}
+.sh-bar .b{grid-column:4/12;color:var(--ink-3)}
+.sh-bar .bq{grid-column:12;justify-self:start;margin-left:-8px}
+.sec{padding-top:48px;padding-bottom:16px}
+.sec-h{grid-column:1/4;border-top:1px solid var(--ink-1);padding-top:16px}
+.sec-h .lab{font-variant-numeric:tabular-nums}
+.sec-h h2{margin-top:8px;font-size:var(--t3);line-height:32px;font-weight:700;letter-spacing:-.015em}
+.sec-b{grid-column:4/13;border-top:1px solid var(--ink-1);padding-top:16px;align-content:start;row-gap:0}
+.sec-b > *{grid-column:1/-1}
+.pr-l{display:grid;grid-template-columns:subgrid;grid-column:1/-1;border-bottom:1px solid var(--rule);padding:12px 0 12px;align-items:first baseline}
+.pr-l:first-child{padding-top:0}
+.pr-l .k{grid-column:1/4;font-size:var(--t4);line-height:24px;font-weight:700;letter-spacing:-.01em}
+.pr-l .v{grid-column:4/10;font-size:var(--t5);line-height:24px;color:var(--ink-2)}
+.gd{display:grid;grid-template-columns:repeat(12,1fr);column-gap:6px;margin-top:8px}
+.gd > div{height:28px;border-top:1px solid var(--rule-2);font-size:var(--t7);color:var(--ink-3);padding-top:4px;font-variant-numeric:tabular-nums;position:relative}
+.gd .tb{border-top:2px solid var(--ink-1);color:var(--ink-1)}
+.gd .tb.blk{border-top-color:var(--ember);color:var(--ember)}
+.gd .sys{background:var(--surface-2);border-top-color:var(--surface-2);color:var(--ink-2)}
+.gd-l{margin-top:24px;font-size:var(--t7);color:var(--ink-3)}
+.spec{display:grid;grid-template-columns:subgrid;grid-column:1/-1;margin-top:24px}
+.spec .k{grid-column:1/3}
+.spec .v{grid-column:3/-1;color:var(--ink-2)}
+.spec-row{display:grid;grid-template-columns:subgrid;grid-column:1/-1;padding:8px 0;border-bottom:1px solid var(--rule)}
+.spec-row .k{grid-column:1/3;color:var(--ink-3)}
+.spec-row .v{grid-column:3/-1}
+.sw{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));column-gap:var(--g);row-gap:24px}
+.sw .c{height:64px;box-shadow:inset 0 0 0 1px var(--rule)}
+.sw .nm{margin-top:8px;font-weight:500}
+.sw .hx{color:var(--ink-3);font-variant-numeric:tabular-nums}
+.sw .rl{color:var(--ink-2);margin-top:4px;font-size:var(--t7)}
+.ts{display:grid;grid-template-columns:subgrid;grid-column:1/-1;border-bottom:1px solid var(--rule);padding:16px 0;align-items:end}
+.ts:first-child{padding-top:0}
+.ts .k{grid-column:1/3;font-size:var(--t7);color:var(--ink-3);line-height:16px}
+.ts .k b{display:block;color:var(--ink-1);font-weight:500;font-size:var(--t6)}
+.ts .v{grid-column:3/-1;white-space:nowrap;overflow:hidden}
+.rw{display:grid;grid-template-columns:subgrid;grid-column:1/-1;padding:16px 0;border-bottom:1px solid var(--rule);align-items:center}
+.rw .s{grid-column:1/4;height:2px;position:relative}
+.rw .s i{position:absolute;left:0;right:0;top:0}
+.rw .k{grid-column:4/7;font-weight:500}
+.rw .v{grid-column:7/-1;color:var(--ink-3)}
+.spc{display:flex;align-items:flex-end;gap:24px;margin-top:8px}
+.spc div{background:var(--ink-3)}
+.spc span{display:block;margin-top:8px;color:var(--ink-3);font-size:var(--t7);font-variant-numeric:tabular-nums}
+.cm{display:grid;grid-template-columns:subgrid;grid-column:1/-1;padding:16px 0 24px;border-bottom:1px solid var(--rule);align-items:start}
+.cm > .k{grid-column:1/3;padding-top:4px}
+.cm > .k b{display:block;font-weight:700;font-size:var(--t6);margin-bottom:4px}
+.cm > .k span{color:var(--ink-3);font-size:var(--t7)}
+.cm > .v{grid-column:3/-1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));column-gap:var(--g);row-gap:16px;align-items:end}
+.cm > .v.five{grid-template-columns:repeat(5,minmax(0,1fr))}
+.cm > .v.one{grid-template-columns:1fr}
+.cm > .v .lab{margin-top:8px}
+.cm .tab{margin-top:0;grid-column:auto}
+.cm .opts{display:grid;grid-template-columns:repeat(3,1fr);column-gap:var(--g)}
+.cm .opts .opt{grid-template-columns:1fr 1fr 1fr}
+.mrow{display:grid;grid-template-columns:subgrid;grid-column:1/-1;align-items:first baseline;position:relative;border-top:1px solid var(--rule-2);padding:12px 0 16px}
+.cm .menu-st{position:static;display:block;width:256px}
+.sheet .foot{padding-top:48px;padding-bottom:96px;color:var(--ink-3)}
+.sheet .foot div{grid-column:4/13}
+</style>
+</head>
+<body data-platform="linux">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="mastg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6a3d"/><stop offset="1" stop-color="#c2300f"/></linearGradient>
+<symbol id="logo" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="url(#mastg)"/><path d="M14 10.5V24.5H6.6Q7.4 16 14 10.5Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/><path d="M17 6V24.5H25.4Q24.7 13 17 6Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></symbol></defs></svg>
+
+<div class="win" id="win">
+  <header class="chrome">
+    <div class="strip grid" id="strip">
+      <div class="wc wc-mac" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="tabs" id="tabs" role="tablist" aria-label="Tabs"></div>
+      <div class="wc wc-win">
+        <button aria-label="Minimise"><svg viewBox="0 0 10 10"><path d="M0 5.5h10"/></svg></button>
+        <button aria-label="Maximise"><svg viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9"/></svg></button>
+        <button class="close" aria-label="Close"><svg viewBox="0 0 10 10"><path d="M0 0l10 10M10 0L0 10"/></svg></button>
+      </div>
+      <div class="wc wc-gnome">
+        <button aria-label="Minimise"><svg viewBox="0 0 10 10"><path d="M1 8h8"/></svg></button>
+        <button aria-label="Maximise"><svg viewBox="0 0 10 10"><rect x="1.5" y="1.5" width="7" height="7"/></svg></button>
+        <button aria-label="Close"><svg viewBox="0 0 10 10"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg></button>
+      </div>
+    </div>
+    <div class="toolbar grid">
+      <div class="nav">
+        <button class="ib" id="back" aria-label="Back"><svg class="i" viewBox="0 0 16 16"><path d="M13 8H3.5M7.5 4L3.5 8l4 4"/></svg></button>
+        <button class="ib" disabled aria-label="Forward"><svg class="i" viewBox="0 0 16 16"><path d="M3 8h9.5M8.5 4l4 4-4 4"/></svg></button>
+        <button class="ib" aria-label="Reload"><svg class="i" viewBox="0 0 16 16"><path d="M12.6 6A5 5 0 1 0 13 8.5"/><path d="M13 2.5V6H9.5"/></svg></button>
+      </div>
+      <div class="fld omni" id="omni">
+        <div class="fmt" id="omniFmt"></div>
+        <input id="omniIn" spellcheck="false" autocomplete="off" aria-label="Address and search bar">
+        <div class="tag" id="omniTag" hidden></div>
+      </div>
+      <button class="bq tbb" id="tbBlock" aria-haspopup="dialog"><i class="sq"></i><span>Block</span></button>
+      <button class="bq tbm" id="tbMenu" aria-haspopup="menu">Menu</button>
+    </div>
+  </header>
+
+  <main class="content" id="content">
+    <!-- NEW TAB -->
+    <section class="view" id="v-ntp" aria-label="New tab">
+      <div class="ntp grid">
+        <div class="ntp-head sub">
+          <div class="brand">
+            <svg aria-label="Mast"><use href="#logo"/></svg>
+            <h1 class="disp">Blocklist</h1>
+            <div class="lab" id="catCount">6 categories, 39 sites</div>
+          </div>
+          <div class="stat-a">
+            <div class="num">4</div>
+            <div class="lab">Distractions stopped today</div>
+          </div>
+          <div class="stat-b">
+            <div class="num" id="blockedNum">21</div>
+            <div class="lab">Sites blocked</div>
+          </div>
+        </div>
+        <div class="ntp-body sub">
+          <div class="ctrl sub">
+            <div class="lab">Selection</div>
+            <div class="selsum" id="selSum"></div>
+            <div class="selsub" id="selSub"></div>
+            <div class="lab d">Duration</div>
+            <div class="optlist sub" id="durList" role="radiogroup" aria-label="Duration"></div>
+            <button class="b1" id="ntpBlock"><span>Block</span><span class="n" id="ntpBlockN"></span></button>
+            <p class="note">Blocks can be lengthened, never shortened or lifted. Undo stays available for 10 seconds after you press Block.</p>
+          </div>
+          <div class="tbl sub" id="tbl"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- GITHUB -->
+    <section class="view" id="v-github" aria-label="GitHub">
+      <div class="gh">
+        <div class="gh-top">
+          <div class="gh-oct"><i></i></div>
+          <div class="gh-crumb">chromium<span>/</span>chromium</div>
+          <div class="gh-search">Type / to search</div>
+          <div class="gh-av"></div>
+        </div>
+        <div class="gh-tabs"><span class="on">Code</span><span>Pull requests<b>0</b></span><span>Actions</span><span>Security</span><span>Insights</span></div>
+        <div class="gh-main">
+          <div class="gh-title">chromium <span style="color:#7d8590;font-weight:400">/</span> chromium <span class="gh-pill">Public mirror</span></div>
+          <div>
+            <div class="gh-bar"><span class="gh-btn">main</span><span class="gh-btn">Go to file</span><span class="gh-btn g">Code</span></div>
+            <div class="gh-box">
+              <div class="hd"><span class="av"></span><b>chromium-autoroll</b><span style="color:#7d8590">Roll Skia from 4f1c2a9b0e1d to 8a77c3e0f512 (3 revisions)</span><span class="mut">1,612,408 commits</span></div>
+              <div id="ghRows"></div>
+            </div>
+          </div>
+          <div class="gh-side">
+            <h3>About</h3>
+            <p>The official GitHub mirror of the Chromium source.</p>
+            <p><a href="#" onclick="return false">chromium.org</a></p>
+            <div class="gh-topics"><span>browser</span><span>c-plus-plus</span><span>chromium</span><span>blink</span><span>v8</span></div>
+            <div class="st">Readme<br>BSD-3-Clause license<br>20.1k stars<br>1.1k watching<br>7.6k forks</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- WIKIPEDIA -->
+    <section class="view" id="v-wiki" aria-label="Wikipedia">
+      <div class="wk">
+        <div class="wk-top">
+          <div class="wk-logo"><span class="w">W</span><span class="wm">WIKIPEDIA<small>The Free Encyclopedia</small></span></div>
+          <div class="wk-search"><span>Search Wikipedia</span><b>Search</b></div>
+          <div class="r"><a href="#" onclick="return false">Donate</a><a href="#" onclick="return false">Create account</a><a href="#" onclick="return false">Log in</a></div>
+        </div>
+        <div class="wk-body">
+          <nav class="wk-toc"><h4>Contents</h4><a href="#" onclick="return false">(Top)</a><a href="#" onclick="return false">History</a><a class="sub" href="#" onclick="return false">Neue Haas Grotesk</a><a class="sub" href="#" onclick="return false">Renaming</a><a href="#" onclick="return false">Characteristics</a><a href="#" onclick="return false">Variants</a><a href="#" onclick="return false">Usage</a><a href="#" onclick="return false">See also</a><a href="#" onclick="return false">References</a></nav>
+          <article>
+            <h1>Helvetica</h1>
+            <div class="wk-tabs"><span class="on">Article</span><span>Talk</span><span class="sp on">Read</span><span>Edit</span><span>View history</span></div>
+            <div class="from">From Wikipedia, the free encyclopedia</div>
+            <div class="wk-ib">
+              <div class="tt">Helvetica</div>
+              <div class="sp">Aa Rr Gg</div>
+              <table>
+                <tr><th>Category</th><td><a href="#" onclick="return false">Sans-serif</a></td></tr>
+                <tr><th>Classification</th><td><a href="#" onclick="return false">Neo-grotesque</a></td></tr>
+                <tr><th>Designer(s)</th><td>Max Miedinger<br>Eduard Hoffmann</td></tr>
+                <tr><th>Foundry</th><td>Haas Type Foundry</td></tr>
+                <tr><th>Date released</th><td>1957</td></tr>
+                <tr><th>Also known as</th><td>Neue Haas Grotesk</td></tr>
+              </table>
+            </div>
+            <p><b>Helvetica</b>, originally <b>Neue Haas Grotesk</b>, is a widely used <a href="#" onclick="return false">sans-serif</a> <a href="#" onclick="return false">typeface</a> developed in 1957 by Swiss typeface designer <a href="#" onclick="return false">Max Miedinger</a> and <a href="#" onclick="return false">Eduard Hoffmann</a>.</p>
+            <p>Helvetica is a neo-grotesque or realist design, one influenced by the famous 19th century typeface <a href="#" onclick="return false">Akzidenz-Grotesk</a> and other German and Swiss designs. Its use became a hallmark of the <a href="#" onclick="return false">International Typographic Style</a> that emerged from the work of Swiss designers in the 1950s and 1960s, becoming one of the most popular typefaces of the mid-20th century.</p>
+            <p>Over the years, a wide range of variants have been released in different weights, widths and sizes, as well as matching designs for a range of non-Latin alphabets. Notable features of Helvetica as originally designed include a high <a href="#" onclick="return false">x-height</a>, the termination of strokes on horizontal or vertical lines and an unusually tight spacing between letters, which combine to give it a dense, compact appearance.</p>
+            <h2>History</h2>
+            <p>Helvetica was developed in 1957 by Max Miedinger with Eduard Hoffmann at the Haas Type Foundry of Münchenstein, Switzerland. Haas set out to design a new sans-serif typeface that could compete with Akzidenz-Grotesk in the Swiss market.</p>
+            <p>Originally called <i>Neue Haas Grotesk</i>, its design was based on Schelter-Grotesk and Haas' Normal Grotesk. The aim of the new design was to create a neutral typeface that had great clarity, had no intrinsic meaning in its form, and could be used on a wide variety of signage.</p>
+            <h2>Characteristics</h2>
+            <p>Helvetica's design makes extensive use of a narrow aperture, with strokes ending on perfectly horizontal or vertical lines. The tight spacing and large x-height give text set in the face a uniform texture.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- BLOCKED -->
+    <section class="view blkv" id="v-blocked" aria-label="Blocked page"></section>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">
+      <span class="msg" id="toastMsg"></span>
+      <button class="u" id="undo">Undo</button>
+      <span class="s" id="toastS">10</span>
+      <i class="pr"></i>
+    </div>
+  </main>
+
+  <div class="pop blockpop" id="blockPop" role="dialog" aria-label="Block this site"><div class="in" id="blockPopIn"></div></div>
+  <div class="pop menu" id="menu" role="menu"></div>
+</div>
+
+<aside class="cap" id="cap">
+  <div class="cap-h"><svg><use href="#logo"/></svg>Proposal 10 · Swiss<button class="bq" id="capMin" aria-label="Collapse caption">Hide</button></div>
+  <p>Typographic Style as interface: one 12-column grid for chrome and pages, one typeface, hairline rules. Ember means blocked.</p>
+  <div class="cap-r"><div class="seg" id="plat" role="radiogroup" aria-label="Platform">
+    <button data-p="linux" class="on">Linux</button><button data-p="mac">macOS</button><button data-p="win">Windows</button>
+  </div><button class="b2" id="openSys">System</button></div>
+</aside>
+
+<!-- SYSTEM SHEET -->
+<div class="sheet" id="sheet" role="dialog" aria-label="System">
+  <div class="sh-bar grid">
+    <div class="a"><svg><use href="#logo"/></svg>Mast System</div>
+    <div class="b">Proposal 10 · Swiss. Tokens, grid, type, rules and components, as used in the chrome and every WebUI page.</div>
+    <button class="bq" id="closeSys">Close <span style="color:var(--ink-3);font-weight:400">Esc</span></button>
+  </div>
+
+  <section class="sec grid">
+    <div class="sec-h"><div class="lab">01</div><h2>Principles</h2></div>
+    <div class="sec-b sub">
+      <div class="pr-l"><div class="k">The grid decides.</div><div class="v">Chrome, pages, popovers and this sheet share one 12-column grid. Nothing sits off it.</div></div>
+      <div class="pr-l"><div class="k">Type is the interface.</div><div class="v">Hierarchy comes from size, weight and position. No boxes, no shadows, no radius, no ornament.</div></div>
+      <div class="pr-l"><div class="k">State lives on the rule.</div><div class="v">Every selectable thing has a top rule: hairline at rest, brighter on hover, 2px when selected.</div></div>
+      <div class="pr-l"><div class="k">Ember means blocked.</div><div class="v">It is the only colour. Blocked text, blocked rules, the Block action, the forever page. Never decoration.</div></div>
+      <div class="pr-l"><div class="k">Flush left, ragged right.</div><div class="v">Nothing is centred and nothing is justified. Big type is trimmed to its cap height so it aligns to rules.</div></div>
+    </div>
+  </section>
+
+  <section class="sec grid">
+    <div class="sec-h"><div class="lab">02</div><h2>Grid</h2></div>
+    <div class="sec-b sub">
+      <div class="lab">Linux · tab strip</div>
+      <div class="gd"><div class="tb">1 Tab</div><div class="tb"></div><div class="tb">2</div><div class="tb"></div><div class="tb">3</div><div class="tb"></div><div class="tb blk">4</div><div class="tb blk"></div><div class="tb blk">5</div><div class="tb blk"></div><div>+</div><div class="sys">Controls</div></div>
+      <div class="lab" style="margin-top:16px">macOS · column 1 belongs to the window controls</div>
+      <div class="gd"><div class="sys">Lights</div><div class="tb">1 Tab</div><div class="tb"></div><div class="tb">2</div><div class="tb"></div><div class="tb">3</div><div class="tb"></div><div class="tb blk">4</div><div class="tb blk"></div><div class="tb blk">5</div><div class="tb blk"></div><div>+</div></div>
+      <div class="lab" style="margin-top:16px">Windows · 46 × 32 caption buttons, a drag gap is left for snap layouts</div>
+      <div class="gd"><div class="tb">1 Tab</div><div class="tb"></div><div class="tb">2</div><div class="tb"></div><div class="tb">3</div><div class="tb"></div><div class="tb blk">4</div><div class="tb blk"></div><div class="tb blk">5</div><div class="tb blk"></div><div>+</div><div class="sys">– □ ×</div></div>
+      <div class="lab" style="margin-top:16px">Toolbar</div>
+      <div class="gd"><div class="sys">← → ↻</div><div class="tb" style="grid-column:span 9">Address field</div><div class="tb blk">Block</div><div class="tb">Menu</div></div>
+      <div class="spec" style="margin-top:32px">
+        <div class="spec-row"><div class="k">Columns</div><div class="v tnum">12, fluid</div></div>
+        <div class="spec-row"><div class="k">Margin / gutter</div><div class="v tnum">24 / 16</div></div>
+        <div class="spec-row"><div class="k">Baseline</div><div class="v tnum">8. Every line height and block height is a multiple of 8 (labels: 16).</div></div>
+        <div class="spec-row"><div class="k">Chrome</div><div class="v tnum">Tab strip 40, toolbar 48, one hairline below. Tabs span 2 columns; over capacity they share the strip equally.</div></div>
+        <div class="spec-row"><div class="k">Pages</div><div class="v">New tab: control column 1–3, table 4–12. Blocked page: four facts of 3 columns each.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec grid">
+    <div class="sec-h"><div class="lab">03</div><h2>Colour</h2></div>
+    <div class="sec-b sub">
+      <div class="sw" id="swatches"></div>
+    </div>
+  </section>
+
+  <section class="sec grid">
+    <div class="sec-h"><div class="lab">04</div><h2>Type</h2></div>
+    <div class="sec-b sub">
+      <div class="ts"><div class="k"><b>T1 Display</b>128 · 700 · −4.5%<br>Cap-trimmed. Numerals, blocked host</div><div class="v num">21</div></div>
+      <div class="ts"><div class="k"><b>T2 Headline</b>56 · 700 · −3%<br>Cap-trimmed. Page titles</div><div class="v disp">Blocklist</div></div>
+      <div class="ts"><div class="k"><b>T3 Title</b>28/32 · 400–700 · −1.5%<br>Category names, sheet sections</div><div class="v" style="font-size:28px;line-height:32px;letter-spacing:-.015em">Video &amp; streaming</div></div>
+      <div class="ts"><div class="k"><b>T4 Lead</b>20/24 · 500 · −1%<br>Selections, facts, Block</div><div class="v" style="font-size:20px;line-height:24px;font-weight:500;letter-spacing:-.01em">Blocked until midnight</div></div>
+      <div class="ts"><div class="k"><b>T5 Body</b>15/24 · 400–500<br>Address, options, status</div><div class="v" style="font-size:15px;line-height:24px">Search Google or type a URL</div></div>
+      <div class="ts"><div class="k"><b>T6 UI</b>13/16 · 400–500<br>Tabs, menus, site lists</div><div class="v">chromium/chromium &nbsp; news.ycombinator.com &nbsp; New window</div></div>
+      <div class="ts"><div class="k"><b>T7 Label</b>11/16 · 500<br>Labels, shortcuts, tab numerals</div><div class="v lab">Distractions stopped today &nbsp; 01 02 03 &nbsp; Ctrl+Shift+N</div></div>
+      <div class="spec">
+        <div class="spec-row"><div class="k">Family</div><div class="v">Inter Tight, bundled. Weights 400, 500, 700 only. Sentence case, no tracking on small sizes, no italics in UI.</div></div>
+        <div class="spec-row"><div class="k">Figures</div><div class="v">Tabular in tables, times and shortcuts; proportional in display numerals.</div></div>
+        <div class="spec-row"><div class="k">Weight as state</div><div class="v">400 rest → 500 active/partial → 700 selected. Colour moves with it: ink-2 → ink-1 (or ember).</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec grid">
+    <div class="sec-h"><div class="lab">05</div><h2>Rules, spacing, shape</h2></div>
+    <div class="sec-b sub">
+      <div class="rw"><div class="s"><i style="height:1px;background:var(--rule)"></i></div><div class="k">Hairline · rule</div><div class="v">Structure: rows, dividers, chrome edge</div></div>
+      <div class="rw"><div class="s"><i style="height:1px;background:var(--rule-2)"></i></div><div class="k">Hairline · rule-2</div><div class="v">A selectable thing at rest; field underline</div></div>
+      <div class="rw"><div class="s"><i style="height:1px;background:var(--ink-3)"></i></div><div class="k">Hairline · ink-3</div><div class="v">Hover</div></div>
+      <div class="rw"><div class="s"><i style="height:1px;background:var(--ink-1)"></i></div><div class="k">Head rule · ink-1</div><div class="v">Starts a section, a popover, a fact row; partial selection</div></div>
+      <div class="rw"><div class="s"><i style="height:2px;background:var(--ink-1)"></i></div><div class="k">State rule · 2px ink-1</div><div class="v">Selected, active tab, focused field</div></div>
+      <div class="rw"><div class="s"><i style="height:1px;background:var(--ember)"></i></div><div class="k">Blocked · 1px ember</div><div class="v">A blocked tab, category or row</div></div>
+      <div class="rw"><div class="s"><i style="height:2px;background:var(--ember)"></i></div><div class="k">Blocked + selected · 2px ember</div><div class="v">Active blocked tab, selected forever, lengthening</div></div>
+      <div class="rw"><div class="s" style="height:24px;background:var(--ember)"></div><div class="k">Field · ember</div><div class="v">The Block action and the forever page. The only filled colour.</div></div>
+      <div class="lab" style="margin-top:32px">Spacing scale</div>
+      <div class="spc" id="spc"></div>
+      <div class="spec" style="margin-top:32px">
+        <div class="spec-row"><div class="k">Radius</div><div class="v">0. Exceptions: the logo and native window controls.</div></div>
+        <div class="spec-row"><div class="k">Elevation</div><div class="v">No shadows. A popover is one surface step up, a hairline edge and an ink head rule.</div></div>
+        <div class="spec-row"><div class="k">Marker</div><div class="v"><i class="sq on" style="margin-right:8px"></i>The 8px ember square means blocked. Outline square = can be blocked.</div></div>
+        <div class="spec-row"><div class="k">Motion</div><div class="v">120 ms colour and weight only. Nothing moves except the Undo rule, which drains over 10 s.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec grid">
+    <div class="sec-h"><div class="lab">06</div><h2>Components</h2></div>
+    <div class="sec-b sub">
+      <div class="cm"><div class="k"><b>Primary</b><span>Block only. Ember field.</span></div><div class="v">
+        <div><button class="b1" style="width:100%">Block</button><div class="lab">Default</div></div>
+        <div><button class="b1 is-hover" style="width:100%">Block</button><div class="lab">Hover</div></div>
+        <div><button class="b1 is-press" style="width:100%">Block</button><div class="lab">Pressed</div></div>
+        <div><button class="b1 is-off" style="width:100%" disabled>Block</button><div class="lab">Disabled</div></div>
+      </div></div>
+      <div class="cm"><div class="k"><b>Secondary</b><span>Inverts on hover.</span></div><div class="v">
+        <div><button class="b2">Back</button><div class="lab">Default</div></div>
+        <div><button class="b2 is-hover">Back</button><div class="lab">Hover</div></div>
+        <div><button class="b2 is-press">Back</button><div class="lab">Pressed</div></div>
+        <div><button class="b2 is-off" disabled>Back</button><div class="lab">Disabled</div></div>
+      </div></div>
+      <div class="cm"><div class="k"><b>Quiet</b><span>Toolbar, menus, links.</span></div><div class="v">
+        <div><button class="bq"><i class="sq"></i>Block</button><div class="lab">Default</div></div>
+        <div><button class="bq is-hover"><i class="sq"></i>Block</button><div class="lab">Hover</div></div>
+        <div><button class="bq is-press"><i class="sq"></i>Block</button><div class="lab">Pressed</div></div>
+        <div><button class="bq is-off" disabled><i class="sq"></i>Block</button><div class="lab">Disabled</div></div>
+      </div></div>
+      <div class="cm"><div class="k"><b>Field</b><span>A hairline. 2px on focus.</span></div><div class="v">
+        <div><div class="fld"><input placeholder="Add a site" tabindex="-1"></div><div class="lab">Empty</div></div>
+        <div><div class="fld" style="--rule-2:var(--ink-3)"><input placeholder="Add a site" tabindex="-1"></div><div class="lab">Hover</div></div>
+        <div><div class="fld is-focus"><input value="espn.com" tabindex="-1"></div><div class="lab">Focus</div></div>
+        <div><div class="fld"><input value="espn.com" tabindex="-1"></div><div class="lab">Filled</div></div>
+      </div></div>
+      <div class="cm"><div class="k"><b>Checkbox</b><span>A square. Filled = on.</span></div><div class="v">
+        <div><div class="mi" style="padding:0"><i class="cb"></i>Show bookmarks bar</div><div class="lab">Off</div></div>
+        <div><div class="mi" style="padding:0"><i class="cb on"></i>Show bookmarks bar</div><div class="lab">On</div></div>
+        <div><div class="mi" style="padding:0;color:var(--ink-4)"><i class="cb off-d"></i>Show bookmarks bar</div><div class="lab">Disabled</div></div>
+        <div></div>
+      </div></div>
+      <div class="cm"><div class="k"><b>Option</b><span>Single choice. State on the top rule.</span></div><div class="v">
+        <div class="opts"><button class="opt"><span class="l">4 hours</span><span class="e">18:20</span></button></div>
+        <div class="opts"><button class="opt is-hover"><span class="l">4 hours</span><span class="e">18:20</span></button></div>
+        <div class="opts"><button class="opt on"><span class="l">4 hours</span><span class="e">18:20</span></button></div>
+        <div class="opts"><button class="opt on ever"><span class="l">Forever</span><span class="e">No end</span></button></div>
+        <div class="lab" style="margin-top:0">Rest</div><div class="lab" style="margin-top:0">Hover</div><div class="lab" style="margin-top:0">Selected</div><div class="lab" style="margin-top:0">Selected, forever</div>
+        <div class="opts"><button class="opt" disabled><span class="l">1 hour</span><span class="e">15:20</span></button></div>
+        <div></div><div></div><div></div>
+        <div class="lab" style="margin-top:0">Disabled (would shorten)</div>
+      </div></div>
+      <div class="cm"><div class="k"><b>Tab</b><span>Numeral = Ctrl/⌘ + n.</span></div><div class="v five">
+        <div><div class="tab active"><span class="n">01</span><span class="t">New Tab</span><span class="x"><svg class="i" viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span></div><div class="lab">Active</div></div>
+        <div><div class="tab"><span class="n">02</span><span class="t">chromium/chromium</span><span class="x"><svg class="i" viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span></div><div class="lab">Inactive</div></div>
+        <div><div class="tab is-hover"><span class="n">03</span><span class="t">Helvetica — Wikipedia</span><span class="x"><svg class="i" viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span></div><div class="lab">Hover</div></div>
+        <div><div class="tab blk"><span class="n">04</span><span class="t">youtube.com</span><span class="x"><svg class="i" viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span></div><div class="lab">Blocked</div></div>
+        <div><div class="tab blk active"><span class="n">05</span><span class="t">x.com</span><span class="x"><svg class="i" viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg></span></div><div class="lab">Blocked, active</div></div>
+      </div></div>
+      <div class="cm"><div class="k"><b>Category row</b><span>Weight, colour, rule.</span></div><div class="v one" id="rowSpec"></div></div>
+      <div class="cm"><div class="k"><b>Toast</b><span>The one inverted surface. 10 s.</span></div><div class="v one">
+        <div class="toast static"><span class="msg">Shopping and Games blocked until midnight.</span><button class="u" tabindex="-1">Undo</button><span class="s">7</span><i class="pr"></i></div>
+      </div></div>
+      <div class="cm"><div class="k"><b>Menu</b><span>Surface + hairline + head rule.</span></div><div class="v one">
+        <div class="pop menu menu-st on">
+          <div class="mi">New tab<span class="k">Ctrl+T</span></div>
+          <div class="mi is-hover">New window<span class="k">Ctrl+N</span></div>
+          <div class="msep"></div>
+          <div class="mi"><i class="cb on"></i>Show bookmarks bar<span class="k">Ctrl+Shift+B</span></div>
+          <div class="mi" style="color:var(--ink-4)">Print<span class="k" style="color:var(--ink-4)">Ctrl+P</span></div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+  <div class="foot grid"><div>Chrome is native Views; new tab and blocked pages are WebUI. Both read the same tokens: grid, type scale, rules, colour.</div></div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const H = 3600e3, D = 24 * H;
+const NOW = new Date(2026, 9, 30, 14, 20).getTime();
+const MID = new Date(2026, 9, 31, 0, 0).getTime();
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const pad = n => String(n).padStart(2, '0');
+const hhmm = t => { const d = new Date(t); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+const md = t => { const d = new Date(t); return MON[d.getMonth()] + ' ' + d.getDate(); };
+const sameDay = (a, b) => new Date(a).toDateString() === new Date(b).toDateString();
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+const DUR = [
+  { k: 'h1',   label: '1 hour',         end: NOW + H },
+  { k: 'h4',   label: '4 hours',        end: NOW + 4 * H },
+  { k: 'mid',  label: 'Until midnight', end: MID },
+  { k: 'w1',   label: '1 week',         end: NOW + 7 * D },
+  { k: 'm1',   label: '1 month',        end: new Date(2026, 10, 30, 14, 20).getTime() },
+  { k: 'ever', label: 'Forever',        end: Infinity },
+];
+const durEnd = d => d.end === Infinity ? 'No end' : d.end === MID ? '00:00' : sameDay(d.end, NOW) ? hhmm(d.end) : md(d.end);
+const untilTxt = end => end === Infinity ? 'forever' : end === MID ? 'until midnight' : sameDay(end, NOW) ? 'until ' + hhmm(end) : 'until ' + md(end);
+const leftTxt = end => {
+  const ms = end - NOW;
+  if (ms < D) { const h = Math.floor(ms / H), m = Math.round((ms - h * H) / 60e3); return h + ' h' + (m ? ' ' + m + ' min' : '') + ' left'; }
+  const d = Math.round(ms / D); return d + (d === 1 ? ' day' : ' days') + ' left';
+};
+const sinceTxt = t => sameDay(t, NOW) ? 'Today, ' + hhmm(t) : md(t) + ', ' + new Date(t).getFullYear();
+
+const CATS = [
+  { id: 'social', name: 'Social', sites: 'x.com twitter.com facebook.com instagram.com tiktok.com reddit.com snapchat.com threads.net bsky.app pinterest.com tumblr.com discord.com' },
+  { id: 'video', name: 'Video & streaming', sites: 'youtube.com netflix.com twitch.tv kick.com primevideo.com disneyplus.com hulu.com max.com' },
+  { id: 'news', name: 'News & forums', sites: 'news.ycombinator.com cnn.com foxnews.com bbc.com nytimes.com buzzfeed.com 9gag.com' },
+  { id: 'shop', name: 'Shopping', sites: 'amazon.com ebay.com aliexpress.com temu.com etsy.com shein.com' },
+  { id: 'games', name: 'Games', sites: 'chess.com lichess.org roblox.com store.steampowered.com poki.com' },
+  { id: 'yours', name: 'Your sites', sites: 'espn.com' },
+];
+
+const S = {
+  sites: {}, sel: new Set(), dur: 'mid', popDur: null, plat: 'linux', bookmarks: false,
+  tabs: [
+    { id: 't1', title: 'New Tab', host: null, view: 'ntp' },
+    { id: 't2', title: 'chromium/chromium', host: 'github.com', path: '/chromium/chromium', view: 'github' },
+    { id: 't3', title: 'Helvetica — Wikipedia', host: 'en.wikipedia.org', path: '/wiki/Helvetica', view: 'wiki' },
+    { id: 't4', title: 'YouTube', host: 'youtube.com', path: '/watch?v=dQw4w9WgXcQ', view: 'none' },
+    { id: 't5', title: 'X', host: 'x.com', path: '/home', view: 'none' },
+  ],
+  active: 't1', seq: 6,
+};
+CATS.forEach(c => c.sites.split(' ').forEach(h => S.sites[h] = { cat: c.id, end: 0, since: 0 }));
+CATS[0].sites.split(' ').forEach(h => Object.assign(S.sites[h], { end: Infinity, since: new Date(2026, 9, 18, 21, 4).getTime() }));
+CATS[1].sites.split(' ').forEach(h => Object.assign(S.sites[h], { end: MID, since: new Date(2026, 9, 30, 9, 12).getTime() }));
+Object.assign(S.sites['news.ycombinator.com'], { end: NOW + 5 * D, since: NOW - 2 * D });
+
+const isBlk = h => !!S.sites[h] && S.sites[h].end > NOW;
+const isEver = h => !!S.sites[h] && S.sites[h].end === Infinity;
+const catSites = id => Object.keys(S.sites).filter(h => S.sites[h].cat === id);
+const catName = id => CATS.find(c => c.id === id).name;
+const normHost = v => v.trim().toLowerCase().replace(/^[a-z]+:\/\//, '').replace(/^www\./, '').split(/[/?#]/)[0];
+const curTab = () => S.tabs.find(t => t.id === S.active);
+const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
+
+/* ---------------- tabs ---------------- */
+const X_ICON = '<svg class="i" viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9"/></svg>';
+function renderTabs() {
+  const el = $('#tabs');
+  el.classList.toggle('dense', S.tabs.length > 5);
+  el.innerHTML = S.tabs.map((t, i) => {
+    const b = t.host && isBlk(t.host);
+    const title = b ? t.host : t.title;
+    return `<div class="tab${t.id === S.active ? ' active' : ''}${b ? ' blk' : ''}" role="tab" aria-selected="${t.id === S.active}" data-id="${t.id}" title="${esc(title)}${b ? ' · blocked' : ''}">
+      <span class="n">${pad(i + 1)}</span><span class="t">${esc(title)}</span><button class="x" data-close="${t.id}" aria-label="Close tab">${X_ICON}</button></div>`;
+  }).join('') + `<button class="newtab" id="newTab" aria-label="New tab" ${S.tabs.length >= 8 ? 'disabled' : ''}><svg class="i" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg></button>`;
+}
+$('#tabs').addEventListener('mousedown', e => {
+  const x = e.target.closest('[data-close]');
+  if (x) { e.stopPropagation(); closeTab(x.dataset.close); return; }
+  if (e.target.closest('#newTab')) { if (S.tabs.length < 8) newTab(); return; }
+  const t = e.target.closest('.tab');
+  if (t) activate(t.dataset.id);
+});
+function activate(id) { S.active = id; closePops(); renderAll(); }
+function newTab() { const id = 't' + S.seq++; S.tabs.push({ id, title: 'New Tab', host: null, view: 'ntp' }); activate(id); }
+function closeTab(id) {
+  const i = S.tabs.findIndex(t => t.id === id);
+  S.tabs.splice(i, 1);
+  if (!S.tabs.length) { newTab(); return; }
+  if (S.active === id) S.active = S.tabs[Math.min(i, S.tabs.length - 1)].id;
+  renderAll();
+}
+
+/* ---------------- toolbar ---------------- */
+function renderToolbar() {
+  const t = curTab(), fmt = $('#omniFmt'), tag = $('#omniTag'), bb = $('#tbBlock');
+  if (!t.host) { fmt.innerHTML = '<span class="ph">Search Google or type a URL</span>'; $('#omniIn').value = ''; $('#omniIn').placeholder = 'Search Google or type a URL'; }
+  else { fmt.innerHTML = `<span class="h">${esc(t.host)}</span><span class="p">${esc(t.path || '')}</span>`; $('#omniIn').value = 'https://' + t.host + (t.path || ''); }
+  const b = t.host && isBlk(t.host);
+  tag.hidden = !b;
+  if (b) tag.innerHTML = `<i class="sq on"></i>Blocked ${untilTxt(S.sites[t.host].end)}`;
+  bb.disabled = !t.host;
+  bb.classList.toggle('blk', !!b);
+  bb.querySelector('.sq').classList.toggle('on', !!b);
+  bb.querySelector('span').textContent = b ? (isEver(t.host) ? 'Blocked' : 'Lengthen') : 'Block';
+  bb.title = !t.host ? 'Nothing to block on this page' : b ? 'Lengthen this block' : 'Block this site';
+  $('#back').disabled = !t.host;
+}
+const omni = $('#omni'), omniIn = $('#omniIn');
+omniIn.addEventListener('focus', () => { omni.classList.add('editing'); setTimeout(() => omniIn.select(), 0); });
+omniIn.addEventListener('blur', () => { omni.classList.remove('editing'); renderToolbar(); });
+omniIn.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { omniIn.blur(); return; }
+  if (e.key !== 'Enter') return;
+  const raw = omniIn.value.trim(), h = normHost(raw), t = curTab();
+  if (!raw) return;
+  const map = { 'github.com': ['chromium/chromium', '/chromium/chromium', 'github'], 'en.wikipedia.org': ['Helvetica — Wikipedia', '/wiki/Helvetica', 'wiki'], 'wikipedia.org': ['Helvetica — Wikipedia', '/wiki/Helvetica', 'wiki'] };
+  if (h.includes('.') && !h.includes(' ')) {
+    if (map[h]) Object.assign(t, { host: h === 'wikipedia.org' ? 'en.wikipedia.org' : h, title: map[h][0], path: map[h][1], view: map[h][2] });
+    else Object.assign(t, { host: h, title: h, path: '/', view: S.sites[h] ? 'none' : 'plain' });
+  }
+  omniIn.blur(); renderAll();
+});
+
+/* ---------------- views ---------------- */
+function renderView() {
+  const t = curTab();
+  let v = t.view;
+  if (t.host && isBlk(t.host)) v = 'blocked';
+  else if (v === 'none' || v === 'plain') v = 'plain';
+  document.querySelectorAll('.view').forEach(s => s.classList.remove('on'));
+  if (v === 'blocked') renderBlocked(t);
+  if (v === 'plain') renderPlain(t);
+  $(v === 'plain' ? '#v-blocked' : '#v-' + v).classList.add('on');
+}
+function renderPlain(t) {
+  const s = $('#v-blocked'); s.className = 'view blkv';
+  s.innerHTML = `<div class="bp grid"><div class="bp-top sub"><div class="k" style="color:var(--ink-3)">Open</div><div class="u">${esc(t.host + (t.path || ''))}</div></div>
+  <h1 class="bp-host" style="color:var(--ink-3)">${esc(t.host)}</h1><p class="bp-until" style="color:var(--ink-3);font-size:var(--t4);line-height:24px">Only a few sites are mocked in this proposal.</p><div></div></div>`;
+}
+function renderBlocked(t) {
+  const s = S.sites[t.host], ever = s.end === Infinity, sec = $('#v-blocked');
+  sec.className = 'view blkv' + (ever ? ' ever' : '');
+  const until = 'Blocked ' + untilTxt(s.end) + '.';
+  const ends = ever ? 'Never' : s.end === MID ? 'Midnight' : sameDay(s.end, NOW) ? 'Today, ' + hhmm(s.end) : md(s.end) + ', ' + hhmm(s.end);
+  const ends2 = ever ? 'It can’t be shortened or lifted' : leftTxt(s.end);
+  sec.innerHTML = `<div class="bp grid">
+    <div class="bp-top sub"><div class="k"><i class="sq on"></i>Blocked</div><div class="c">${esc(catName(s.cat))}</div><div class="u">${esc(t.host + (t.path || ''))}</div></div>
+    <h1 class="bp-host" id="bpHost">${esc(t.host)}</h1>
+    <p class="bp-until">${until}</p>
+    <div class="bp-acts"><button class="b2" id="bpBack"><svg class="i" viewBox="0 0 16 16"><path d="M13 8H3.5M7.5 4L3.5 8l4 4"/></svg>Back</button>${ever ? '' : '<button class="bq" id="bpLonger">Lengthen</button>'}</div>
+    <div class="bp-facts sub">
+      <div class="f"><div class="lab">Category</div><div class="v">${esc(catName(s.cat))}</div></div>
+      <div class="f"><div class="lab">Blocked since</div><div class="v">${sinceTxt(s.since)}</div></div>
+      <div class="f"><div class="lab">Ends</div><div class="v">${ends}</div><div class="v2">${ends2}</div></div>
+      <div class="f"><div class="lab">Remaining</div><div class="v">${ever ? 'Forever' : leftTxt(s.end).replace(' left', '')}</div></div>
+    </div></div>`;
+  // fit long hosts into the 12 columns
+  const h = $('#bpHost'); h.style.fontSize = '';
+  requestAnimationFrame(() => { const avail = h.parentElement.clientWidth - 48; if (h.scrollWidth > avail) h.style.fontSize = Math.floor(parseFloat(getComputedStyle(h).fontSize) * avail / h.scrollWidth) + 'px'; });
+  $('#bpBack').onclick = goBack;
+  const l = $('#bpLonger'); if (l) l.onclick = e => { e.stopPropagation(); openBlockPop(); };
+}
+function goBack() { const t = curTab(); Object.assign(t, { host: null, title: 'New Tab', path: '', view: 'ntp' }); renderAll(); }
+$('#back').onclick = goBack;
+
+/* ---------------- new tab ---------------- */
+function renderDur() {
+  $('#durList').innerHTML = DUR.map(d => `<button class="opt${S.dur === d.k ? ' on' : ''}${d.k === 'ever' ? ' ever' : ''}" role="radio" aria-checked="${S.dur === d.k}" data-d="${d.k}"><span class="l">${d.label}</span><span class="e">${durEnd(d)}</span></button>`).join('');
+}
+$('#durList').addEventListener('click', e => { const b = e.target.closest('[data-d]'); if (b) { S.dur = b.dataset.d; renderNTP(); } });
+
+function catState(c) {
+  const hs = catSites(c.id), blk = hs.filter(isBlk), selectable = hs.filter(h => !isEver(h)), nSel = selectable.filter(h => S.sel.has(h)).length;
+  return { hs, blk, selectable, nSel, allBlk: hs.length > 0 && blk.length === hs.length, ever: hs.length > 0 && selectable.length === 0,
+    selCls: selectable.length && nSel === selectable.length ? 'sel' : nSel ? 'part' : '' };
+}
+function statusHTML(st) {
+  const { hs, blk } = st;
+  if (!blk.length) return `<div class="m">Open</div><div class="s">${plural(hs.length, 'site')}</div>`;
+  const ends = [...new Set(blk.map(h => S.sites[h].end))];
+  let m, s;
+  if (blk.length === hs.length) {
+    if (ends.length === 1) { m = 'Blocked ' + untilTxt(ends[0]); { const sn = S.sites[blk[0]].since; s = ends[0] === Infinity ? (sameDay(sn, NOW) ? 'Since today, ' + hhmm(sn) : 'Since ' + md(sn)) : leftTxt(ends[0]); } }
+    else { m = 'Blocked'; s = 'Mixed durations'; }
+  } else {
+    m = blk.length + ' of ' + hs.length + ' blocked';
+    s = ends.length === 1 ? (ends[0] === Infinity ? 'Forever' : untilTxt(ends[0]).replace(/^u/, 'U') + ', ' + leftTxt(ends[0])) : 'Mixed durations';
+  }
+  return `<div class="m"><i class="sq on"></i>${m}</div><div class="s">${s}</div>`;
+}
+function rowHTML(c, forceCls = '') {
+  const st = catState(c);
+  const cls = ['row', st.selCls, st.allBlk ? 'blk' : '', st.ever ? 'ever' : 'pick', forceCls].filter(Boolean).join(' ');
+  const sites = st.hs.map(h => {
+    const b = isBlk(h), ev = isEver(h), sel = S.sel.has(h);
+    return `<button class="site${b ? ' blk' : ''}${ev ? ' ever' : ''}${sel ? ' sel' : ''}" data-h="${esc(h)}" ${ev ? 'aria-disabled="true" title="Blocked forever"' : `aria-pressed="${sel}"`}>${esc(h)}</button>`;
+  }).join('') + (c.id === 'yours' ? '<span class="fld add"><input id="addSite" placeholder="Add a site" spellcheck="false" aria-label="Add a site"></span>' : '');
+  return `<div class="${cls}" data-c="${c.id}"><button class="name" ${st.ever ? 'aria-disabled="true" title="Blocked forever. Nothing to lengthen."' : `aria-pressed="${st.selCls === 'sel'}"`}>${esc(c.name)}</button>
+    <div class="st${st.blk.length ? ' blk' : ''}">${statusHTML(st)}</div><div class="sites">${sites}</div></div>`;
+}
+function selection() {
+  const end = DUR.find(d => d.k === S.dur).end;
+  const hosts = [...S.sel];
+  const aff = hosts.filter(h => end > S.sites[h].end);
+  return { end, hosts, aff };
+}
+function describe(hosts) {
+  const set = new Set(hosts), parts = [], rest = new Set(hosts);
+  CATS.forEach(c => { const hs = catSites(c.id).filter(h => !isEver(h) || set.has(h)); if (hs.length && hs.every(h => set.has(h))) { parts.push(c.name); hs.forEach(h => rest.delete(h)); } });
+  if (rest.size) parts.push(rest.size === 1 ? [...rest][0] : plural(rest.size, 'site'));
+  return parts.length > 2 ? parts.slice(0, -1).join(', ') + ' and ' + parts.at(-1) : parts.join(' and ');
+}
+function renderNTP() {
+  const total = Object.keys(S.sites).length;
+  $('#catCount').textContent = `${CATS.length} categories, ${total} sites`;
+  $('#blockedNum').textContent = Object.keys(S.sites).filter(isBlk).length;
+  renderDur();
+  const focused = document.activeElement && document.activeElement.id === 'addSite';
+  $('#tbl').innerHTML = `<div class="tbl-h sub"><span class="lab c1">Category</span><span class="lab c2">Status</span><span class="lab c3">Sites</span></div>` + CATS.map(c => rowHTML(c)).join('');
+  if (focused) $('#addSite').focus();
+  const { end, hosts, aff } = selection();
+  const sum = $('#selSum'), sub = $('#selSub'), btn = $('#ntpBlock');
+  if (!hosts.length) {
+    sum.className = 'selsum empty'; sum.textContent = 'Nothing selected';
+    sub.textContent = 'Pick categories or single sites.';
+  } else {
+    sum.className = 'selsum'; sum.textContent = describe(hosts);
+    const skipped = hosts.length - aff.length;
+    sub.textContent = aff.length ? `${plural(aff.length, 'site')}, ${untilTxt(end)}` + (skipped ? `. ${skipped} already blocked longer.` : '.') : 'Already blocked for longer. Pick a longer duration.';
+  }
+  btn.disabled = !aff.length;
+  $('#ntpBlockN').textContent = aff.length ? plural(aff.length, 'site') + ' · ' + untilTxt(end) : '';
+}
+$('#tbl').addEventListener('click', e => {
+  const site = e.target.closest('.site'), name = e.target.closest('.name');
+  if (site) {
+    const h = site.dataset.h; if (isEver(h)) return;
+    S.sel.has(h) ? S.sel.delete(h) : S.sel.add(h); renderNTP(); return;
+  }
+  if (name) {
+    const c = CATS.find(c => c.id === name.closest('.row').dataset.c), st = catState(c);
+    if (!st.selectable.length) return;
+    if (st.selCls === 'sel') st.selectable.forEach(h => S.sel.delete(h)); else st.selectable.forEach(h => S.sel.add(h));
+    renderNTP();
+  }
+});
+$('#tbl').addEventListener('keydown', e => {
+  if (e.target.id !== 'addSite' || e.key !== 'Enter') return;
+  const h = normHost(e.target.value);
+  if (!h || !h.includes('.')) return;
+  if (!S.sites[h]) S.sites[h] = { cat: 'yours', end: 0, since: 0 };
+  if (!isEver(h)) S.sel.add(h);
+  e.target.value = '';
+  renderNTP();
+});
+$('#ntpBlock').onclick = () => { const { end, aff } = selection(); if (aff.length) doBlock(aff, end); };
+
+/* ---------------- block + undo ---------------- */
+let toastT = 0, tickT = 0, snap = null;
+function doBlock(hosts, end) {
+  snap = { sites: structuredClone(S.sites), sel: [...S.sel] };
+  const desc = describe(hosts);
+  hosts.forEach(h => { const s = S.sites[h]; if (!(s.end > NOW)) s.since = NOW; s.end = end; });
+  S.sel.clear();
+  closePops();
+  renderAll();
+  toast(`${desc} blocked ${untilTxt(end)}.`);
+}
+function toast(msg) {
+  const t = $('#toast'); let n = 10;
+  $('#toastMsg').textContent = msg; $('#toastS').textContent = n;
+  t.classList.remove('run'); void t.offsetWidth; t.classList.add('on', 'run');
+  clearTimeout(toastT); clearInterval(tickT);
+  tickT = setInterval(() => { n--; $('#toastS').textContent = Math.max(n, 0); }, 1000);
+  toastT = setTimeout(hideToast, 10000);
+}
+function hideToast() { clearTimeout(toastT); clearInterval(tickT); $('#toast').classList.remove('on', 'run'); snap = null; }
+$('#undo').onclick = () => { if (!snap) return; S.sites = snap.sites; S.sel = new Set(snap.sel); hideToast(); renderAll(); };
+
+/* ---------------- toolbar Block popover ---------------- */
+function openBlockPop() {
+  const t = curTab(); if (!t.host) return;
+  closeMenu();
+  const cur = S.sites[t.host] ? S.sites[t.host].end : 0;
+  if (!S.popDur || !(DUR.find(d => d.k === S.popDur).end > cur)) S.popDur = (DUR.find(d => d.end > cur) || {}).k || null;
+  renderBlockPop();
+  $('#blockPop').classList.add('on'); $('#tbBlock').classList.add('open');
+}
+function renderBlockPop() {
+  const t = curTab(), s = S.sites[t.host], cur = s ? s.end : 0, b = cur > NOW, ever = cur === Infinity;
+  const d = DUR.find(x => x.k === S.popDur);
+  const stl = b ? `<div class="stl blk"><i class="sq on"></i>Blocked ${untilTxt(cur)}${ever ? '' : ', ' + leftTxt(cur)}</div>` : `<div class="stl"><i class="sq"></i>Open${s ? ', in ' + esc(catName(s.cat)) : ''}</div>`;
+  const opts = DUR.map(x => `<button class="opt${S.popDur === x.k ? ' on' : ''}${x.k === 'ever' ? ' ever' : ''}" data-pd="${x.k}" ${x.end > cur ? '' : 'disabled'} role="radio" aria-checked="${S.popDur === x.k}"><span class="l">${x.label}</span><span class="e">${durEnd(x)}</span></button>`).join('');
+  const note = ever ? 'Forever blocks can’t be changed.' : b ? 'Only longer durations are available. Blocks are never shortened.' : s ? 'Undo stays available for 10 seconds.' : `Adds ${esc(t.host)} to Your sites. Undo stays available for 10 seconds.`;
+  $('#blockPopIn').innerHTML = `<div class="lab">This site</div><div class="h">${esc(t.host)}</div>${stl}
+    <div class="optlist" style="grid-template-columns:subgrid">${opts}</div>
+    <button class="b1 sm" id="popGo" ${d && !ever ? '' : 'disabled'}><span>${ever ? 'Blocked forever' : b ? 'Lengthen' : 'Block'}</span><span class="n">${d && !ever ? untilTxt(d.end) : ''}</span></button>
+    <p class="note">${note}</p>`;
+}
+$('#blockPop').addEventListener('click', e => {
+  const o = e.target.closest('[data-pd]');
+  if (o && !o.disabled) { S.popDur = o.dataset.pd; renderBlockPop(); return; }
+  if (e.target.closest('#popGo')) {
+    const t = curTab(), d = DUR.find(x => x.k === S.popDur); if (!d) return;
+    const restoreSnapExtra = !S.sites[t.host];
+    if (restoreSnapExtra) { const before = structuredClone(S.sites); S.sites[t.host] = { cat: 'yours', end: 0, since: 0 }; doBlock([t.host], d.end); snap.sites = before; }
+    else doBlock([t.host], d.end);
+  }
+});
+$('#tbBlock').onclick = e => { e.stopPropagation(); $('#blockPop').classList.contains('on') ? closePops() : openBlockPop(); };
+
+/* ---------------- menu ---------------- */
+function renderMenu() {
+  const m = S.plat === 'mac', k = s => m ? s.replace('Ctrl+Shift+', '⇧⌘').replace('Ctrl+', '⌘') : s;
+  $('#menu').innerHTML = `
+    <button class="mi" data-a="new" role="menuitem">New tab<span class="k">${k('Ctrl+T')}</span></button>
+    <button class="mi" role="menuitem">New window<span class="k">${k('Ctrl+N')}</span></button>
+    <button class="mi" role="menuitem">New private window<span class="k">${k('Ctrl+Shift+N')}</span></button>
+    <div class="msep"></div>
+    <button class="mi" data-a="list" role="menuitem">Blocklist</button>
+    <button class="mi" role="menuitem">History<span class="k">${k(m ? 'Ctrl+Y' : 'Ctrl+H')}</span></button>
+    <button class="mi" role="menuitem">Downloads<span class="k">${k(m ? 'Ctrl+Shift+J' : 'Ctrl+J')}</span></button>
+    <button class="mi" data-a="bm" role="menuitemcheckbox" aria-checked="${S.bookmarks}"><i class="cb${S.bookmarks ? ' on' : ''}"></i>Show bookmarks bar<span class="k">${k('Ctrl+Shift+B')}</span></button>
+    <div class="msep"></div>
+    <div class="mzoom">Zoom<span class="z"><button class="bq" aria-label="Zoom out">−</button><span>100%</span><button class="bq" aria-label="Zoom in">+</button></span></div>
+    <div class="msep"></div>
+    <button class="mi" role="menuitem">Settings<span class="k">${m ? '⌘,' : ''}</span></button>
+    <button class="mi" role="menuitem">Help</button>
+    ${m ? '' : `<div class="msep"></div><button class="mi" role="menuitem">Exit<span class="k">${S.plat === 'win' ? 'Alt+F4' : 'Ctrl+Q'}</span></button>`}`;
+}
+$('#menu').addEventListener('click', e => {
+  const b = e.target.closest('.mi'); if (!b) return;
+  if (b.dataset.a === 'bm') { S.bookmarks = !S.bookmarks; renderMenu(); return; }
+  closePops();
+  if (b.dataset.a === 'new') newTab();
+  if (b.dataset.a === 'list') { const t = S.tabs.find(t => t.view === 'ntp' && !t.host); t ? activate(t.id) : newTab(); }
+});
+$('#tbMenu').onclick = e => { e.stopPropagation(); const on = $('#menu').classList.contains('on'); closePops(); if (!on) { renderMenu(); $('#menu').classList.add('on'); $('#tbMenu').classList.add('open'); } };
+function closeMenu() { $('#menu').classList.remove('on'); $('#tbMenu').classList.remove('open'); }
+function closePops() { closeMenu(); $('#blockPop').classList.remove('on'); $('#tbBlock').classList.remove('open'); }
+document.addEventListener('mousedown', e => { if (!e.target.closest('.pop,#tbBlock,#tbMenu,#bpLonger')) closePops(); });
+
+/* ---------------- caption, platform, system ---------------- */
+$('#plat').addEventListener('click', e => {
+  const b = e.target.closest('[data-p]'); if (!b) return;
+  S.plat = b.dataset.p; document.body.dataset.platform = S.plat;
+  document.querySelectorAll('#plat button').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); });
+  renderMenu();
+});
+$('#capMin').onclick = () => { const c = $('#cap'); c.classList.toggle('min'); $('#capMin').textContent = c.classList.contains('min') ? 'Show' : 'Hide'; };
+$('#openSys').onclick = () => { closePops(); $('#sheet').classList.add('on'); $('#closeSys').focus(); };
+$('#closeSys').onclick = () => $('#sheet').classList.remove('on');
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closePops(); $('#sheet').classList.remove('on'); return; }
+  const mod = S.plat === 'mac' ? e.metaKey : e.ctrlKey;
+  if (!mod) return;
+  if (/^[1-8]$/.test(e.key) && S.tabs[+e.key - 1]) { e.preventDefault(); activate(S.tabs[+e.key - 1].id); }
+  if (e.key === '9') { e.preventDefault(); activate(S.tabs.at(-1).id); }
+  if (e.key.toLowerCase() === 'l') { e.preventDefault(); omniIn.focus(); }
+});
+
+/* system sheet: swatches, spacing, row spec */
+const TOK = [['bg','#0b0b0b','Window, chrome, pages'],['surface','#151514','Popover, menu, caption'],['surface-2','#1f1f1d','Hover fill, disabled field'],['rule','#262624','Structure hairline'],['rule-2','#3b3b38','Selectable at rest'],['ink-4','#4d4c49','Disabled text'],['ink-3','#7d7c77','Labels, secondary info'],['ink-2','#aaa9a3','Resting text'],['ink-1','#f3f2ee','Primary text, selected, toast'],['ember','#ff6a3d','Blocked, Block, forever field'],['ember-press','#e2532a','Block pressed'],['on-ember','#0b0b0b','Text on ember']];
+$('#swatches').innerHTML = TOK.map(([n, h, r]) => `<div><div class="c" style="background:${h}"></div><div class="nm">${n}</div><div class="hx">${h}</div><div class="rl">${r}</div></div>`).join('');
+$('#spc').innerHTML = [4, 8, 16, 24, 32, 48, 64, 96].map(n => `<div style="background:none"><div style="width:${n}px;height:${n}px;background:var(--surface-2);box-shadow:inset 0 2px 0 var(--ink-3)"></div><span>${n}</span></div>`).join('');
+
+function renderRowSpec() {
+  // three live states, rendered with the real row component
+  const saveSel = S.sel; S.sel = new Set(catSites('shop'));
+  const html = rowHTML(CATS[3]) + (S.sel = new Set(), rowHTML(CATS[4])) + rowHTML(CATS[0]) + (S.sel = new Set(catSites('video')), rowHTML(CATS[1]));
+  S.sel = saveSel;
+  $('#rowSpec').innerHTML = `<div class="sub" style="display:grid;grid-template-columns:repeat(9,minmax(0,1fr));column-gap:var(--g)">${html.replace(/<button/g, '<button tabindex="-1"')}</div>
+    <div class="lab">Selected · Open · Blocked forever (not selectable) · Blocked and selected to lengthen</div>`;
+}
+$('#rowSpec').style.display = 'block';
+$('#openSys').addEventListener('click', renderRowSpec);
+
+/* ---------------- github rows ---------------- */
+$('#ghRows').innerHTML = [['.github','Update CODEOWNERS for //ui/views','2 hours ago'],['android_webview','[WebView] Remove deprecated flag','5 hours ago'],['base','Add ScopedFeatureList helper for tests','3 hours ago'],['build','Roll clang llvmorg-21-init','1 hour ago'],['cc','Fix damage tracking for clipped layers','6 hours ago'],['chrome','[Tabs] Refactor TabStripLayoutHelper','8 minutes ago'],['components','[omnibox] Trim scheme in steady state','40 minutes ago'],['content','Plumb NavigationThrottle registry','2 hours ago'],['docs','Update Linux build instructions','yesterday'],['gpu','Skia Graphite: enable on Linux','4 hours ago'],['net','Rename HttpCache::Transaction methods','3 hours ago'],['third_party','Roll Perfetto to 7b2f1c0','27 minutes ago'],['ui','[Views] BubbleBorder: allow zero radius','1 hour ago'],['v8','Update V8 to version 14.9.112','35 minutes ago']]
+  .map(([n, m, t]) => `<div class="gh-row"><i class="fi"></i><a href="#" onclick="return false" style="color:#e6edf3">${n}</a><span class="m">${m}</span><span class="t">${t}</span></div>`).join('');
+
+/* ---------------- render ---------------- */
+function renderAll() { renderTabs(); renderToolbar(); renderView(); renderNTP(); if ($('#blockPop').classList.contains('on')) renderBlockPop(); }
+renderMenu();
+renderAll();
+window.__mast = { S, activate, doBlock };
+})();
+</script>
+</body>
+</html>

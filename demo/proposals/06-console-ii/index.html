@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<!--
+  Proposal 06 · Console II. Riskiest pieces to port to the Chromium fork (Views first on Linux, then macOS/Windows):
+  1. Tabs as keys. Needs a custom TabStyle/Tab painter: each tab is a separate raised key (gradient face, 1px edge,
+     top bevel, 2px base) and the active tab is drawn pressed in. Close-button hit-testing, drag reordering and
+     the per-platform leading/trailing insets (traffic lights, caption buttons, drag gap) also have to be handled.
+  2. The address display. OmniboxView is a Views Textfield placed inside a recessed, warm-tinted well with a
+     trailing status segment ("UNTIL MIDNIGHT" outlined, or "FOREVER" as a solid ember chip). That means a custom
+     LocationBarView background and a new decoration view. There's no text glow anywhere, so Textfield can draw it.
+  3. Indicators (LEDs). These are small circles with a soft halo on the M size, repainted when block state changes.
+     They're cheap individually, but they live in tabs, the toolbar Block key and the popovers, so every surface
+     needs one shared painter and one shared state source (BlockStateService → observers).
+  4. Bundled fonts in native chrome: Martian Mono (static 87.5% width cut) and IBM Plex Sans Condensed through
+     the gfx::FontList and fontconfig paths on Linux, and DirectWrite and CoreText on the others. The mono
+     legends' tracking (letter-spacing) isn't a native Views label feature, so it needs a custom label or
+     pre-tracked strings.
+  5. The Block popover and toast are browser-side bubbles (they have to appear over ordinary web pages), so the
+     key, display and selector components exist twice: once in Views (bubbles) and once in WebUI (NTP and
+     blocked page). The tokens have to come from one source, e.g. a ColorMixer and a generated CSS file.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mast · Proposal 06 · Console II</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Martian+Mono:wdth,wght@75..112.5,300..700&family=IBM+Plex+Sans+Condensed:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* =====================================================================
+   TOKENS
+   ===================================================================== */
+:root{
+  /* surfaces, from outside in */
+  --desk:#060607;          /* behind the window */
+  --panel:#1c1c1f;         /* chrome + module plates */
+  --panel-hi:#212124;      /* module face, top */
+  --page:#141416;          /* WebUI page ground */
+  --key-t:#2c2c30; --key-b:#252528;       /* key face, raised */
+  --key-th:#323236; --key-bh:#2a2a2e;     /* key face, hover */
+  --key-in:#19191c;                        /* key face, latched */
+  --recess:#100e0d;        /* display well (warm-tinted) */
+  /* strokes */
+  --edge:#09090a;          /* outer edge of every raised or recessed part */
+  --bevel:rgba(255,255,255,.075);
+  --groove:rgba(255,255,255,.035);
+  --rule:#2c2c30;
+  /* ink, printed on panel */
+  --ink-1:#ede8df; --ink-2:#bdb8ae; --ink-3:#8a867e; --ink-4:#5c5954;
+  /* display ink */
+  --d-ink:#efe6da; --d-dim:#877b71; --d-off:#4b403a;
+  /* ember: the only accent; it means "blocked" */
+  --e-lit:#ff6a3d;  --e-read:#ff8f5e; --e-dim:#a1583b; --e-core:#3d1b10; --e-deep:#c2300f; --e-on:#1a0703;
+  --e-face:linear-gradient(180deg,#ff7a4f 0%,#ff6a3d 45%,#ee5428 100%);
+  /* indicators */
+  --led-off:#2a2a2d; --led-armed:#f6f1e7;
+  --focus:rgba(246,241,231,.85);
+  /* type */
+  --mono:'Martian Mono',ui-monospace,'DejaVu Sans Mono',monospace;
+  --body:'IBM Plex Sans Condensed','Arial Narrow',sans-serif;
+  /* space (4px grid) */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s6:24px; --s8:32px;
+  /* radii */
+  --r-chip:3px; --r-disp:4px; --r-key:5px; --r-mod:8px; --r-win:12px;
+  /* heights */
+  --h-row:24px; --h-key:32px; --h-key-l:56px; --h-strip:40px; --h-tool:44px;
+  /* motion */
+  --t-press:60ms; --t-ui:120ms;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--desk);overflow:hidden}
+body{font-family:var(--body);color:var(--ink-1);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+button,input{font:inherit;color:inherit;background:none;border:0;outline:0}
+button{cursor:pointer}
+::selection{background:rgba(246,241,231,.25)}
+:focus-visible{outline:1.5px solid var(--focus);outline-offset:2px}
+
+/* =====================================================================
+   TYPE: three voices. Label (printed), Readout (displays), Body (content)
+   ===================================================================== */
+.lab{font:500 9.5px/12px var(--mono);font-stretch:87.5%;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+.lab.strong{font-weight:600;color:var(--ink-2)}
+.lab.faint{color:var(--ink-4)}
+.rd{font-family:var(--mono);font-stretch:87.5%;letter-spacing:.04em}
+.rd-s{font:400 10px/12px var(--mono);font-stretch:87.5%;letter-spacing:.06em}
+.rd-m{font:400 12.5px/16px var(--mono);font-stretch:87.5%;letter-spacing:.02em}
+.rd-l{font:400 20px/24px var(--mono);font-stretch:87.5%;letter-spacing:.01em}
+.rd-xl{font:400 40px/44px var(--mono);font-stretch:87.5%;letter-spacing:-.01em}
+.b-s{font:400 12px/16px var(--body)}
+.b-m{font:400 13px/18px var(--body)}
+.b-l{font:400 15px/22px var(--body)}
+.b-xl{font:500 26px/32px var(--body);letter-spacing:-.005em}
+.rule{display:flex;align-items:center;gap:var(--s2)}
+.rule::after{content:"";flex:1;height:1px;background:var(--rule)}
+
+/* =====================================================================
+   INDICATOR (LED): off · armed · timed · forever   ×   S (lists) · M (keys, tabs)
+   ===================================================================== */
+.led{display:inline-block;flex:none;width:8px;height:8px;border-radius:50%;background:var(--led-off);
+  box-shadow:inset 0 1px 1px rgba(0,0,0,.7),0 1px 0 rgba(255,255,255,.05)}
+.led.s{width:6px;height:6px}
+.led.armed{background:var(--led-armed);box-shadow:0 0 6px rgba(255,244,228,.45)}
+.led.timed{background:var(--e-core);box-shadow:inset 0 0 0 1.5px var(--e-lit),0 0 5px rgba(255,106,61,.3)}
+.led.forever{background:var(--e-lit);box-shadow:0 0 8px rgba(255,106,61,.6)}
+.led.s.armed,.led.s.timed,.led.s.forever{box-shadow:none}
+.led.s.timed{box-shadow:inset 0 0 0 1.25px var(--e-lit)}
+/* on an ember surface an indicator is drawn in ink */
+.on-ember .led.forever,.key.forever .led.forever{background:var(--e-on);box-shadow:none}
+
+/* =====================================================================
+   KEY: raised · hover · pressed · latched · disabled · focus.  Sizes M (32) and L (56)
+   ===================================================================== */
+.key{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:var(--s2);height:var(--h-key);padding:0 var(--s3);
+  border-radius:var(--r-key);background:linear-gradient(180deg,var(--key-t),var(--key-b));
+  box-shadow:0 0 0 1px var(--edge),inset 0 1px 0 var(--bevel),0 2px 0 var(--edge);
+  font:500 10px/12px var(--mono);font-stretch:87.5%;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);white-space:nowrap;
+  transition:transform var(--t-press) ease-out,box-shadow var(--t-press) ease-out,background var(--t-ui),color var(--t-ui)}
+.key:hover,.key.is-hover{background:linear-gradient(180deg,var(--key-th),var(--key-bh));color:var(--ink-1)}
+.key:active,.key.is-pressed,.key.open{transform:translateY(2px);box-shadow:0 0 0 1px var(--edge),inset 0 1px 2px rgba(0,0,0,.5)}
+.key.latched,.key[aria-pressed="true"],.key[aria-selected="true"]{transform:translateY(2px);background:var(--key-in);color:var(--ink-1);
+  box-shadow:0 0 0 1px var(--edge),inset 0 1px 3px rgba(0,0,0,.65),inset 0 -1px 0 rgba(255,255,255,.04)}
+.key[disabled],.key.is-disabled{cursor:default;transform:none;background:var(--key-b);color:var(--ink-4);
+  box-shadow:0 0 0 1px var(--edge),inset 0 1px 0 rgba(255,255,255,.03),0 2px 0 var(--edge)}
+.key:focus-visible,.key.is-focus{outline:1.5px solid var(--focus);outline-offset:3px}
+.key svg{display:block;flex:none}
+.key.icon{width:var(--h-key);padding:0}
+.key .act{color:var(--e-read)}                       /* the act of blocking is ember */
+.key[disabled] .act{color:var(--ink-4)}
+.key .n{font-weight:400;color:var(--ink-4);letter-spacing:.06em}
+.key[aria-pressed="true"] .n{color:var(--ink-3)}
+/* L size */
+.key.l{height:var(--h-key-l);border-radius:7px;flex-direction:column;gap:6px;box-shadow:0 0 0 1px var(--edge),inset 0 1px 0 var(--bevel),0 3px 0 var(--edge)}
+.key.l:active,.key.l.is-pressed{transform:translateY(3px);box-shadow:0 0 0 1px var(--edge),inset 0 1px 3px rgba(0,0,0,.55)}
+.key.l .t{display:flex;align-items:center;gap:10px;font-size:13px;line-height:14px;font-weight:600;letter-spacing:.24em;padding-left:.24em}
+.key.l .sub{font-size:9px;letter-spacing:.12em;color:var(--ink-3);font-weight:500;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.key.l[disabled] .sub{color:var(--ink-4)}
+/* the one ember-faced key: commit forever */
+.key.forever{background:var(--e-face);color:var(--e-on);box-shadow:0 0 0 1px #4a1406,inset 0 1px 0 rgba(255,255,255,.28),0 3px 0 #3a1004,0 0 18px rgba(255,106,61,.22)}
+.key.forever:hover{background:linear-gradient(180deg,#ff8660 0%,#ff754a 45%,#f25d31 100%);color:var(--e-on)}
+.key.forever .act,.key.forever .sub{color:var(--e-on)}
+.key.forever .sub{opacity:.72}
+.key.forever:active{transform:translateY(3px);box-shadow:0 0 0 1px #4a1406,inset 0 1px 3px rgba(90,20,4,.55)}
+
+/* =====================================================================
+   DISPLAY: recessed well · readouts only.  Modes: lit · unlit · timed · forever
+   ===================================================================== */
+.disp{position:relative;border-radius:var(--r-disp);background:var(--recess);color:var(--d-ink);
+  box-shadow:0 0 0 1px var(--edge),inset 0 1px 3px rgba(0,0,0,.85),0 1px 0 rgba(255,255,255,.05)}
+.disp .dim{color:var(--d-dim)}
+.disp.unlit{color:var(--d-off)} .disp.unlit .dim{color:var(--d-off)}
+.disp.timed{color:var(--e-read)} .disp.timed .dim{color:var(--e-dim)}
+.disp.forever{background:var(--e-face);color:var(--e-on);box-shadow:0 0 0 1px #4a1406,inset 0 1px 0 rgba(255,255,255,.25),0 0 22px rgba(255,106,61,.16)}
+.disp.forever .dim{color:rgba(26,7,3,.62)}
+.disp .cap{font:500 9px/12px var(--mono);font-stretch:87.5%;letter-spacing:.14em;text-transform:uppercase}
+/* status segment inside a display */
+.seg{display:inline-flex;align-items:center;gap:7px;height:22px;padding:0 var(--s2);border-radius:var(--r-chip);font:500 9px/12px var(--mono);font-stretch:87.5%;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap}
+.seg.timed{color:var(--e-read);box-shadow:inset 0 0 0 1px rgba(255,106,61,.35)}
+.seg.forever{background:var(--e-lit);color:var(--e-on);font-weight:600}
+
+/* =====================================================================
+   MODULE: flat plate that groups keys + displays
+   ===================================================================== */
+.module{border-radius:var(--r-mod);background:linear-gradient(180deg,var(--panel-hi),var(--panel));
+  box-shadow:0 0 0 1px var(--edge),inset 0 1px 0 rgba(255,255,255,.055)}
+.m-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s2);min-height:12px}
+
+/* =====================================================================
+   WINDOW + PLATFORM CHROME
+   ===================================================================== */
+.win{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--panel);border-radius:var(--r-win);overflow:hidden;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+.win[data-plat="mac"]{--r-win:10px}
+.win[data-plat="win"]{--r-win:8px}
+.win[data-plat="linux"]{--r-win:12px}
+
+.tabstrip{display:flex;align-items:center;height:var(--h-strip);padding:0 0 0 var(--s2);flex:none;position:relative}
+.tabs{display:flex;align-items:center;gap:6px;min-width:0;flex:1 1 auto;height:100%;padding-bottom:2px}
+.tabs .tabs{flex:0 1 auto;padding:0}
+.drag{flex:0 0 40px;align-self:stretch}
+.win[data-plat="win"] .drag{flex-basis:56px}
+.wc{display:none;flex:none}
+/* macOS: traffic lights, native colours, 12px, 8px apart, 14px inset */
+.wc-mac{gap:8px;padding:0 18px 0 6px;align-items:center;height:100%}
+.win[data-plat="mac"] .wc-mac{display:flex}
+.tl{width:12px;height:12px;border-radius:50%;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.25)}
+.tl.c{background:#ff5f57}.tl.m{background:#febc2e}.tl.z{background:#28c840}
+.tl svg{opacity:0;display:block}
+.wc-mac:hover .tl svg{opacity:1}
+/* Windows: 46 × 40 caption buttons, flush top-right */
+.win[data-plat="win"] .wc-win{display:flex;align-self:flex-start;height:var(--h-strip)}
+.cb{width:46px;height:100%;display:grid;place-items:center;color:var(--ink-1)}
+.cb:hover{background:rgba(255,255,255,.08)}
+.cb.x:hover{background:#c42b1c;color:#fff}
+/* GNOME/Adwaita: 24px circular buttons on the right */
+.win[data-plat="linux"] .wc-lin{display:flex;gap:12px;align-items:center;padding:0 12px 0 4px}
+.gb{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.09);color:var(--ink-1)}
+.gb:hover{background:rgba(255,255,255,.15)}
+.win[data-plat="mac"] .tabstrip{padding-left:var(--s2)}
+.win[data-plat="win"] .tabstrip{padding-left:var(--s2)}
+
+/* tab = key with body-type title (content is theirs) */
+.tab{flex:0 1 208px;width:208px;min-width:52px;height:30px;justify-content:flex-start;padding:0 6px 0 10px;gap:var(--s2);
+  font:400 12.5px/16px var(--body);letter-spacing:0;text-transform:none;color:var(--ink-3)}
+.tab:hover{color:var(--ink-2)}
+.tab .fav{width:16px;height:16px;display:grid;place-items:center;flex:none}
+.tab .ttl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:left}
+.tab .rdt{font:400 10px/12px var(--mono);font-stretch:87.5%;letter-spacing:.06em;color:var(--e-read)}
+.tab .x{width:18px;height:18px;border-radius:var(--r-chip);display:grid;place-items:center;color:var(--ink-3);opacity:0;flex:none}
+.tab:hover .x,.tab[aria-selected="true"] .x{opacity:1}
+.tab .x:hover{background:rgba(255,255,255,.07);color:var(--ink-1)}
+.tab.blocked .ttl{color:var(--ink-3)}
+.tab[aria-selected="true"].blocked .ttl{color:var(--ink-2)}
+.tab:active{transform:translateY(2px)}
+.newtab{width:28px;height:28px;margin-left:var(--s2);flex:none}
+.fv-gh{width:14px;height:14px;border-radius:50%;background:#e6edf3}
+.fv-wk{width:14px;height:14px;border-radius:2px;background:#e9e9e9;color:#111;font:700 10px/14px Georgia,serif;text-align:center}
+.fv-g{width:14px;height:14px;border-radius:50%;background:#e9e9e9;color:#333;font:700 9px/14px Arial,sans-serif;text-align:center}
+
+/* toolbar */
+.toolbar{display:flex;align-items:center;gap:var(--s1);height:var(--h-tool);padding:0 var(--s2) 2px;flex:none;
+  border-top:1px solid var(--edge);box-shadow:inset 0 1px 0 var(--groove)}
+.address{flex:1;min-width:0;height:var(--h-key);margin:0 var(--s2);display:flex;align-items:center;cursor:text}
+.address .slot{width:34px;height:100%;display:grid;place-items:center;color:var(--d-dim);flex:none}
+.address .field{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.address .field.ph{color:var(--d-off)}
+.address input{flex:1;min-width:0;height:100%;color:var(--d-ink);caret-color:var(--e-lit)}
+.address input::placeholder{color:var(--d-off)}
+.address .seg{margin:0 5px 0 var(--s2)}
+.address.blocked .host{color:var(--e-read)}
+.k-block{padding:0 var(--s3) 0 10px}
+.k-menu{margin-left:2px}
+
+/* content */
+.content{flex:1;min-height:0;position:relative;background:var(--page);border-top:1px solid var(--edge)}
+.view{position:absolute;inset:0;overflow:auto}
+.view[hidden]{display:none}
+
+/* =====================================================================
+   NEW TAB (WebUI): the blocklist
+   ===================================================================== */
+.ntp{padding:28px 32px 40px}
+.ntp-in{max-width:1360px;margin:0 auto;display:flex;flex-direction:column;gap:var(--s4)}
+.ntp-head{display:flex;align-items:center;gap:var(--s4);height:44px}
+.ntp-head .brand{display:flex;align-items:center;gap:10px}
+.ntp-head .brand svg{width:20px;height:20px}
+.ntp-head .rule{flex:1}
+.counters{display:flex;align-items:center;height:44px;padding:0 var(--s4);gap:var(--s4)}
+.counters .c{display:flex;align-items:baseline;gap:10px}
+.counters .sep{width:1px;height:20px;background:rgba(255,255,255,.06)}
+.grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr)) 288px;gap:var(--s2);align-items:stretch}
+.strip{display:flex;flex-direction:column;gap:var(--s3);padding:var(--s3) 10px 10px;min-width:0}
+.strip.has-sel{box-shadow:0 0 0 1px var(--edge),inset 0 1px 0 rgba(255,255,255,.055),inset 0 0 0 1px rgba(246,241,231,.12)}
+.strip .m-head .lab.strong{overflow:hidden;text-overflow:ellipsis}
+.s-disp{height:44px;padding:7px 10px;display:flex;flex-direction:column;justify-content:space-between;min-width:0}
+.s-disp .l1{font:400 11.5px/14px var(--mono);font-stretch:87.5%;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s-disp.forever .l1{font-weight:600}
+.s-disp .l2{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rows{list-style:none;display:flex;flex-direction:column;margin:0 -4px}
+.row{display:flex;align-items:center;gap:10px;width:100%;height:var(--h-row);padding:0 6px;border-radius:var(--r-chip);
+  font:400 13px/16px var(--body);color:var(--ink-3);text-align:left;white-space:nowrap}
+.row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.row .tg{font:400 10px/12px var(--mono);font-stretch:87.5%;letter-spacing:.06em;color:var(--e-read)}
+.row:hover{background:rgba(255,255,255,.04);color:var(--ink-2)}
+.row.blocked{color:var(--ink-2)}
+.row[aria-pressed="true"]{color:var(--ink-1);background:rgba(246,241,231,.06)}
+.row.fixed{cursor:default;color:var(--ink-3)}
+.row.fixed:hover{background:none}
+.add{display:flex;align-items:center;gap:10px;height:28px;margin:6px 0 0;padding:0 8px;border-radius:var(--r-disp);background:var(--recess);
+  box-shadow:0 0 0 1px var(--edge),inset 0 1px 2px rgba(0,0,0,.7);color:var(--d-off)}
+.add:focus-within{box-shadow:0 0 0 1px var(--edge),inset 0 1px 2px rgba(0,0,0,.7),0 0 0 2.5px rgba(246,241,231,.5)}
+.add input{flex:1;min-width:0;height:100%;font:400 12.5px var(--mono);font-stretch:87.5%;color:var(--d-ink);caret-color:var(--e-lit)}
+.add input::placeholder{color:var(--d-off)}
+.strip .k-sel{margin-top:auto;width:100%;justify-content:flex-start;padding:0 10px}
+.k-sel .lbl{flex:1;text-align:left}
+.legend{display:flex;gap:var(--s6);align-items:center;padding:var(--s1) 2px 0}
+.legend span{display:flex;align-items:center;gap:var(--s2)}
+
+/* master */
+.master{display:flex;flex-direction:column;gap:var(--s3);padding:var(--s3) var(--s3) var(--s3)}
+.dial{position:relative;width:224px;height:168px;margin:2px auto 0;user-select:none;-webkit-user-select:none}
+.knob{position:absolute;left:112px;top:90px;width:84px;height:84px;margin:-42px 0 0 -42px;border-radius:50%;cursor:grab;
+  background:linear-gradient(180deg,#323236,#232326);box-shadow:0 0 0 1px var(--edge),inset 0 1px 0 rgba(255,255,255,.1),0 3px 0 var(--edge),0 8px 16px rgba(0,0,0,.45)}
+.knob:active{cursor:grabbing}
+.knob:focus-visible{outline:1.5px solid var(--focus);outline-offset:6px}
+.knob .face{position:absolute;inset:10px;border-radius:50%;background:linear-gradient(180deg,#2a2a2e,#2f2f33);box-shadow:inset 0 1px 2px rgba(0,0,0,.45),0 1px 0 rgba(255,255,255,.05)}
+.knob .rot{position:absolute;inset:0;transition:transform 200ms cubic-bezier(.3,1.45,.5,1)}
+.knob .ptr{position:absolute;left:50%;top:8px;width:3px;height:20px;margin-left:-1.5px;border-radius:2px;background:var(--ink-1)}
+.dial.inf .knob .ptr{background:var(--e-lit)}
+.det{position:absolute;transform:translate(-50%,-50%)}
+.det-l{position:absolute;transform:translate(-50%,-50%);padding:4px 5px;border-radius:var(--r-chip);color:var(--ink-3)}
+.det-l:hover{color:var(--ink-1)}
+.det-l.on{color:var(--ink-1)}
+.sel-disp{padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.sel-disp .top{display:flex;justify-content:space-between;gap:var(--s2)}
+.sel-disp .l1{font:400 17px/20px var(--mono);font-stretch:87.5%;letter-spacing:.03em;text-transform:uppercase;white-space:nowrap}
+.sel-disp.forever .l1{font-weight:600}
+.sel-disp .l2{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.master .k-big{width:100%}
+.master .note{text-align:center;color:var(--ink-4)}
+
+/* =====================================================================
+   BLOCKED PAGE (WebUI)
+   ===================================================================== */
+.blockpage{min-height:100%;display:grid;place-items:center;padding:40px}
+.bp{width:min(640px,100%);display:flex;flex-direction:column;gap:var(--s4)}
+.bp-disp{padding:22px 26px 24px;display:flex;flex-direction:column;gap:20px}
+.bp-disp .host{word-break:break-all}
+.bp-disp .bot{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s4)}
+.bp-disp .bot .rd-m{text-transform:uppercase;letter-spacing:.08em}
+.meter{height:3px;border-radius:2px;background:rgba(255,106,61,.14);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--e-lit)}
+.bp-copy{display:flex;flex-direction:column;gap:6px;padding:var(--s2) 2px 0}
+.bp-copy .b-l{color:var(--ink-3)}
+.bp-foot{display:flex;gap:var(--s3);align-items:center;padding-top:var(--s2)}
+.bp-foot .key{height:36px;padding:0 var(--s4)}
+
+/* =====================================================================
+   ORDINARY PAGES (fake web content, kept as the sites would render)
+   ===================================================================== */
+.gh{min-height:100%;background:#0d1117;color:#e6edf3;font:14px/1.5 -apple-system,'Segoe UI','Noto Sans',Helvetica,Arial,sans-serif}
+.gh a{color:#4493f8;text-decoration:none}
+.gh-top{height:64px;display:flex;align-items:center;gap:16px;padding:0 24px;background:#010409;border-bottom:1px solid #30363d}
+.gh-top .search{width:280px;height:32px;border:1px solid #30363d;border-radius:6px;color:#9198a1;font-size:13px;display:flex;align-items:center;padding:0 10px}
+.gh-head{padding:16px 32px 0;border-bottom:1px solid #30363d}
+.gh-title{font-size:20px;display:flex;gap:6px;align-items:center}
+.gh-pill{font-size:12px;color:#9198a1;border:1px solid #30363d;border-radius:20px;padding:0 8px;margin-left:6px}
+.gh-tabs{display:flex;gap:24px;padding:14px 0 0}
+.gh-tabs span{padding-bottom:10px;color:#9198a1}
+.gh-tabs span.on{color:#e6edf3;border-bottom:2px solid #f78166}
+.gh-body{display:grid;grid-template-columns:minmax(0,1fr) 296px;gap:24px;padding:24px 32px;max-width:1280px}
+.gh-box{border:1px solid #30363d;border-radius:6px;overflow:hidden}
+.gh-box .r{height:40px;border-top:1px solid #21262d;display:flex;align-items:center;gap:12px;padding:0 16px;font-size:14px}
+.gh-box .r:first-child{border-top:0;background:#151b23}
+.gh-box .r .m{color:#9198a1;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gh-box .r .d{color:#9198a1;font-size:13px}
+.gh-readme{padding:24px 32px}
+.gh-readme h2{font-size:24px;font-weight:600;padding-bottom:8px;border-bottom:1px solid #30363d;margin-bottom:16px}
+.gh-readme p{margin-bottom:14px;color:#d1d7e0}
+.gh-readme code{font:12px ui-monospace,monospace;background:#262c36;padding:2px 6px;border-radius:6px}
+.wk{min-height:100%;background:#101418;color:#eaecf0;font:15px/1.6 'Linux Libertine',Georgia,serif}
+.wk-top{height:56px;display:flex;align-items:center;gap:16px;padding:0 28px;border-bottom:1px solid #2a2f35;font-family:Arial,sans-serif;font-size:13px}
+.wk-body{display:grid;grid-template-columns:176px minmax(0,1fr);gap:36px;padding:24px 28px 48px;max-width:1200px}
+.wk-side{font:13px/2 Arial,sans-serif;color:#88a3e8}
+.wk h1{font-weight:400;font-size:30px;line-height:1.3;border-bottom:1px solid #3a4048;padding-bottom:4px;margin-bottom:4px}
+.wk .from{font:13px Arial,sans-serif;color:#a2a9b1;margin-bottom:18px}
+.wk p{margin-bottom:14px;max-width:72ch}
+.wk h2{overflow:hidden;font-weight:400;font-size:22px;border-bottom:1px solid #3a4048;margin:22px 0 10px}
+.wk a{color:#88a3e8}
+.wk-info{float:right;width:260px;margin:0 0 16px 24px;border:1px solid #2f353c;background:#151a1f;padding:10px;font:12.5px/1.5 Arial,sans-serif}
+.wk-info .img{height:150px;background:linear-gradient(135deg,#2a2f36,#1c2026);margin-bottom:8px;display:grid;place-items:center;color:#5d6670}
+.wk-info td{padding:3px 4px;vertical-align:top}
+.gs{min-height:100%;background:#202124;color:#e8eaed;font:14px/1.5 Arial,sans-serif;padding:24px 40px}
+.gs .q{width:620px;max-width:100%;height:44px;border-radius:22px;background:#303134;display:flex;align-items:center;padding:0 20px;margin-bottom:28px}
+.gs .res{max-width:620px;margin-bottom:26px}
+.gs .res .u{font-size:12px;color:#bdc1c6}
+.gs .res .h{font-size:20px;color:#8ab4f8;margin:2px 0}
+.gs .res .s{color:#bdc1c6}
+
+/* =====================================================================
+   BUBBLES: popover · menu · toast  (browser-side, over web content)
+   ===================================================================== */
+.pop{position:absolute;z-index:30;width:344px;padding:var(--s4);display:flex;flex-direction:column;gap:var(--s3);
+  box-shadow:0 0 0 1px var(--edge),inset 0 1px 0 rgba(255,255,255,.07),0 16px 36px rgba(0,0,0,.55);
+  opacity:0;transform:translateY(-4px);pointer-events:none;transition:opacity var(--t-ui),transform var(--t-ui)}
+.pop.show{opacity:1;transform:none;pointer-events:auto}
+.pop-disp{height:52px;padding:9px 12px;display:flex;flex-direction:column;justify-content:space-between}
+.pop-disp .l1{font:400 14px/16px var(--mono);font-stretch:87.5%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pop-disp .cap{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pop .k-go{width:100%;height:48px}
+.pop .msg{color:var(--ink-2)}
+/* linear selector: a strip of detent keys in a well */
+.lin{display:flex;gap:3px;padding:3px;border-radius:var(--r-key);background:var(--recess);box-shadow:0 0 0 1px var(--edge),inset 0 1px 2px rgba(0,0,0,.8),0 1px 0 rgba(255,255,255,.05)}
+.lin button{flex:1 1 auto;height:28px;padding:0 6px;border-radius:var(--r-chip);display:flex;align-items:center;justify-content:center;gap:6px;
+  font:500 9.5px/12px var(--mono);font-stretch:87.5%;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.lin button:hover{color:var(--ink-1)}
+.lin button[aria-checked="true"]{background:linear-gradient(180deg,var(--key-t),var(--key-b));color:var(--ink-1);box-shadow:0 0 0 1px var(--edge),inset 0 1px 0 var(--bevel)}
+.lin button[disabled]{color:var(--ink-4);cursor:default;text-decoration:line-through;text-decoration-color:rgba(255,255,255,.18)}
+.menu{width:264px;padding:6px;gap:0}
+.mi{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);height:30px;padding:0 10px;border-radius:var(--r-chip);font:400 13px/16px var(--body);color:var(--ink-2);text-align:left;width:100%}
+.mi:hover,.mi.is-hover{background:rgba(255,255,255,.055);color:var(--ink-1)}
+.mi .sc{font:400 10px/12px var(--mono);font-stretch:87.5%;letter-spacing:.06em;color:var(--ink-4)}
+.mi .led{margin-right:auto;margin-left:-2px}
+.msep{height:1px;margin:5px 4px;background:var(--rule)}
+.toast{position:absolute;left:50%;bottom:28px;z-index:25;display:flex;align-items:center;gap:var(--s3);height:56px;padding:0 10px 0 var(--s4);min-width:460px;overflow:hidden;
+  box-shadow:0 0 0 1px var(--edge),inset 0 1px 0 rgba(255,255,255,.07),0 16px 34px rgba(0,0,0,.55);
+  transform:translate(-50%,12px);opacity:0;pointer-events:none;transition:transform 180ms cubic-bezier(.2,.9,.3,1),opacity 140ms}
+.toast.show{transform:translate(-50%,0);opacity:1;pointer-events:auto}
+.toast .msg{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.toast .t1{font:500 14px/18px var(--body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.toast .key .secs{display:inline-block;min-width:22px;padding:2px 4px;border-radius:var(--r-chip);background:var(--recess);color:var(--d-ink);box-shadow:inset 0 1px 2px #000;text-align:center;letter-spacing:.04em}
+.toast .meter{position:absolute;left:0;right:0;bottom:0;height:2px;border-radius:0;background:transparent}
+.toast .meter i{background:var(--ink-3);transform-origin:left}
+
+/* =====================================================================
+   CAPTION (outside the product)
+   ===================================================================== */
+.caption{position:fixed;left:14px;bottom:14px;z-index:80;width:344px;padding:var(--s3) var(--s3) var(--s3) var(--s4);display:flex;flex-direction:column;gap:10px;
+  box-shadow:0 0 0 1px var(--edge),inset 0 1px 0 rgba(255,255,255,.07),0 12px 30px rgba(0,0,0,.55)}
+.caption p{color:var(--ink-3)}
+.caption .ctl{display:flex;gap:var(--s2);align-items:center}
+.caption .lin{flex:1}
+.caption .key{height:34px}
+.cap-x{width:24px;height:20px;border-radius:var(--r-chip);color:var(--ink-3);display:grid;place-items:center;margin:-4px -4px 0 0}
+.cap-x:hover{color:var(--ink-1);background:rgba(255,255,255,.06)}
+.caption.min{width:auto;padding:var(--s2) var(--s2) var(--s2) var(--s3)}
+.caption.min p,.caption.min .ctl{display:none}
+.caption.min .m-head{align-items:center;gap:var(--s3)}
+.caption.min .cap-x{margin:0}
+
+/* =====================================================================
+   SYSTEM SHEET
+   ===================================================================== */
+.sheet{position:fixed;inset:0;z-index:100;background:var(--desk);overflow:auto;display:none}
+.sheet.show{display:block}
+.sh{max-width:1220px;margin:0 auto;padding:36px 40px 80px;display:flex;flex-direction:column;gap:36px}
+.sh-top{display:flex;align-items:center;gap:var(--s4);position:sticky;top:0;z-index:2;background:var(--desk);padding:12px 0;margin:-12px 0}
+.sh-top>svg{width:28px;height:28px}
+.sh-top .ttl{display:flex;flex-direction:column;gap:4px}
+.sh-top .ttl .b-xl{font-size:22px;line-height:26px}
+.sh-top .sp{flex:1}
+.sec{display:flex;flex-direction:column;gap:var(--s4)}
+.sec>.lab.rule{color:var(--ink-2);font-weight:600}
+.cols{display:grid;gap:var(--s2)}
+.plate{padding:var(--s4);display:flex;flex-direction:column;gap:var(--s3);min-width:0}
+.plate>.lab:first-child{color:var(--ink-3)}
+.prin{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--s2)}
+.prin .plate{gap:var(--s2)}
+.prin .rd-l{color:var(--ink-4)}
+.prin .b-l{color:var(--ink-1);font-weight:500;font-size:15px;line-height:20px}
+.prin .b-m{color:var(--ink-3)}
+.sw{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s2)}
+.sw .chip{display:flex;flex-direction:column;gap:6px;min-width:0}
+.sw .chip i{display:block;height:40px;border-radius:var(--r-disp);box-shadow:0 0 0 1px rgba(255,255,255,.08)}
+.sw .chip .b-s{color:var(--ink-3)}
+.typ{display:grid;grid-template-columns:180px 1fr 260px;align-items:baseline;gap:var(--s4);padding:10px 0;border-top:1px solid var(--rule)}
+.typ:first-of-type{border-top:0}
+.typ .spec{color:var(--ink-4);text-align:right}
+.specrow{display:flex;flex-wrap:wrap;gap:var(--s4) var(--s6);align-items:flex-end}
+.specrow .it{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.specrow .it>.lab{color:var(--ink-4)}
+.box-s{background:var(--e-core);box-shadow:inset 0 0 0 1px rgba(255,106,61,.5)}
+.anno{position:relative;padding:40px 0 34px}
+.anno .tag{position:absolute;display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.anno .tag::before{content:"";width:1px;height:12px;background:var(--ink-4)}
+.anno .tag.up{flex-direction:column-reverse}
+.mini{position:relative;height:40px;border-radius:8px 8px 0 0;background:var(--panel);box-shadow:0 0 0 1px var(--edge);display:flex;align-items:center;overflow:hidden}
+.mini .tabs{padding:0}
+
+@media (max-width:1360px){
+  .grid{grid-template-columns:repeat(6,minmax(0,1fr)) 264px}
+  .ntp{padding:22px 24px 36px}
+  .dial{zoom:.94}
+  .strip{padding:var(--s3) 8px 8px}
+  .row{font-size:12.5px;gap:8px}
+}
+@media (max-height:820px){
+  .ntp{padding-top:16px}
+  .ntp-in{gap:var(--s3)}
+  .s-disp{height:40px;padding:6px 9px}
+  .dial{height:160px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="win" id="win" data-plat="linux">
+  <!-- Tab strip -->
+  <div class="tabstrip" id="tabstrip">
+    <div class="wc wc-mac" aria-label="Window controls">
+      <button class="tl c" aria-label="Close"><svg width="12" height="12"><path d="M4 4l4 4M8 4l-4 4" stroke="#4d0000" stroke-width="1.1"/></svg></button>
+      <button class="tl m" aria-label="Minimise"><svg width="12" height="12"><path d="M3.5 6h5" stroke="#5a3a00" stroke-width="1.1"/></svg></button>
+      <button class="tl z" aria-label="Full screen"><svg width="12" height="12"><path d="M4 4.2h3.6v3.6zM8 7.8H4.4V4.2z" fill="#0a4a0a"/></svg></button>
+    </div>
+    <div class="tabs"><div class="tabs" id="tabs" role="tablist" aria-label="Tabs"></div>
+    <button class="key icon newtab" id="kNew" aria-label="New tab"><svg width="10" height="10"><path d="M5 .5v9M.5 5h9" stroke="currentColor" stroke-width="1.3"/></svg></button></div>
+    <div class="drag"></div>
+    <div class="wc wc-lin">
+      <button class="gb" aria-label="Minimise"><svg width="10" height="10"><path d="M1.5 7h7" stroke="currentColor" stroke-width="1.4"/></svg></button>
+      <button class="gb" aria-label="Maximise"><svg width="10" height="10"><rect x="1.7" y="1.7" width="6.6" height="6.6" rx="1" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
+      <button class="gb" aria-label="Close"><svg width="10" height="10"><path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" stroke-width="1.4"/></svg></button>
+    </div>
+    <div class="wc wc-win">
+      <button class="cb" aria-label="Minimise"><svg width="10" height="10"><path d="M0 5h10" stroke="currentColor" stroke-width="1"/></svg></button>
+      <button class="cb" aria-label="Maximise"><svg width="10" height="10"><rect x=".5" y=".5" width="9" height="9" rx="1" fill="none" stroke="currentColor" stroke-width="1"/></svg></button>
+      <button class="cb x" aria-label="Close"><svg width="10" height="10"><path d="M.5.5l9 9M9.5.5l-9 9" stroke="currentColor" stroke-width="1"/></svg></button>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <button class="key icon" id="kBack" aria-label="Back"><svg width="12" height="12"><path d="M7.5 2.5L4 6l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg></button>
+    <button class="key icon" id="kFwd" aria-label="Forward" disabled><svg width="12" height="12"><path d="M4.5 2.5L8 6l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg></button>
+    <button class="key icon" id="kReload" aria-label="Reload"><svg width="12" height="12"><path d="M9.6 4.2A4 4 0 1 0 10 7" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M10.2 1.6v3H7.2" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
+    <div class="disp address rd-m" id="address"></div>
+    <button class="key k-block" id="kBlock" aria-haspopup="dialog"><i class="led" id="kBlockLed"></i><span class="act">Block</span></button>
+    <button class="key icon k-menu" id="kMenu" aria-label="Menu" aria-haspopup="menu"><svg width="14" height="12"><path d="M1 2.5h12M1 6h12M1 9.5h12" stroke="currentColor" stroke-width="1.3"/></svg></button>
+  </div>
+
+  <!-- Content -->
+  <main class="content" id="content">
+    <section class="view ntp" id="vNtp" hidden>
+      <div class="ntp-in">
+        <div class="ntp-head">
+          <div class="brand">
+            <svg viewBox="0 0 32 32"><defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6a3d"/><stop offset="1" stop-color="#c2300f"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#g1)"/><path d="M14 10.5V24.5H6.6Q7.4 16 14 10.5Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/><path d="M17 6V24.5H25.4Q24.7 13 17 6Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>
+            <span class="lab strong">Blocklist</span>
+          </div>
+          <div class="rule"></div>
+          <div class="disp counters">
+            <div class="c"><span class="rd-l" id="cStopped">4</span><span class="cap dim">Stopped today</span></div>
+            <i class="sep"></i>
+            <div class="c"><span class="rd-l" id="cBlocked">21</span><span class="cap dim">Sites blocked</span></div>
+          </div>
+        </div>
+        <div class="grid" id="grid">
+          <div class="module master" id="master">
+            <div class="m-head"><span class="lab strong">Duration</span></div>
+            <div class="dial" id="dial">
+              <div class="knob" id="knob" tabindex="0" role="slider" aria-label="Duration" aria-valuemin="0" aria-valuemax="5"><div class="face"></div><div class="rot" id="knobRot"><div class="ptr"></div></div></div>
+            </div>
+            <div class="disp sel-disp" id="selDisp"></div>
+            <button class="key l k-big" id="kBig"><span class="t act" id="kBigT">Block</span><span class="sub" id="kBigSub"></span></button>
+            <p class="b-s note">Blocks only get longer. 10 seconds to undo.</p>
+          </div>
+        </div>
+        <div class="legend lab faint">
+          <span><i class="led s"></i>Open</span>
+          <span><i class="led s armed"></i>Selected</span>
+          <span><i class="led s timed"></i>Blocked for a time</span>
+          <span><i class="led s forever"></i>Blocked forever</span>
+        </div>
+      </div>
+    </section>
+    <section class="view" id="vPage" hidden></section>
+    <div class="module toast" id="toast" role="status" aria-live="polite">
+      <i class="led" id="toastLed"></i>
+      <div class="msg"><div class="t1" id="toastT1"></div><div class="lab" id="toastT2"></div></div>
+      <button class="key" id="kUndo">Undo <span class="secs rd-s" id="toastSec">10</span></button>
+      <div class="meter"><i id="toastBar"></i></div>
+    </div>
+  </main>
+
+  <div class="module pop" id="popBlock" role="dialog" aria-label="Block this site"></div>
+  <div class="module pop menu" id="popMenu" role="menu"></div>
+</div>
+
+<!-- Caption -->
+<aside class="module caption" id="caption">
+  <div class="m-head"><span class="lab strong">Proposal 06 · Console II</span><button class="cap-x" id="capX" aria-label="Collapse caption" aria-expanded="true"><svg width="10" height="10"><path d="M1.5 5h7" stroke="currentColor" stroke-width="1.3"/></svg></button></div>
+  <p class="b-m">A matte instrument. Keys press and latch, displays read out, and ember lights only what is blocked. Solid ember means forever.</p>
+  <div class="ctl">
+    <div class="lin" id="platSel" role="radiogroup" aria-label="Platform">
+      <button role="radio" data-p="linux" aria-checked="true">Linux</button>
+      <button role="radio" data-p="mac" aria-checked="false">macOS</button>
+      <button role="radio" data-p="win" aria-checked="false">Windows</button>
+    </div>
+    <button class="key" id="kSys">System</button>
+  </div>
+</aside>
+
+<!-- System sheet -->
+<div class="sheet" id="sheet" role="dialog" aria-label="System specification">
+  <div class="sh" id="sh"></div>
+</div>
+
+<script>
+(() => {
+const $ = (s, r = document) => r.querySelector(s);
+const pad = n => String(n).padStart(2, '0');
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const H = 36e5, D = 864e5;
+const LOGO = (id, s = 16) => `<svg viewBox="0 0 32 32" width="${s}" height="${s}"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6a3d"/><stop offset="1" stop-color="#c2300f"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#${id})"/><path d="M14 10.5V24.5H6.6Q7.4 16 14 10.5Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/><path d="M17 6V24.5H25.4Q24.7 13 17 6Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
+const ICON = {
+  x: '<svg width="8" height="8"><path d="M1 1l6 6M7 1L1 7" stroke="currentColor" stroke-width="1.2"/></svg>',
+  lock: '<svg width="10" height="12"><rect x="1" y="5" width="8" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M3 5V3.5a2 2 0 0 1 4 0V5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>',
+  search: '<svg width="12" height="12"><circle cx="5" cy="5" r="3.6" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M7.7 7.7l3 3" stroke="currentColor" stroke-width="1.2"/></svg>',
+  plus: '<svg width="8" height="8"><path d="M4 .5v7M.5 4h7" stroke="currentColor" stroke-width="1.2"/></svg>',
+  back: '<svg width="12" height="12"><path d="M7.5 2.5L4 6l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>',
+};
+
+/* ---------------- data ---------------- */
+const CATS = [
+  {id:'social', name:'Social', sites:['x.com','twitter.com','facebook.com','instagram.com','tiktok.com','reddit.com','snapchat.com','threads.net','bsky.app','pinterest.com','tumblr.com','discord.com']},
+  {id:'video', name:'Video & streaming', sites:['youtube.com','netflix.com','twitch.tv','kick.com','primevideo.com','disneyplus.com','hulu.com','max.com']},
+  {id:'news', name:'News & forums', sites:['news.ycombinator.com','cnn.com','foxnews.com','bbc.com','nytimes.com','buzzfeed.com','9gag.com']},
+  {id:'shopping', name:'Shopping', sites:['amazon.com','ebay.com','aliexpress.com','temu.com','etsy.com','shein.com']},
+  {id:'games', name:'Games', sites:['chess.com','lichess.org','roblox.com','store.steampowered.com','poki.com']},
+  {id:'yours', name:'Your sites', sites:['espn.com'], custom:true},
+];
+const DUR = [
+  {k:'1H', name:'1 hour'}, {k:'4H', name:'4 hours'}, {k:'Midnight', name:'until midnight'},
+  {k:'1W', name:'1 week'}, {k:'1M', name:'1 month'}, {k:'Forever', name:'forever'},
+];
+const ANG = [-125,-75,-25,25,75,125];
+const nextMidnight = (t = Date.now()) => { const d = new Date(t); d.setHours(24,0,0,0); return d.getTime(); };
+function endFor(i, t = Date.now()){
+  switch(i){
+    case 0: return t + H; case 1: return t + 4*H; case 2: return nextMidnight(t); case 3: return t + 7*D;
+    case 4: { const d = new Date(t); d.setMonth(d.getMonth()+1); return d.getTime(); }
+    default: return Infinity;
+  }
+}
+const START = Date.now();
+const OCT18 = new Date(2026, 9, 18, 9, 24).getTime();
+let blocks = {};
+CATS[0].sites.forEach(s => blocks[s] = {until: Infinity, since: OCT18});
+CATS[1].sites.forEach(s => blocks[s] = {until: nextMidnight(), since: START - 3*H - 17*60e3});
+blocks['news.ycombinator.com'] = {until: START + 5*D, since: START - 2*D};
+let stopped = 4, sel = new Set(), dur = 2, popDur = 2, plat = 'linux';
+
+let tabs = [
+  {id:1, hist:['mast://newtab']},
+  {id:2, hist:['https://github.com/0xmiki/mast']},
+  {id:3, hist:['https://en.wikipedia.org/wiki/Bauhaus']},
+  {id:4, hist:['mast://newtab','https://www.youtube.com/watch?v=jNQXAC9IVRw']},
+  {id:5, hist:['https://x.com/home']},
+];
+let activeId = 1, nextId = 6;
+const TITLES = {'github.com':'0xmiki/mast: a browser that blocks distractions','en.wikipedia.org':'Bauhaus - Wikipedia','youtube.com':'YouTube','x.com':'X','google.com':'Google Search'};
+
+/* ---------------- helpers ---------------- */
+const live = b => b && b.until > Date.now();
+const isForever = s => blocks[s] && blocks[s].until === Infinity && live(blocks[s]);
+const urlOf = t => t.hist[t.hist.length-1];
+const isNtp = u => u === 'mast://newtab';
+function hostOf(u){ try { return new URL(u).hostname.replace(/^www\./,''); } catch(e){ return ''; } }
+function blockFor(host){
+  if(!host) return null;
+  for(const s in blocks) if((host === s || host.endsWith('.'+s)) && live(blocks[s])) return {site:s, ...blocks[s]};
+  return null;
+}
+const catOf = s => CATS.find(c => c.sites.includes(s));
+function siteFor(host){
+  for(const c of CATS) for(const s of c.sites) if(host === s || host.endsWith('.'+s)) return s;
+  const p = host.split('.'); return p.length > 2 && host !== 'news.ycombinator.com' ? p.slice(-2).join('.') : host;
+}
+const hm = t => { const d = new Date(t); return pad(d.getHours())+':'+pad(d.getMinutes()); };
+const dShort = t => { const d = new Date(t); return MON[d.getMonth()]+' '+d.getDate(); };
+const sameDay = (a, b) => new Date(a).toDateString() === new Date(b).toDateString();
+/* "until midnight" / "until 14:05" / "until Tue Nov 4" / "forever" */
+function until(u, t = Date.now()){
+  if(u === Infinity) return 'forever';
+  if(Math.abs(u - nextMidnight(t)) < 60e3) return 'until midnight';
+  if(sameDay(u, t)) return 'until '+hm(u);
+  const d = new Date(u); return 'until '+DOW[d.getDay()]+' '+dShort(u);
+}
+function left(ms, mode){
+  ms = Math.max(0, ms);
+  if(mode === 'compact'){ if(ms >= D) return Math.round(ms/D)+'D'; if(ms >= H) return Math.floor(ms/H)+'H'; return Math.max(1, Math.ceil(ms/60e3))+'M'; }
+  if(ms >= 2*D) return Math.round(ms/D)+' days left';
+  if(ms >= H) return Math.floor(ms/H)+' h '+Math.floor(ms%H/60e3)+' min left';
+  return Math.max(1, Math.ceil(ms/60e3))+' min left';
+}
+const plural = (n, w) => n+' '+w+(n === 1 ? '' : 's');
+const cap = s => s.charAt(0).toUpperCase()+s.slice(1);
+const blockedCount = () => Object.keys(blocks).filter(s => live(blocks[s])).length;
+const ledState = b => !live(b) ? '' : b.until === Infinity ? 'forever' : 'timed';
+function catStatus(c){
+  const b = c.sites.filter(s => live(blocks[s]));
+  if(!b.length) return {kind:'open'};
+  if(b.length === c.sites.length){
+    if(b.every(isForever)) return {kind:'forever', since: Math.min(...b.map(s => blocks[s].since))};
+    return {kind:'timed', until: Math.min(...b.filter(s => !isForever(s)).map(s => blocks[s].until))};
+  }
+  return {kind:'partial', n:b.length, m:c.sites.length};
+}
+
+/* ---------------- platform ---------------- */
+const SC = {
+  linux:{newtab:'Ctrl+T', newwin:'Ctrl+N', hist:'Ctrl+H', dl:'Ctrl+J', bm:'Ctrl+Shift+O', set:'', find:'Ctrl+F'},
+  win:  {newtab:'Ctrl+T', newwin:'Ctrl+N', hist:'Ctrl+H', dl:'Ctrl+J', bm:'Ctrl+Shift+O', set:'', find:'Ctrl+F'},
+  mac:  {newtab:'⌘T', newwin:'⌘N', hist:'⌘Y', dl:'⌥⌘L', bm:'⌥⌘B', set:'⌘,', find:'⌘F'},
+};
+function renderMenu(){
+  const s = SC[plat];
+  $('#popMenu').innerHTML = `
+    <button class="mi" role="menuitem" data-act="newtab"><span>New tab</span><span class="sc">${s.newtab}</span></button>
+    <button class="mi" role="menuitem"><span>New window</span><span class="sc">${s.newwin}</span></button>
+    <div class="msep"></div>
+    <button class="mi" role="menuitem" data-act="newtab"><span>Blocklist</span><span class="sc"></span></button>
+    <button class="mi" role="menuitem"><span>History</span><span class="sc">${s.hist}</span></button>
+    <button class="mi" role="menuitem"><span>Downloads</span><span class="sc">${s.dl}</span></button>
+    <button class="mi" role="menuitem"><span>Bookmarks</span><span class="sc">${s.bm}</span></button>
+    <button class="mi" role="menuitem"><span>Find…</span><span class="sc">${s.find}</span></button>
+    <div class="msep"></div>
+    <button class="mi" role="menuitem"><span>Settings</span><span class="sc">${s.set}</span></button>
+    <button class="mi" role="menuitem"><span>About Mast</span><span class="sc">1.0</span></button>`;
+}
+function setPlat(p){
+  plat = p; $('#win').dataset.plat = p;
+  document.querySelectorAll('#platSel [data-p]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.p === p)));
+  renderMenu(); closePops();
+}
+$('#platSel').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if(b) setPlat(b.dataset.p); });
+
+/* ---------------- tabs ---------------- */
+const tabsEl = $('#tabs');
+function favFor(host){
+  if(host === 'github.com') return '<i class="fv-gh"></i>';
+  if(host.endsWith('wikipedia.org')) return '<i class="fv-wk">W</i>';
+  return `<i class="fv-g">${(host[0]||'?').toUpperCase()}</i>`;
+}
+function tabHTML(t, on){
+  const u = urlOf(t), ntp = isNtp(u), host = hostOf(u), b = ntp ? null : blockFor(host);
+  let ttl = ntp ? 'New tab' : (TITLES[host] || (host.startsWith('google.') ? 'Google Search' : host));
+  const fav = ntp ? LOGO('lt'+t.id, 14) : b ? `<i class="led ${ledState(b)}"></i>` : favFor(host);
+  const rd = b && b.until !== Infinity ? `<span class="rdt" data-until="${b.until}" data-fmt="compact">${left(b.until-Date.now(),'compact')}</span>` : '';
+  return `<div class="key tab${b?' blocked':''}" role="tab" tabindex="0" data-id="${t.id}" aria-selected="${on}" title="${ntp?'New tab':u}">
+    <span class="fav">${fav}</span><span class="ttl">${ttl}</span>${rd}<span class="x" data-close="${t.id}" role="button" aria-label="Close tab">${ICON.x}</span></div>`;
+}
+function renderTabs(){ tabsEl.innerHTML = tabs.map(t => tabHTML(t, t.id === activeId)).join(''); }
+tabsEl.addEventListener('mousedown', e => {
+  if(e.target.closest('[data-close]')) return;
+  const t = e.target.closest('.tab'); if(!t) return;
+  const id = +t.dataset.id; if(id !== activeId){ activeId = id; closePops(); render(); }
+});
+tabsEl.addEventListener('click', e => { const x = e.target.closest('[data-close]'); if(x){ e.stopPropagation(); closeTab(+x.dataset.close); } });
+tabsEl.addEventListener('keydown', e => { const t = e.target.closest('.tab'); if(t && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); activeId = +t.dataset.id; render(); } });
+$('#kNew').addEventListener('click', () => newTab());
+function newTab(){ const t = {id: nextId++, hist:['mast://newtab']}; tabs.push(t); activeId = t.id; closePops(); render(); }
+function closeTab(id){
+  if(tabs.length === 1){ tabs[0].hist = ['mast://newtab']; render(); return; }
+  const i = tabs.findIndex(t => t.id === id); tabs.splice(i, 1);
+  if(activeId === id) activeId = tabs[Math.min(i, tabs.length-1)].id;
+  render();
+}
+const cur = () => tabs.find(t => t.id === activeId);
+
+/* ---------------- address display ---------------- */
+const addr = $('#address');
+let editing = false;
+function renderAddr(){
+  if(editing) return;
+  const u = urlOf(cur());
+  addr.classList.remove('blocked');
+  if(isNtp(u)){
+    addr.innerHTML = `<span class="slot">${ICON.search}</span><span class="field ph">Search Google or type a URL</span>`;
+    return;
+  }
+  const x = new URL(u), b = blockFor(hostOf(u));
+  const path = (x.pathname === '/' ? '' : x.pathname) + x.search;
+  let seg = '';
+  if(b){
+    addr.classList.add('blocked');
+    seg = b.until === Infinity ? `<span class="seg forever">Blocked forever</span>`
+      : `<span class="seg timed"><i class="led s timed"></i>Blocked ${until(b.until)}</span>`;
+  }
+  addr.innerHTML = `<span class="slot">${ICON.lock}</span><span class="field"><span class="host">${x.hostname}</span><span class="dim">${path}</span></span>${seg}`;
+}
+addr.addEventListener('click', () => {
+  if(editing) return; editing = true;
+  const u = urlOf(cur());
+  addr.classList.remove('blocked');
+  addr.innerHTML = `<span class="slot">${ICON.search}</span><input id="addrIn" spellcheck="false" placeholder="Search Google or type a URL" value="${isNtp(u)?'':u}">`;
+  const inp = $('#addrIn'); inp.focus(); inp.select();
+  inp.addEventListener('keydown', e => {
+    if(e.key === 'Enter'){ const v = inp.value.trim(); editing = false; if(v) go(v); else renderAddr(); }
+    if(e.key === 'Escape'){ editing = false; renderAddr(); }
+  });
+  inp.addEventListener('blur', () => setTimeout(() => { if(editing){ editing = false; renderAddr(); } }, 0));
+});
+function go(v){
+  let url;
+  if(/^[a-z]+:\/\//i.test(v)) url = v;
+  else if(/^[^\s]+\.[a-z]{2,}(\/.*)?$/i.test(v)) url = 'https://'+v;
+  else url = 'https://www.google.com/search?q='+encodeURIComponent(v);
+  cur().hist.push(url);
+  if(blockFor(hostOf(url))) stopped++;
+  render();
+}
+function back(){ const t = cur(); if(t.hist.length > 1) t.hist.pop(); else t.hist = ['mast://newtab']; render(); }
+$('#kBack').addEventListener('click', back);
+$('#kReload').addEventListener('click', () => render());
+
+/* ---------------- NTP ---------------- */
+const grid = $('#grid'), master = $('#master');
+function stripHTML(c){
+  const st = catStatus(c);
+  const pickable = c.sites.filter(s => !isForever(s));
+  const nSel = pickable.filter(s => sel.has(s)).length;
+  const all = pickable.length > 0 && nSel === pickable.length;
+  let disp;
+  if(st.kind === 'forever') disp = `<div class="disp s-disp forever"><div class="l1">Forever</div><div class="l2 cap dim">Since ${dShort(st.since)}</div></div>`;
+  else if(st.kind === 'timed') disp = `<div class="disp s-disp timed"><div class="l1">${until(st.until)}</div><div class="l2 cap dim" data-until="${st.until}" data-fmt="long">${left(st.until-Date.now())}</div></div>`;
+  else if(st.kind === 'partial') disp = `<div class="disp s-disp"><div class="l1">${st.n} of ${st.m} blocked</div><div class="l2 cap dim">${c.sites.length - st.n} open</div></div>`;
+  else disp = `<div class="disp s-disp unlit"><div class="l1">Open</div><div class="l2 cap">Nothing blocked</div></div>`;
+  const rows = c.sites.map(s => {
+    const b = blocks[s], on = live(b), fv = isForever(s), picked = sel.has(s);
+    const led = picked ? 'armed' : ledState(b);
+    const tag = on && b.until !== Infinity && st.kind === 'partial' ? `<span class="tg" data-until="${b.until}" data-fmt="compact">${left(b.until-Date.now(),'compact')}</span>` : '';
+    return `<li><button class="row${on?' blocked':''}${fv?' fixed':''}" data-site="${s}" aria-pressed="${picked}" ${fv?'aria-disabled="true" title="Blocked forever"':''}><i class="led s ${led}"></i><span class="nm">${s}</span>${tag}</button></li>`;
+  }).join('') + (c.custom ? `<li><label class="add">${ICON.plus}<input id="addIn" placeholder="Add a site" spellcheck="false" aria-label="Add a site"></label></li>` : '');
+  const key = `<button class="key k-sel" data-pick="${c.id}" aria-pressed="${all}" ${pickable.length?'':'disabled'}><i class="led ${all?'armed':''}"></i><span class="lbl">Select all</span><span class="n">${pickable.length ? (nSel && !all ? pad(nSel)+'/' : '')+pad(pickable.length) : ''}</span></button>`;
+  return `<div class="module strip${nSel?' has-sel':''}" data-cat="${c.id}">
+    <div class="m-head"><span class="lab strong" title="${c.name}">${c.name}</span></div>
+    ${disp}<ul class="rows">${rows}</ul>${key}</div>`;
+}
+function renderNtp(){
+  const focusAdd = document.activeElement && document.activeElement.id === 'addIn';
+  grid.querySelectorAll('.strip').forEach(n => n.remove());
+  master.insertAdjacentHTML('beforebegin', CATS.map(stripHTML).join(''));
+  if(focusAdd) $('#addIn').focus();
+  $('#cStopped').textContent = stopped;
+  $('#cBlocked').textContent = blockedCount();
+  renderMaster();
+}
+function selSummary(){
+  const sites = [...sel];
+  const full = CATS.filter(c => { const a = c.sites.filter(s => !isForever(s)); return a.length && a.every(s => sel.has(s)); });
+  const covered = new Set(full.flatMap(c => c.sites));
+  const rest = sites.filter(s => !covered.has(s));
+  const parts = full.map(c => c.name);
+  if(rest.length === 1) parts.push(rest[0]); else if(rest.length) parts.push(plural(rest.length, 'site'));
+  return {n: sites.length, text: parts.join(' + ')};
+}
+function renderMaster(){
+  const m = $('#selDisp'), k = $('#kBig'), sum = selSummary(), inf = dur === 5, u = until(endFor(dur));
+  m.className = 'disp sel-disp ' + (sum.n ? (inf ? 'forever' : 'timed') : 'unlit');
+  const keeps = [...sel].some(s => live(blocks[s]) && blocks[s].until > endFor(dur));
+  const end = endFor(dur);
+  const detail = inf ? 'Can’t be shortened or lifted' : dur === 2 ? 'Tonight at 00:00' : (sameDay(end, Date.now()) ? 'Today' : DOW[new Date(end).getDay()]+' '+dShort(end))+' · '+hm(end);
+  m.innerHTML = `<div class="top cap dim"><span>${sum.n ? plural(sum.n,'site')+' selected' : 'Nothing selected'}</span><span>${DUR[dur].k}</span></div>
+    <div class="l1">${inf ? 'Forever' : u}</div>
+    <div class="l2 cap dim">${sum.n && keeps ? 'Longer blocks stay as they are' : detail}</div>`;
+  k.disabled = !sum.n;
+  k.classList.toggle('forever', inf && !!sum.n);
+  $('#kBigT').textContent = inf ? 'Block forever' : 'Block';
+  $('#kBigSub').textContent = sum.n ? sum.text : 'Select a category or a site';
+}
+grid.addEventListener('click', e => {
+  const r = e.target.closest('[data-site]');
+  if(r){ const s = r.dataset.site; if(isForever(s)) return; sel.has(s) ? sel.delete(s) : sel.add(s); renderNtp(); return; }
+  const k = e.target.closest('[data-pick]');
+  if(k && !k.disabled){
+    const c = CATS.find(c => c.id === k.dataset.pick), a = c.sites.filter(s => !isForever(s)), all = a.every(s => sel.has(s));
+    a.forEach(s => all ? sel.delete(s) : sel.add(s)); renderNtp();
+  }
+});
+grid.addEventListener('keydown', e => {
+  if(e.target.id !== 'addIn' || e.key !== 'Enter') return;
+  const v = e.target.value.trim().toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0];
+  if(!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(v)) return;
+  if(!CATS.some(c => c.sites.includes(v))) CATS[5].sites.push(v);
+  if(!isForever(v)) sel.add(v);
+  e.target.value = ''; renderNtp(); $('#addIn').focus();
+});
+
+/* ---------------- dial (rotary selector) ---------------- */
+const dial = $('#dial'), knob = $('#knob');
+const CX = 112, CY = 90;
+const pt = (a, r) => { const t = a*Math.PI/180; return [CX + r*Math.sin(t), CY - r*Math.cos(t)]; };
+function buildDial(){
+  ANG.forEach((a, i) => {
+    const [lx, ly] = pt(a, 54), [tx, ty] = pt(a, 76);
+    const led = document.createElement('i'); led.className = 'led s det'; led.style.left = lx+'px'; led.style.top = ly+'px'; led.dataset.i = i;
+    const b = document.createElement('button'); b.className = 'lab det-l'; b.textContent = DUR[i].k; b.dataset.i = i;
+    b.style.left = tx+'px'; b.style.top = ty+'px'; b.setAttribute('aria-label', DUR[i].name);
+    dial.append(led, b);
+  });
+}
+function setDur(i){
+  dur = Math.max(0, Math.min(5, i));
+  $('#knobRot').style.transform = `rotate(${ANG[dur]}deg)`;
+  dial.classList.toggle('inf', dur === 5);
+  dial.querySelectorAll('.det').forEach(l => { l.className = 'led s det' + (+l.dataset.i === dur ? (dur === 5 ? ' forever' : ' armed') : ''); });
+  dial.querySelectorAll('.det-l').forEach(b => b.classList.toggle('on', +b.dataset.i === dur));
+  knob.setAttribute('aria-valuenow', dur); knob.setAttribute('aria-valuetext', DUR[dur].name);
+  renderMaster();
+}
+dial.addEventListener('click', e => { const b = e.target.closest('.det-l'); if(b) setDur(+b.dataset.i); });
+let drag = null;
+knob.addEventListener('pointerdown', e => { drag = {moved:false}; knob.setPointerCapture(e.pointerId); });
+knob.addEventListener('pointermove', e => {
+  if(!drag) return;
+  const r = knob.getBoundingClientRect(), dx = e.clientX - (r.left + r.width/2), dy = e.clientY - (r.top + r.height/2);
+  if(Math.hypot(dx, dy) < 12) return;
+  const a = Math.atan2(dx, -dy)*180/Math.PI; if(Math.abs(a) > 160) return;
+  let best = 0; ANG.forEach((g, i) => { if(Math.abs(g - a) < Math.abs(ANG[best] - a)) best = i; });
+  if(best !== dur){ drag.moved = true; setDur(best); }
+});
+knob.addEventListener('pointerup', () => { if(drag && !drag.moved) setDur((dur+1) % 6); drag = null; });
+knob.addEventListener('keydown', e => {
+  const m = {ArrowRight:1, ArrowUp:1, ArrowLeft:-1, ArrowDown:-1}[e.key];
+  if(m){ e.preventDefault(); setDur(dur + m); }
+  if(e.key === 'Home'){ e.preventDefault(); setDur(0); }
+  if(e.key === 'End'){ e.preventDefault(); setDur(5); }
+});
+
+/* ---------------- blocking + undo ---------------- */
+let undoState = null, toastTimer = null, toastEnd = 0;
+function snapshot(){ const b = {}; for(const s in blocks) b[s] = {...blocks[s]}; return {blocks:b, yours:[...CATS[5].sites], sel:[...sel]}; }
+function restore(sn){ blocks = sn.blocks; CATS[5].sites = sn.yours; sel = new Set(sn.sel); }
+function doBlock(sites, di, label, sn = snapshot()){
+  const t = Date.now(), end = endFor(di, t), changed = [];
+  sites.forEach(s => {
+    const b = blocks[s];
+    if(live(b)){ if(end > b.until){ blocks[s] = {until:end, since:b.since}; changed.push(s); } }
+    else { blocks[s] = {until:end, since:t}; changed.push(s); }
+  });
+  if(!changed.length){
+    restore(sn); render();
+    showToast({led:'', t1:'Nothing changed', t2:'Already blocked for longer · blocks only get longer', undo:false}); return;
+  }
+  undoState = sn;
+  render();
+  showToast({led: end === Infinity ? 'forever' : 'timed', t1:`${label} blocked ${until(end, t)}`,
+    t2:`${plural(changed.length,'site')} · ${blockedCount()} blocked in total`, undo:true});
+}
+$('#kBig').addEventListener('click', () => {
+  if(!sel.size) return;
+  const sn = snapshot(), sum = selSummary(), sites = [...sel];
+  sel.clear(); doBlock(sites, dur, sum.text, sn);
+});
+function showToast({led, t1, t2, undo}){
+  const t = $('#toast');
+  $('#toastLed').className = 'led ' + led;
+  $('#toastT1').textContent = t1; $('#toastT2').textContent = t2;
+  $('#kUndo').style.display = undo ? '' : 'none';
+  $('#toastBar').parentNode.style.display = undo ? '' : 'none';
+  clearInterval(toastTimer); clearTimeout(toastTimer);
+  t.classList.add('show');
+  if(undo){
+    toastEnd = Date.now() + 10e3;
+    const bar = $('#toastBar');
+    bar.style.transition = 'none'; bar.style.transform = 'scaleX(1)'; void bar.offsetWidth;
+    bar.style.transition = 'transform 10s linear'; bar.style.transform = 'scaleX(0)';
+    const upd = () => {
+      const r = toastEnd - Date.now();
+      $('#toastSec').textContent = Math.max(0, Math.ceil(r/1000));
+      if(r <= 0){ clearInterval(toastTimer); undoState = null; t.classList.remove('show'); }
+    };
+    upd(); toastTimer = setInterval(upd, 200);
+  } else toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+$('#kUndo').addEventListener('click', () => {
+  if(!undoState) return;
+  restore(undoState); undoState = null; clearInterval(toastTimer);
+  render();
+  showToast({led:'', t1:'Undone', t2:'Nothing was blocked', undo:false});
+});
+
+/* ---------------- toolbar Block popover + menu ---------------- */
+const popB = $('#popBlock'), popM = $('#popMenu'), kB = $('#kBlock'), kM = $('#kMenu');
+function place(pop, btn){
+  const w = $('#win').getBoundingClientRect(), r = btn.getBoundingClientRect();
+  pop.style.top = (r.bottom - w.top + 8) + 'px';
+  pop.style.right = Math.max(8, w.right - r.right) + 'px';
+}
+function closePops(){ [popB, popM].forEach(p => p.classList.remove('show')); [kB, kM].forEach(k => k.classList.remove('open')); }
+function renderPopBlock(){
+  const u = urlOf(cur()), host = hostOf(u), site = siteFor(host), b = blockFor(host), now = Date.now();
+  const forever = b && b.until === Infinity;
+  const minI = b ? DUR.findIndex((_, i) => endFor(i, now) > b.until) : 0;
+  if(b && popDur < minI) popDur = minI;
+  const dispCls = forever ? 'forever' : b ? 'timed' : '';
+  const l2 = !b ? 'Open · not on your blocklist' : forever ? 'Blocked forever · since '+dShort(b.since) : cap(until(b.until))+' · '+left(b.until-now);
+  if(forever){
+    popB.innerHTML = `<div class="lab strong rule">This site</div>
+      <div class="disp pop-disp forever"><div class="l1">${site}</div><div class="cap dim">${l2}</div></div>
+      <p class="b-m msg">There’s nothing longer than forever. This block can’t be shortened or lifted.</p>`;
+    return;
+  }
+  const segs = DUR.map((d, i) => `<button role="radio" data-pd="${i}" aria-checked="${i===popDur}" ${b && i < minI ? 'disabled' : ''}>${d.k}</button>`).join('');
+  const inf = popDur === 5;
+  popB.innerHTML = `<div class="lab strong rule">${b ? 'Lengthen this block' : 'Block this site'}</div>
+    <div class="disp pop-disp ${dispCls}"><div class="l1">${site}</div><div class="cap dim">${l2}</div></div>
+    <div class="lin" role="radiogroup" aria-label="Duration">${segs}</div>
+    <button class="key l k-go${inf?' forever':''}" id="kPopGo"><span class="t act">${inf ? 'Block forever' : b ? 'Lengthen' : 'Block'}</span><span class="sub">${site} · ${until(endFor(popDur))}</span></button>
+    <p class="b-s" style="color:var(--ink-4)">Blocks only get longer. 10 seconds to undo.</p>`;
+}
+popB.addEventListener('click', e => {
+  const s = e.target.closest('[data-pd]');
+  if(s && !s.disabled){ popDur = +s.dataset.pd; renderPopBlock(); return; }
+  if(e.target.closest('#kPopGo')){
+    const site = siteFor(hostOf(urlOf(cur()))), sn = snapshot();
+    if(!CATS.some(c => c.sites.includes(site))) CATS[5].sites.push(site);
+    closePops(); doBlock([site], popDur, site, sn);
+  }
+});
+kB.addEventListener('click', e => {
+  e.stopPropagation(); if(kB.disabled) return;
+  const open = popB.classList.contains('show'); closePops();
+  if(!open){ renderPopBlock(); place(popB, kB); popB.classList.add('show'); kB.classList.add('open'); }
+});
+kM.addEventListener('click', e => {
+  e.stopPropagation();
+  const open = popM.classList.contains('show'); closePops();
+  if(!open){ place(popM, kM); popM.classList.add('show'); kM.classList.add('open'); }
+});
+popM.addEventListener('click', e => { const b = e.target.closest('.mi'); if(!b) return; if(b.dataset.act === 'newtab') newTab(); closePops(); });
+document.addEventListener('mousedown', e => { if(!e.target.closest('.pop') && !e.target.closest('#kBlock') && !e.target.closest('#kMenu')) closePops(); });
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape'){ closePops(); $('#sheet').classList.remove('show'); }
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 't'){ e.preventDefault(); newTab(); }
+});
+
+/* ---------------- pages ---------------- */
+const vNtp = $('#vNtp'), vPage = $('#vPage');
+function githubPage(){
+  const files = [['docs','docs: Chromium fork wiring plan','2 days ago'],['src/blocklist','feat(blocklist): lengthen-only rule','3 days ago'],['src/chrome/views','feat(tabs): key-style tab painter','last week'],['src/webui/ntp','feat(ntp): blocklist strips','last week'],['BRIEF.md','docs: round 2 brief','yesterday'],['README.md','docs: drop pact wording from README','2 weeks ago']];
+  return `<div class="gh">
+    <div class="gh-top"><svg width="32" height="32" viewBox="0 0 16 16"><path fill="#e6edf3" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      <span style="font-weight:600">0xmiki / mast</span><div style="flex:1"></div><div class="search">Type / to search</div></div>
+    <div class="gh-head"><div class="gh-title"><a href="#">0xmiki</a><span style="color:#9198a1">/</span><a href="#" style="font-weight:600">mast</a><span class="gh-pill">Public</span></div>
+      <div class="gh-tabs"><span class="on">Code</span><span>Issues 12</span><span>Pull requests 3</span><span>Actions</span><span>Wiki</span><span>Settings</span></div></div>
+    <div class="gh-body"><div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+      <div class="gh-box"><div class="r"><b>0xmiki</b><span class="m">feat(brand): white sails on deeper ember</span><span class="d">56a8b69 · 3 hours ago</span></div>
+        ${files.map(f => `<div class="r"><span style="color:#9198a1">${f[0].includes('.')?'📄':'📁'}</span><span style="width:170px;flex:none">${f[0]}</span><span class="m">${f[1]}</span><span class="d">${f[2]}</span></div>`).join('')}</div>
+      <div class="gh-box gh-readme"><h2>Mast</h2>
+        <p>Mast is a Chromium-based browser whose one job is blocking distractions. The blocker is part of the browser, so it can’t be switched off like an extension.</p>
+        <p>Pick categories or single sites, choose how long, press <b>Block</b>. Blocks can be lengthened but never shortened. Forever means forever. The only way back is the ten-second Undo right after you press Block.</p>
+        <p>Build on Linux with <code>./build.sh --release</code>, then run <code>out/Release/mast</code>.</p></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px"><b style="font-size:16px">About</b><p style="color:#d1d7e0">A browser that blocks distractions and doesn’t let you unblock them.</p>
+      <div style="color:#9198a1;font-size:14px;line-height:2">☆ 1.2k stars<br>◉ 18 watching<br>⑂ 64 forks</div></div></div></div>`;
+}
+function wikiPage(){
+  return `<div class="wk"><div class="wk-top"><b style="font-family:Georgia,serif;font-size:18px;font-weight:400">Wikipedia</b><span style="color:#a2a9b1">The Free Encyclopedia</span><div style="flex:1"></div><div style="width:320px;height:32px;border:1px solid #3a4048;border-radius:2px;display:flex;align-items:center;padding:0 10px;color:#808891">Search Wikipedia</div></div>
+    <div class="wk-body"><div class="wk-side">Main page<br>Contents<br>Current events<br>Random article<br>About Wikipedia<br>Contact us</div>
+      <div><h1>Bauhaus</h1><div class="from">From Wikipedia, the free encyclopedia</div>
+        <div class="wk-info"><div class="img">Bauhaus Dessau</div><table><tr><td style="color:#a2a9b1">Founded</td><td>1919, Weimar</td></tr><tr><td style="color:#a2a9b1">Founder</td><td>Walter Gropius</td></tr><tr><td style="color:#a2a9b1">Closed</td><td>1933, Berlin</td></tr></table></div>
+        <p>The <b>Staatliches Bauhaus</b>, commonly known as the <b>Bauhaus</b>, was a German art school operational from 1919 to 1933 that combined crafts and the fine arts. The school became famous for its approach to design, which attempted to unify individual artistic vision with the principles of mass production and an emphasis on function.</p>
+        <p>The Bauhaus was founded by architect <a>Walter Gropius</a> in <a>Weimar</a>. It was grounded in the idea of creating a <i>Gesamtkunstwerk</i> in which all the arts would eventually be brought together. The Bauhaus style later became one of the most influential currents in modern design, modernist architecture and art, design, and architectural education.</p>
+        <h2>History</h2>
+        <p>The school existed in three German cities: Weimar, from 1919 to 1925; Dessau, from 1925 to 1932; and Berlin, from 1932 to 1933, under three different architect-directors: Walter Gropius from 1919 to 1928; Hannes Meyer from 1928 to 1930; and Ludwig Mies van der Rohe from 1930 until 1933, when the school was closed by its own leadership under pressure from the Nazi regime.</p>
+        <p>The changes of venue and leadership resulted in a constant shifting of focus, technique, instructors, and politics. For example, the pottery shop was discontinued when the school moved from Weimar to Dessau, even though it had been an important revenue source.</p></div></div></div>`;
+}
+function genericPage(url){
+  const x = new URL(url), q = x.searchParams.get('q') || hostOf(url);
+  const esc = s => s.replace(/[<&]/g, c => ({'<':'&lt;','&':'&amp;'})[c]);
+  return `<div class="gs"><div class="q">${esc(q)}</div>
+    ${[0,1,2,3].map(i => `<div class="res"><div class="u">${['en.wikipedia.org','github.com','developer.mozilla.org','news.example.org'][i]}</div><div class="h">${esc(q)} ${['- Wikipedia','· GitHub','| MDN','- explained'][i]}</div><div class="s">A result about ${esc(q)}. Search is set to Google by default; you can change it in Settings.</div></div>`).join('')}</div>`;
+}
+function blockedPage(host, b){
+  const fv = b.until === Infinity, c = catOf(b.site), cname = c ? c.name : 'Your sites';
+  const since = sameDay(b.since, Date.now()) ? 'Since '+hm(b.since) : 'Since '+dShort(b.since);
+  const frac = fv ? 1 : Math.max(0, Math.min(1, (b.until - Date.now())/(b.until - b.since)));
+  const disp = fv
+    ? `<div class="disp bp-disp forever"><div class="cap dim" style="display:flex;justify-content:space-between"><span>${cname}</span><span>${since}</span></div>
+        <div class="rd-xl host" style="font-weight:500">${host}</div>
+        <div class="bot"><span class="rd-m" style="font-weight:600">Forever</span><span class="cap dim">Can’t be shortened or lifted</span></div></div>`
+    : `<div class="disp bp-disp timed"><div class="cap dim" style="display:flex;justify-content:space-between"><span>${cname}</span><span>${since}</span></div>
+        <div class="rd-xl host">${host}</div>
+        <div class="bot"><span class="rd-m">${until(b.until)}</span><span class="cap dim" data-until="${b.until}" data-fmt="long">${left(b.until-Date.now())}</span></div>
+        <div class="meter"><i data-since="${b.since}" data-end="${b.until}" style="width:${(frac*100).toFixed(2)}%"></i></div></div>`;
+  return `<div class="blockpage"><div class="bp">
+      <div class="lab rule">Blocked by Mast</div>
+      ${disp}
+      <div class="bp-copy"><div class="b-xl">${fv ? 'Blocked forever.' : cap('blocked '+until(b.until))+'.'}</div>
+        <div class="b-l">${fv ? 'You chose to block this for good. Nothing in Mast can lift it.' : 'You can lengthen this block, but you can’t shorten it.'}</div></div>
+      <div class="bp-foot"><button class="key" id="kBpBack">${ICON.back}Back</button></div>
+    </div></div>`;
+}
+function renderView(){
+  const u = urlOf(cur());
+  if(isNtp(u)){ vNtp.hidden = false; vPage.hidden = true; renderNtp(); return; }
+  vNtp.hidden = true; vPage.hidden = false;
+  const host = hostOf(u), b = blockFor(host);
+  vPage.innerHTML = b ? blockedPage(host, b) : host === 'github.com' ? githubPage() : host.endsWith('wikipedia.org') ? wikiPage() : genericPage(u);
+  vPage.scrollTop = 0;
+  const bb = $('#kBpBack'); if(bb) bb.addEventListener('click', back);
+}
+function renderToolbar(){
+  const t = cur(), u = urlOf(t), b = isNtp(u) ? null : blockFor(hostOf(u));
+  kB.disabled = isNtp(u);
+  kB.title = isNtp(u) ? 'Nothing to block on this page' : b ? (b.until === Infinity ? 'Blocked forever' : 'Lengthen this block') : 'Block this site';
+  $('#kBlockLed').className = 'led ' + (b ? ledState(b) : '');
+  $('#kBack').disabled = t.hist.length < 2 && isNtp(u);
+}
+function render(){
+  renderTabs(); renderAddr(); renderToolbar(); renderView();
+  if(popB.classList.contains('show')) renderPopBlock();
+}
+
+/* live readouts (once a second; nothing blinks) */
+setInterval(() => {
+  const now = Date.now();
+  if(Object.keys(blocks).some(s => blocks[s].until <= now && blocks[s].until > now - 1100)){ render(); return; }
+  document.querySelectorAll('#win [data-until]').forEach(el => { const f = el.dataset.fmt; if(f) el.textContent = left(+el.dataset.until - now, f); });
+  document.querySelectorAll('.meter i[data-end]').forEach(el => { const s = +el.dataset.since, e = +el.dataset.end; el.style.width = (Math.max(0, Math.min(1, (e-now)/(e-s)))*100).toFixed(2)+'%'; });
+}, 1000);
+
+/* ---------------- caption ---------------- */
+$('#capX').addEventListener('click', () => {
+  const c = $('#caption'), min = !c.classList.contains('min');
+  c.classList.toggle('min', min);
+  $('#capX').setAttribute('aria-expanded', String(!min));
+  $('#capX').innerHTML = min ? '<svg width="10" height="10"><path d="M1.5 5h7M5 1.5v7" stroke="currentColor" stroke-width="1.3"/></svg>' : '<svg width="10" height="10"><path d="M1.5 5h7" stroke="currentColor" stroke-width="1.3"/></svg>';
+});
+
+/* ---------------- System sheet ---------------- */
+function sheetHTML(){
+  const sw = (c, n, v, note) => `<div class="chip"><i style="background:${c}"></i><span class="lab strong">${n}</span><span class="rd-s" style="color:var(--ink-3)">${v}</span>${note?`<span class="b-s">${note}</span>`:''}</div>`;
+  const leds = cls => ['','armed','timed','forever'].map(s => `<i class="led ${cls} ${s}"></i>`).join('');
+  const tabSpec = (title, fav, extra, on, blocked) => `<div class="key tab${blocked?' blocked':''}" aria-selected="${on}" style="flex:1 1 0;width:auto;min-width:0"><span class="fav">${fav}</span><span class="ttl">${title}</span>${extra}<span class="x">${ICON.x}</span></div>`;
+  return `
+  <div class="sh-top">${LOGO('sl', 28)}<div class="ttl"><span class="lab">Mast · Proposal 06 · Rev 2 · Oct 2026</span><span class="b-xl">Console II: system specification</span></div><div class="sp"></div>
+    <span class="lab faint">Esc to close</span><button class="key" id="kSysClose">${ICON.x}&nbsp;Close</button></div>
+
+  <section class="sec"><div class="lab rule">01 · Principles</div>
+    <div class="prin">
+      ${[['Ember means blocked.','Nothing else is ever ember. A solid ember surface means forever, and only forever.'],
+         ['Printing is ours, content is theirs.','Engraved mono capitals label the instrument. Page titles, sites and sentences are set in plain sans.'],
+         ['Light only what holds state.','Off, selected, timed, forever. Four indicator states, the same everywhere, and nothing blinks.'],
+         ['Every control is a key.','It rises, presses, latches or goes dead. Values are read on displays, never on keys.'],
+         ['Native where the OS owns it.','Window controls, shortcuts, menus and scrollbars follow the platform. The keys sit beside them.']]
+        .map((p, i) => `<div class="module plate"><span class="rd-l">${pad(i+1)}</span><span class="b-l">${p[0]}</span><span class="b-m">${p[1]}</span></div>`).join('')}
+    </div></section>
+
+  <section class="sec"><div class="lab rule">02 · Colour tokens</div>
+    <div class="cols" style="grid-template-columns:1fr 1fr">
+      <div class="module plate"><span class="lab">Surfaces · outside in</span><div class="sw">
+        ${sw('#060607','desk','#060607')}${sw('#1c1c1f','panel','#1c1c1f','Chrome, module plates')}${sw('#141416','page','#141416','WebUI ground')}${sw('#100e0d','recess','#100e0d','Display well')}
+        ${sw('linear-gradient(#2c2c30,#252528)','key','#2c2c30 → #252528')}${sw('linear-gradient(#323236,#2a2a2e)','key / hover','#323236 → #2a2a2e')}${sw('#19191c','key / latched','#19191c')}${sw('#09090a','edge','#09090a','1px around every part')}
+      </div></div>
+      <div class="module plate"><span class="lab">Ink · display ink</span><div class="sw">
+        ${sw('#ede8df','ink-1','#ede8df','Active, values')}${sw('#bdb8ae','ink-2','#bdb8ae','Key legends')}${sw('#8a867e','ink-3','#8a867e','Printed labels')}${sw('#5c5954','ink-4','#5c5954','Disabled, faint')}
+        ${sw('#efe6da','d-ink','#efe6da','Lit readout')}${sw('#877b71','d-dim','#877b71','Secondary readout')}${sw('#4b403a','d-off','#4b403a','Unlit segment')}${sw('#2a2a2d','led-off','#2a2a2d','Empty socket')}
+      </div></div>
+      <div class="module plate" style="grid-column:1/-1"><span class="lab">Ember · five levels, one meaning</span><div class="sw" style="grid-template-columns:repeat(7,1fr)">
+        ${sw('#ff6a3d','e-lit','#ff6a3d','Indicators, forever face')}${sw('#ff8f5e','e-read','#ff8f5e','Timed readout, Block legend')}${sw('#a1583b','e-dim','#a1583b','Timed secondary')}${sw('#3d1b10','e-core','#3d1b10','Timed LED core')}${sw('#c2300f','e-deep','#c2300f','Logo only')}${sw('#1a0703','e-on','#1a0703','Ink on ember')}${sw('#f6f1e7','armed','#f6f1e7','Selected (white light)')}
+      </div></div>
+    </div></section>
+
+  <section class="sec"><div class="lab rule">03 · Type · three voices</div>
+    <div class="module plate">
+      ${[['Label','<span class="lab strong">Video &amp; streaming · Duration</span>','Martian Mono 500 · 9.5/12 · caps · +14% · 87.5 wd'],
+         ['Key legend','<span class="key" style="pointer-events:none">Select all</span>','Martian Mono 500 · 10/12 · caps · +12%'],
+         ['Key legend L','<span class="key l" style="pointer-events:none;width:200px"><span class="t act">Block</span></span>','Martian Mono 600 · 13/14 · caps · +24%'],
+         ['Readout S','<span class="rd-s" style="color:var(--e-read)">13H · 5D</span>','Martian Mono 400 · 10/12 · +6%'],
+         ['Readout M','<span class="rd-m">github.com/0xmiki/mast</span>','Martian Mono 400 · 12.5/16 · +2%'],
+         ['Readout L','<span class="rd-l">21</span>','Martian Mono 400 · 20/24'],
+         ['Readout XL','<span class="rd-xl" style="color:var(--e-read)">youtube.com</span>','Martian Mono 400 · 40/44'],
+         ['Body S / M','<span class="b-m">x.com · New window · Bauhaus - Wikipedia</span>','Plex Sans Cond. 400 · 12/16 · 13/18'],
+         ['Body L','<span class="b-l" style="color:var(--ink-3)">You can lengthen this block, but you can’t shorten it.</span>','Plex Sans Cond. 400 · 15/22'],
+         ['Body XL','<span class="b-xl">Blocked until midnight.</span>','Plex Sans Cond. 500 · 26/32']]
+        .map(r => `<div class="typ"><span class="lab">${r[0]}</span><span>${r[1]}</span><span class="rd-s spec">${r[2]}</span></div>`).join('')}
+    </div></section>
+
+  <section class="sec"><div class="lab rule">04 · Space · radius · stroke · elevation</div>
+    <div class="cols" style="grid-template-columns:1.1fr 1fr 1.2fr">
+      <div class="module plate"><span class="lab">Space · 4px grid</span><div class="specrow">
+        ${[4,8,12,16,24,32].map(n => `<div class="it"><i class="box-s" style="display:block;width:${n}px;height:${n}px"></i><span class="rd-s" style="color:var(--ink-3)">${n}</span></div>`).join('')}</div>
+        <span class="b-s" style="color:var(--ink-3)">Heights: row 24 · key 32 · tab 30 · tab strip 40 · toolbar 44 · key L 56. Gaps between keys 4–6, between modules 8.</span></div>
+      <div class="module plate"><span class="lab">Radius</span><div class="specrow" style="gap:16px 14px">
+        ${[['chip',3],['display',4],['key',5],['key L',7],['module',8]].map(r => `<div class="it"><i style="display:block;width:40px;height:40px;border:1px solid var(--ink-4);border-radius:${r[1]}px ${r[1]}px 0 0;border-bottom:0;border-left:0;width:30px;height:24px"></i><span class="rd-s" style="color:var(--ink-3)">${r[1]}</span></div>`).join('')}</div>
+        <span class="b-s" style="color:var(--ink-3)">Chip 3 · display 4 · key 5 · key L 7 · module 8. Window: macOS 10 · Windows 8 · GNOME 12, as each OS draws it.</span></div>
+      <div class="module plate"><span class="lab">Elevation · three levels, no others</span><div class="specrow">
+        <div class="it"><span class="key" style="pointer-events:none;width:80px">Raised</span><span class="lab">Key · 2px base</span></div>
+        <div class="it"><span class="module" style="display:block;width:80px;height:32px"></span><span class="lab">Plate · flat</span></div>
+        <div class="it"><span class="disp" style="display:block;width:80px;height:32px"></span><span class="lab">Recess</span></div></div>
+        <span class="b-s" style="color:var(--ink-3)">Strokes: 1px edge #09090a on everything; 1px top bevel white 7.5%; 1px groove between chrome rows; focus 1.5px ink at 3px offset.</span></div>
+    </div></section>
+
+  <section class="sec"><div class="lab rule">05 · Indicators</div>
+    <div class="cols" style="grid-template-columns:1fr 1.6fr">
+      <div class="module plate"><span class="lab">Four states × two sizes</span>
+        <div class="typ" style="grid-template-columns:70px repeat(4,1fr);border:0;padding:0"><span></span>${['Off','Selected','Timed','Forever'].map(s => `<span class="lab">${s}</span>`).join('')}</div>
+        <div class="typ" style="grid-template-columns:70px repeat(4,1fr);align-items:center"><span class="lab">M · 8</span>${leds('').replace(/<i/g,'<span><i').replace(/<\/i>/g,'</i></span>')}</div>
+        <div class="typ" style="grid-template-columns:70px repeat(4,1fr);align-items:center"><span class="lab">S · 6</span>${leds('s').replace(/<i/g,'<span><i').replace(/<\/i>/g,'</i></span>')}</div>
+        <span class="b-s" style="color:var(--ink-3)">M sits on keys and tabs and has a halo. S sits in lists and has none. Timed is an ember ring, forever is solid ember, selected is white. Nothing blinks or pulses.</span></div>
+      <div class="module plate"><span class="lab">Display modes · same rule, larger surface</span>
+        <div class="cols" style="grid-template-columns:repeat(4,1fr)">
+          <div class="disp s-disp unlit"><div class="l1">Open</div><div class="l2 cap">Nothing blocked</div></div>
+          <div class="disp s-disp"><div class="l1">2 of 7 blocked</div><div class="l2 cap dim">5 open</div></div>
+          <div class="disp s-disp timed"><div class="l1">until midnight</div><div class="l2 cap dim">13 h 37 min left</div></div>
+          <div class="disp s-disp forever"><div class="l1">Forever</div><div class="l2 cap dim">Since Oct 18</div></div></div>
+        <div class="cols" style="grid-template-columns:repeat(4,1fr)">${['Unlit','Lit','Timed','Forever'].map(s => `<span class="lab">${s}</span>`).join('')}</div>
+        <span class="b-s" style="color:var(--ink-3)">Displays hold readouts only: Martian Mono, no glow, no texture. Recessed and warm-tinted. They turn ember only for blocked state.</span></div>
+    </div></section>
+
+  <section class="sec"><div class="lab rule">06 · Keys</div>
+    <div class="module plate">
+      <div class="specrow">
+        ${[['Default',''],['Hover','is-hover'],['Pressed','is-pressed'],['Latched','latched'],['Disabled','is-disabled'],['Focus','is-focus']].map(k => `<div class="it"><span class="key ${k[1]}" style="pointer-events:none;width:128px"><i class="led ${k[1]==='latched'?'armed':''}"></i>Select all</span><span class="lab">${k[0]}</span></div>`).join('')}
+      </div>
+      <div class="specrow" style="padding-top:8px">
+        <div class="it"><span class="key l" style="pointer-events:none;width:220px"><span class="t act">Block</span><span class="sub">Shopping · until midnight</span></span><span class="lab">L · block, timed</span></div>
+        <div class="it"><span class="key l forever" style="pointer-events:none;width:220px"><span class="t act">Block forever</span><span class="sub">Social</span></span><span class="lab">L · block forever (only ember key)</span></div>
+        <div class="it"><span class="key l is-disabled" style="pointer-events:none;width:220px"><span class="t act">Block</span><span class="sub">Select a category or a site</span></span><span class="lab">L · nothing selected</span></div>
+        <div class="it"><span class="key icon" style="pointer-events:none">${ICON.back}</span><span class="lab">Icon · 32</span></div>
+        <div class="it"><span class="key" style="pointer-events:none"><i class="led timed"></i><span class="act">Block</span></span><span class="lab">Toolbar Block</span></div>
+      </div>
+      <span class="b-s" style="color:var(--ink-3)">Anatomy: 1px edge · face gradient · 1px top bevel · 2px base (3px on L). Press moves the face down by the base height and removes the base; latched keys stay down and darken. Legends are printed caps; a block action's legend is ember.</span>
+    </div></section>
+
+  <section class="sec"><div class="lab rule">07 · Display anatomy · the address</div>
+    <div class="module plate"><div class="anno" style="padding:36px 0 40px">
+      <div class="disp address rd-m blocked" style="margin:0;pointer-events:none"><span class="slot">${ICON.lock}</span><span class="field"><span class="host">www.youtube.com</span><span class="dim">/watch?v=jNQXAC9IVRw</span></span><span class="seg timed"><i class="led s timed"></i>Blocked until midnight</span></div>
+      <div class="tag" style="left:12px;top:72px"><span class="lab">Slot 34 · security / search glyph</span></div>
+      <div class="tag" style="left:52px;top:0" ><span class="lab">Readout M · host in state colour, path dim</span></div>
+      <div class="tag" style="right:20px;top:72px;align-items:flex-end"><span class="lab">Status segment · outlined = timed, solid = forever</span></div>
+    </div>
+    <div class="cols" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="disp address rd-m" style="margin:0;pointer-events:none"><span class="slot">${ICON.search}</span><span class="field ph">Search Google or type a URL</span></div>
+      <div class="disp address rd-m" style="margin:0;pointer-events:none"><span class="slot">${ICON.lock}</span><span class="field"><span class="host">github.com</span><span class="dim">/0xmiki/mast</span></span></div>
+      <div class="disp address rd-m blocked" style="margin:0;pointer-events:none"><span class="slot">${ICON.lock}</span><span class="field"><span class="host">x.com</span><span class="dim">/home</span></span><span class="seg forever">Blocked forever</span></div>
+    </div>
+    <div class="cols" style="grid-template-columns:1fr 1fr 1fr"><span class="lab">Empty</span><span class="lab">Ordinary site</span><span class="lab">Blocked forever</span></div></div></section>
+
+  <section class="sec"><div class="lab rule">08 · Tabs · inputs · selectors</div>
+    <div class="cols" style="grid-template-columns:1.25fr 1fr">
+      <div class="module plate"><span class="lab">Tab · a key carrying content</span>
+        <div class="mini" style="padding:0 8px;gap:6px">
+          ${tabSpec('0xmiki/mast', '<i class="fv-gh"></i>', '', true, false)}
+          ${tabSpec('Bauhaus - Wikipedia', '<i class="fv-wk">W</i>', '', false, false)}
+          ${tabSpec('YouTube', '<i class="led timed"></i>', '<span class="rdt">13H</span>', false, true)}
+          ${tabSpec('X', '<i class="led forever"></i>', '', false, true)}</div>
+        <div class="cols" style="grid-template-columns:repeat(4,1fr);gap:6px;padding:0 8px"><span class="lab">Active · latched</span><span class="lab">Inactive · raised</span><span class="lab">Blocked · timed</span><span class="lab">Blocked · forever</span></div>
+        <span class="b-s" style="color:var(--ink-3)">The favicon slot shows the indicator when the site is blocked; time left is a Readout S. Titles stay Body: they belong to the page.</span></div>
+      <div class="module plate"><span class="lab">Input · row toggle · linear selector</span>
+        <div class="specrow" style="align-items:flex-start">
+          <div class="it" style="width:180px"><label class="add" style="width:100%;margin:0">${ICON.plus}<input placeholder="Add a site" tabindex="-1"></label><span class="lab">Input · recessed</span></div>
+          <div class="it" style="width:150px"><ul class="rows" style="margin:0;width:100%">
+            <li><span class="row"><i class="led s"></i><span class="nm">amazon.com</span></span></li>
+            <li><span class="row" aria-pressed="true" style="color:var(--ink-1);background:rgba(246,241,231,.06)"><i class="led s armed"></i><span class="nm">ebay.com</span></span></li>
+            <li><span class="row blocked"><i class="led s timed"></i><span class="nm">twitch.tv</span><span class="tg">13H</span></span></li>
+            <li><span class="row fixed"><i class="led s forever"></i><span class="nm">x.com</span></span></li></ul><span class="lab">Row toggle (checkbox)</span></div></div>
+        <div class="lin" style="pointer-events:none">${DUR.map((d, i) => `<button aria-checked="${i===2}" ${i<1?'disabled':''}>${d.k}</button>`).join('')}</div>
+        <span class="b-s" style="color:var(--ink-3)">Linear selector: the same six detents as the dial. When lengthening, shorter options are struck out.</span></div>
+    </div></section>
+
+  <section class="sec"><div class="lab rule">09 · Toast · menu · rotary selector</div>
+    <div class="cols" style="grid-template-columns:1.3fr .8fr .9fr">
+      <div class="module plate"><span class="lab">Toast · 10 s Undo, the only way back</span>
+        <div class="module toast show" style="position:relative;left:0;bottom:0;transform:none;min-width:0;pointer-events:none"><i class="led timed"></i><div class="msg"><div class="t1">Shopping blocked until midnight</div><div class="lab">6 sites · 27 blocked in total</div></div><span class="key">Undo <span class="secs rd-s">7</span></span><div class="meter"><i style="transform:scaleX(.7)"></i></div></div>
+        <div class="module toast show" style="position:relative;left:0;bottom:0;transform:none;min-width:0;pointer-events:none"><i class="led forever"></i><div class="msg"><div class="t1">Social blocked forever</div><div class="lab">12 sites · 21 blocked in total</div></div><span class="key">Undo <span class="secs rd-s">9</span></span><div class="meter"><i style="transform:scaleX(.9)"></i></div></div>
+        <span class="b-s" style="color:var(--ink-3)">No confirm dialogs and no hold-to-confirm. The undo meter is neutral ink, because it counts time and doesn’t mean blocked.</span></div>
+      <div class="module plate"><span class="lab">Menu</span>
+        <div class="module menu" style="width:100%;padding:6px;box-shadow:0 0 0 1px var(--edge),inset 0 1px 0 rgba(255,255,255,.07)">
+          <span class="mi"><span>New tab</span><span class="sc">${SC[plat].newtab}</span></span>
+          <span class="mi is-hover"><span>Blocklist</span><span class="sc"></span></span>
+          <span class="mi"><span>History</span><span class="sc">${SC[plat].hist}</span></span>
+          <div class="msep"></div><span class="mi"><span>Settings</span><span class="sc">${SC[plat].set}</span></span></div>
+        <span class="b-s" style="color:var(--ink-3)">Items are Body; shortcuts are Readout S in the platform's own notation.</span></div>
+      <div class="module plate"><span class="lab">Rotary selector · detents</span>
+        <span class="b-s" style="color:var(--ink-2)">Six detents across a 250° arc. Each detent is an S indicator plus a printed label. The selected detent is lit white, or solid ember when it's Forever. The pointer follows the same rule. Click, drag, scroll-free; arrow keys, Home and End.</span>
+        <span class="b-s" style="color:var(--ink-3)">Lives only in WebUI. The toolbar bubble uses the linear selector.</span></div>
+    </div></section>
+
+  <section class="sec"><div class="lab rule">10 · Platform chrome</div>
+    <div class="cols" style="grid-template-columns:repeat(3,1fr)">
+      ${[['Linux · GNOME','linux'],['macOS','mac'],['Windows 11','win']].map(p => `<div class="module plate"><span class="lab">${p[0]}</span>
+        <div class="win" data-plat="${p[1]}" style="position:relative;inset:auto;height:40px;border-radius:${p[1]==='mac'?10:p[1]==='win'?8:12}px ${p[1]==='mac'?10:p[1]==='win'?8:12}px 0 0;pointer-events:none">
+          <div class="tabstrip">${$('.wc-mac').outerHTML}<div class="tabs" style="flex:0 1 auto">${tabSpec('New tab', LOGO('ps'+p[1],14), '', true, false).replace('flex:1 1 0;width:auto','flex:0 0 132px;width:132px')}</div><span class="key icon newtab"><svg width="10" height="10"><path d="M5 .5v9M.5 5h9" stroke="currentColor" stroke-width="1.3"/></svg></span><div class="drag"></div>${$('.wc-lin').outerHTML}${$('.wc-win').outerHTML}</div></div>
+        <span class="b-s" style="color:var(--ink-3)">${p[1]==='mac' ? 'Native traffic lights, 12px, top left. Tabs start at 78px. ⌘ shortcuts; app menu stays in the system menu bar.' : p[1]==='win' ? 'Native caption buttons, 46 × 40, flush top right, close turns red. At least 56px of drag area before them for Snap layouts. Ctrl+ shortcuts.' : 'Adwaita circular buttons, 24px, right side, following the GTK button layout setting. Ctrl+ shortcuts.'}</span></div>`).join('')}
+    </div></section>`;
+}
+function openSheet(){ $('#sh').innerHTML = sheetHTML(); $('#sheet').classList.add('show'); $('#sheet').scrollTop = 0; $('#kSysClose').addEventListener('click', () => $('#sheet').classList.remove('show')); $('#kSysClose').focus(); }
+$('#kSys').addEventListener('click', openSheet);
+
+/* expose for verification */
+window.__mast = {setPlat, openSheet, setDur, newTab};
+buildDial(); renderMenu(); render(); setDur(2);
+})();
+</script>
+</body>
+</html>

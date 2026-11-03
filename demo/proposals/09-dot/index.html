@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<!--
+  Proposal 09 · Dot. Riskiest pieces to port to the Chromium fork (Views, Linux first):
+  1. Dot painting in native chrome. Dotted rules, dotted-outline (empty/disabled) controls and the 12px
+     state cell need a shared views::Painter that draws 2px circles on a 4px pitch, snapped to physical
+     pixels. At 1.25x/1.5x scale the pitch has to be re-snapped per DSF or the dots blur and beat.
+  2. Tab strip. Square, borderless tabs, 3-dot vertical separators, and a favicon slot that swaps to an
+     ember state cell (dotted = timed, solid = forever) need a custom TabStyle and Tab painting, plus
+     blocked state plumbed from the block service into TabRendererData.
+  3. Omnibox state cell + toolbar Block action + its bubble. LocationBarView needs a leading decoration
+     that reflects block state, and the Block bubble (BubbleDialogDelegate) needs custom radio rows,
+     disabled "can't shorten" options and square corners that override Chrome Refresh 2023 radii tokens.
+  4. Undo toast with a 10-dot drain. Chromium's ToastController/Toast views are not this customisable; it
+     needs our own anchored, non-activating widget with a 1s ticking repaint and keyboard reachability.
+  5. Fonts. Doto (dot-matrix display) appears only in WebUI (new tab, blocked page). Geist is used in the
+     native chrome and must be bundled and registered with fontconfig on Linux; on macOS/Windows it can
+     fall back to the system UI font without breaking the language.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mast · Proposal 09 · Dot</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Doto:wght,ROND@100..900,0..100&family=Geist:wght@300..700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* greys: the only surfaces */
+  --k0:#000; --k1:#141414; --k2:#1c1c1c; --k3:#262626; --k4:#303030; --line:#2a2a2a;
+  /* dots + text */
+  --g1:#3a3a3a; --g2:#5c5c5c; --g3:#808080; --g4:#a8a8a8; --ink:#ededed; --white:#fff;
+  /* the only colour */
+  --ember:#ff6a3d; --ember-hi:#ff8058; --ember-lo:#e2552b; --ember-ink:#1a0703;
+  /* the atom */
+  --pitch:4px; --cell:12px; /* dot fill = radial-gradient(circle,var(--dc) 0 1px,transparent 1.3px) 0 0/4px 4px space */
+  --ring: linear-gradient(#000 0 0) top/100% 4px no-repeat, linear-gradient(#000 0 0) bottom/100% 4px no-repeat,
+          linear-gradient(#000 0 0) left/4px 100% no-repeat, linear-gradient(#000 0 0) right/4px 100% no-repeat;
+  --display:'Doto', 'Geist Mono', monospace;
+  --ui:'Geist', 'Inter', system-ui, sans-serif;
+  --mono:'Geist Mono', ui-monospace, monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#0a0a0a}
+body{font:400 13px/16px var(--ui);color:var(--ink);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+button,input{font:inherit;color:inherit;background:none;border:0;outline:0}
+button{cursor:pointer}
+button:disabled{cursor:default}
+:focus-visible{outline:1px solid var(--white);outline-offset:2px}
+::selection{background:var(--ink);color:#000}
+
+/* ============ THE ATOM: dot cell ============ */
+/* empty = dotted outline · partial = dotted fill · whole = solid fill.  white = selection, ember = block */
+.cell{--dc:var(--g2);position:relative;display:inline-block;width:12px;height:12px;flex:none;vertical-align:middle}
+.cell::before{content:"";position:absolute;inset:0;background:radial-gradient(circle,var(--dc) 0 1px,transparent 1.3px) 0 0/4px 4px space}
+.cell.e::before{-webkit-mask:var(--ring);mask:var(--ring)}
+.cell.f::before{background:var(--dc);inset:1px}
+.cell.w{--dc:var(--ink)} .cell.em{--dc:var(--ember)} .cell.dim{--dc:var(--g1)}
+/* dotted outline for any box (disabled, empty, drop) */
+.dl{position:relative}
+.dl::after,.btn:disabled::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle,var(--dc) 0 1px,transparent 1.3px) 0 0/4px 4px space;-webkit-mask:var(--ring);mask:var(--ring)}
+.dl{--dc:var(--g2)}
+.btn:disabled{--dc:var(--g1)}
+/* dotted rule */
+.rule{--dc:var(--g1);height:4px;background:radial-gradient(circle,var(--dc) 0 1px,transparent 1.3px) 0 0/4px 4px space;flex:1}
+.vrule{--dc:var(--g1);width:4px;background:radial-gradient(circle,var(--dc) 0 1px,transparent 1.3px) 0 0/4px 4px space}
+/* dot-matrix glyphs */
+.g{display:block;flex:none}
+
+/* ============ stage + window ============ */
+.stage{position:fixed;inset:0;display:flex;flex-direction:column;padding:8px 8px 0}
+.win{flex:1;min-height:0;position:relative;display:flex;flex-direction:column;background:var(--k0);overflow:hidden;
+  border-radius:12px;box-shadow:0 0 0 1px #2c2c2c,0 20px 50px rgba(0,0,0,.5)}
+[data-os=mac] .win{border-radius:10px;box-shadow:0 0 0 .5px #4a4a4a,0 20px 50px rgba(0,0,0,.5)}
+[data-os=win] .win{border-radius:8px;box-shadow:0 0 0 1px #3a3a3a,0 20px 50px rgba(0,0,0,.5)}
+
+/* ---- tab strip ---- */
+.strip{height:40px;flex:none;display:flex;align-items:flex-end;padding-left:8px;position:relative;background:var(--k0);user-select:none}
+[data-os=mac] .strip{padding-left:80px}
+.lights{display:none;position:absolute;left:14px;top:14px;gap:8px}
+.lights i{width:12px;height:12px;border-radius:50%;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.25)}
+.lights i:nth-child(1){background:#ff5f57}.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#28c840}
+[data-os=mac] .lights{display:flex}
+.tabs{display:flex;min-width:0;height:32px;flex:0 1 auto}
+.tab{position:relative;flex:0 1 216px;min-width:52px;height:32px;display:flex;align-items:center;gap:8px;padding:0 6px 0 12px;
+  color:var(--g4);font:450 12.5px/16px var(--ui);cursor:default}
+.tab:hover{background:#0b0b0b;color:var(--ink)}
+.tab.act{background:var(--k1);color:var(--ink)}
+.tab::before{content:"";--dc:var(--g1);position:absolute;left:-2px;top:10px;width:4px;height:12px;background:radial-gradient(circle,var(--dc) 0 1px,transparent 1.3px) 0 0/4px 4px space}
+.tab:first-child::before,.tab.act::before,.tab.act+.tab::before,.tab:hover::before,.tab:hover+.tab::before{opacity:0}
+.tab .fav{width:16px;height:16px;display:grid;place-items:center;flex:none}
+.tab .ttl{flex:1;min-width:0;white-space:nowrap;overflow:hidden;-webkit-mask:linear-gradient(90deg,#000 calc(100% - 16px),transparent);mask:linear-gradient(90deg,#000 calc(100% - 16px),transparent)}
+.tab.blk .ttl{color:var(--g3)}
+.tab.blk.act .ttl{color:var(--g4)}
+.tab .x{width:20px;height:20px;display:grid;place-items:center;color:var(--g3);opacity:0;flex:none}
+.tab:hover .x,.tab.act .x{opacity:1}
+.tab .x:hover{background:var(--k3);color:var(--ink)}
+.newtab{width:32px;height:32px;display:grid;place-items:center;color:var(--g4);margin-left:2px;flex:none}
+.newtab:hover{background:var(--k2);color:var(--ink)}
+.drag{flex:1;min-width:24px;align-self:stretch}
+[data-os=win] .drag{min-width:48px}
+.caps{display:none;align-self:stretch;flex:none}
+[data-os=win] .caps.w,[data-os=linux] .caps.l{display:flex}
+.caps.w button{width:46px;height:40px;display:grid;place-items:center;color:#e6e6e6}
+.caps.w button:hover{background:rgba(255,255,255,.08)}
+.caps.w button.cl:hover{background:#c42b1c;color:#fff}
+.caps.l{align-items:center;gap:12px;padding:0 10px 0 8px}
+.caps.l button{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;color:#e8e8e8}
+.caps.l button:hover{background:rgba(255,255,255,.16)}
+
+/* ---- toolbar ---- */
+.toolbar{height:44px;flex:none;display:flex;align-items:center;gap:4px;padding:0 8px;background:var(--k1);position:relative}
+.toolbar::after{content:"";--dc:var(--g1);position:absolute;left:0;right:0;bottom:-2px;height:4px;background:radial-gradient(circle,var(--dc) 0 1px,transparent 1.3px) 0 0/4px 4px space;z-index:2;pointer-events:none}
+.ib{width:32px;height:32px;display:grid;place-items:center;color:var(--g4);flex:none}
+.ib:hover:not(:disabled){background:var(--k3);color:var(--ink)}
+.ib:active:not(:disabled),.ib.open{background:var(--k4);color:var(--ink)}
+.ib:disabled{color:var(--g1)}
+.omni{flex:1;min-width:0;height:32px;margin:0 8px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--k0);box-shadow:inset 0 0 0 1px var(--line);position:relative}
+.omni:hover{box-shadow:inset 0 0 0 1px var(--g1)}
+.omni:focus-within{box-shadow:inset 0 0 0 1px var(--white)}
+.omni input{flex:1;min-width:0;height:100%;font:400 13.5px/16px var(--ui);color:var(--ink)}
+.omni input::placeholder{color:var(--g3)}
+.omni .disp{position:absolute;left:34px;right:1px;top:1px;bottom:1px;display:flex;align-items:center;font:400 13.5px/16px var(--ui);white-space:nowrap;overflow:hidden;pointer-events:none;background:var(--k0)}
+.omni:focus-within .disp,.omni .disp:empty{display:none}
+.omni .disp b{font-weight:400;color:var(--ink)} .omni .disp span{color:var(--g3)}
+.omni .disp em{font-style:normal;color:var(--ember);margin-left:12px;font-size:12px}
+.tba{height:32px;display:flex;align-items:center;gap:8px;padding:0 12px 0 10px;font:500 13px/16px var(--ui);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line);position:relative;flex:none}
+.tba:hover:not(:disabled){background:var(--k3)}
+.tba:active:not(:disabled),.tba.open{background:var(--k4)}
+.tba:disabled{box-shadow:none;color:var(--g3)}
+.tba:disabled{--dc:var(--g1)}
+.tba:disabled::after{content:"";position:absolute;inset:0;background:radial-gradient(circle,var(--dc) 0 1px,transparent 1.3px) 0 0/4px 4px space;-webkit-mask:var(--ring);mask:var(--ring)}
+
+/* ---- content ---- */
+.content{flex:1;min-height:0;position:relative;background:var(--k0);overflow:hidden}
+.scroll{position:absolute;inset:0;overflow:auto}
+
+/* ============ buttons ============ */
+.btn{height:32px;padding:0 14px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font:500 13px/16px var(--ui);position:relative;white-space:nowrap}
+.btn.lg{height:44px;padding:0 20px;font-size:14px;font-weight:600}
+.btn.pri{background:var(--ink);color:#000}
+.btn.pri:hover:not(:disabled),.btn.pri.is-hover{background:var(--white)}
+.btn.pri:active:not(:disabled),.btn.pri.is-press{background:#bdbdbd}
+.btn.pri.ever{background:var(--ember);color:var(--ember-ink)}
+.btn.pri.ever:hover:not(:disabled),.btn.pri.ever.is-hover{background:var(--ember-hi)}
+.btn.pri.ever:active:not(:disabled),.btn.pri.ever.is-press{background:var(--ember-lo)}
+.btn.sec{color:var(--ink);box-shadow:inset 0 0 0 1px var(--g1)}
+.btn.sec:hover:not(:disabled),.btn.sec.is-hover{background:var(--k3)}
+.btn.sec:active:not(:disabled),.btn.sec.is-press{background:var(--k4)}
+.btn:disabled{background:transparent!important;color:var(--g3)!important;box-shadow:none}
+.btn .bd{font-weight:400;opacity:.62}
+.lnk{font:500 12px/16px var(--ui);color:var(--g4);padding:4px 6px;margin:0 -2px}
+.lnk:hover{color:var(--ink);background:var(--k2)}
+
+/* ============ new tab page ============ */
+.ntp{position:absolute;inset:0;overflow:auto;display:flex;flex-direction:column}
+.ntp-in{width:100%;max-width:1184px;margin:0 auto;padding:36px 48px 24px;flex:1}
+.nh{display:flex;align-items:flex-end;gap:56px;margin-bottom:32px}
+.stat{display:flex;align-items:flex-end;gap:12px}
+.num{font:800 64px/52px var(--display);font-variation-settings:"ROND" 100;letter-spacing:.02em;color:var(--ink)}
+.num .z{color:var(--g1)}
+.stat .lbl{font:400 13px/16px var(--ui);color:var(--g4);padding-bottom:2px;max-width:120px}
+.nh .date{margin-left:auto;white-space:nowrap;font:500 11px/16px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--g3);padding-bottom:2px}
+.lab{font:500 11px/16px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--g3);white-space:nowrap}
+.sec{display:flex;align-items:center;gap:16px;margin-bottom:4px}
+.legend{display:flex;gap:16px;color:var(--g3);font-size:12px}
+.legend span{display:flex;align-items:center;gap:6px}
+.cats{display:flex;flex-direction:column}
+.cat{display:grid;grid-template-columns:28px 200px 252px 1fr;align-items:start;padding:14px 0 14px;position:relative}
+.cat+.cat::before{content:"";--dc:var(--g1);position:absolute;left:0;right:0;top:-2px;height:4px;background:radial-gradient(circle,var(--dc) 0 1px,transparent 1.3px) 0 0/4px 4px space}
+.ck{width:24px;height:24px;margin:-2px 0 0 -6px;display:grid;place-items:center}
+.ck:hover:not(:disabled){background:var(--k2)}
+.cn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding-right:16px}
+.cn:disabled{cursor:default}
+.cn .nm{font:500 15px/20px var(--ui);color:var(--ink)}
+.cn:hover:not(:disabled) .nm{text-decoration:underline;text-decoration-color:var(--g2);text-underline-offset:4px}
+.cn .ct{font:400 12px/16px var(--ui);color:var(--g3)}
+.cs{display:flex;gap:10px;align-items:flex-start;padding-top:4px;padding-right:16px}
+.cs .cell{margin-top:2px}
+.cs .st{font:500 13px/16px var(--ui);color:var(--g3)}
+.cs .ss{font:400 12px/16px var(--ui);color:var(--g3);margin-top:2px}
+.cat.ever .st,.cat.timed .st{color:var(--ember)}
+.cat.part .st{color:var(--ink)}
+.sites{display:flex;flex-wrap:wrap;gap:0 4px;margin:-1px 0 0 -6px}
+.site{display:flex;align-items:center;gap:7px;height:24px;padding:0 6px;font:400 13px/16px var(--ui);color:var(--g4)}
+.site:hover:not(:disabled){background:var(--k2);color:var(--ink)}
+.site.on{color:var(--ink)}
+.site:disabled{color:var(--g3)}
+.addsite{height:24px;width:132px;padding:0 8px;font:400 13px/16px var(--ui);color:var(--ink);margin-left:4px}
+.addsite::placeholder{color:var(--g3)}
+.addwrap{position:relative;--dc:var(--g2)}
+.addwrap::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle,var(--dc) 0 1px,transparent 1.3px) 0 0/4px 4px space;-webkit-mask:var(--ring);mask:var(--ring)}
+.addwrap:focus-within::after{display:none}
+.addwrap:focus-within{box-shadow:inset 0 0 0 1px var(--white)}
+
+/* action bar */
+.bar{position:sticky;bottom:0;background:var(--k0);flex:none;z-index:3}
+.bar::before{content:"";--dc:var(--g1);position:absolute;left:0;right:0;top:-2px;height:4px;background:radial-gradient(circle,var(--dc) 0 1px,transparent 1.3px) 0 0/4px 4px space}
+.bar-in{max-width:1184px;margin:0 auto;padding:16px 48px 20px;display:flex;align-items:center;gap:32px}
+.sum{flex:1;min-width:0}
+.sum .s1{font:500 14px/20px var(--ui);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sum .s2{font:400 12px/16px var(--ui);color:var(--g3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sum.none .s1{color:var(--g4)}
+.meter{display:flex;gap:8px}
+.seg{display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:6px 4px 4px;min-width:68px}
+.seg .sb{--dc:var(--g2);height:12px;position:relative}
+.seg .sb::before{content:"";position:absolute;inset:0;background:radial-gradient(circle,var(--dc) 0 1px,transparent 1.3px) 0 0/4px 4px space;-webkit-mask:var(--ring);mask:var(--ring)}
+.seg:hover .sb{--dc:var(--g4)}
+.seg:hover .sb::before{-webkit-mask:none;mask:none}
+.seg.on .sb::before{background:var(--ink);inset:1px;-webkit-mask:none;mask:none}
+.meter.ever .seg .sb::before{background:var(--ember);inset:1px;-webkit-mask:none;mask:none}
+.seg .sl{font:400 12px/16px var(--ui);color:var(--g3);text-align:left;white-space:nowrap}
+.seg:hover .sl{color:var(--g4)}
+.seg.cur .sl{color:var(--ink);font-weight:500}
+.meter.ever .seg.cur .sl{color:var(--ember)}
+#doBlock{min-width:236px}
+
+/* ============ blocked page ============ */
+.bp{position:absolute;inset:0;overflow:auto;display:flex;flex-direction:column}
+.bp-band{display:block;width:100%;height:48px}
+.bp-in{width:100%;max-width:720px;margin:auto;padding:48px}
+.bp-host{font:800 80px/72px var(--display);font-variation-settings:"ROND" 100;color:var(--ink);margin:0 0 24px;word-break:break-all}
+.bp-host .pd{display:inline-block;width:.32em;height:8px;position:relative;margin:0 .02em}
+.bp-host .pd::before{content:"";position:absolute;left:50%;bottom:0;width:8px;height:8px;margin-left:-4px;border-radius:50%;background:currentColor}
+.bp-st{font:500 24px/32px var(--ui);color:var(--ember)}
+.bp-sub{font:400 14px/20px var(--ui);color:var(--g4);margin-top:8px}
+.bp-act{display:flex;gap:16px;align-items:center;margin-top:32px}
+.bp-act .note{font-size:12px;color:var(--g3)}
+
+/* ============ popover + menu ============ */
+.pop{position:absolute;z-index:30;background:var(--k1);box-shadow:inset 0 0 0 1px var(--line),0 16px 40px rgba(0,0,0,.7);display:none}
+.pop.show{display:block}
+#popBlock{width:316px;padding:16px}
+.ph{display:flex;gap:12px;align-items:flex-start}
+.ph .cell{margin-top:4px}
+.ph .h1{font:600 14px/20px var(--ui);color:var(--ink);word-break:break-all}
+.ph .h2{font:400 12px/16px var(--ui);color:var(--g3)}
+.ph .h2.em{color:var(--ember)}
+.pop .rule{margin:14px 0 10px}
+.pop .lab{display:block;margin-bottom:6px}
+.opt{width:100%;height:32px;display:flex;align-items:center;gap:12px;padding:0 8px;margin:0 -8px;width:calc(100% + 16px);text-align:left;font:400 13px/16px var(--ui);color:var(--g4)}
+.opt:hover:not(:disabled){background:var(--k3);color:var(--ink)}
+.opt.on{color:var(--ink);font-weight:500}
+.opt:disabled{color:var(--g2)}
+.opt .hint{margin-left:auto;font:400 12px/16px var(--ui);color:var(--g3)}
+.opt:disabled .hint{color:var(--g2)}
+.opt.on.ever{color:var(--ember)}
+.pop .btn.lg{width:100%;margin-top:14px}
+.pnote{font:400 12px/16px var(--ui);color:var(--g3);margin-top:12px}
+#menu{width:288px;padding:6px 0}
+.mi{width:100%;height:32px;display:flex;align-items:center;gap:12px;padding:0 16px;font:400 13px/16px var(--ui);color:var(--ink);text-align:left}
+.mi:hover,.mi.is-hover{background:var(--k3)}
+.mi .k{margin-left:auto;font:400 12px/16px var(--mono);color:var(--g3)}
+.mi .sp{width:12px;flex:none}
+.mi.dis{color:var(--g3)}
+.mi.dis:hover{background:none;cursor:default}
+#menu .rule,.mspec .rule{margin:4px 16px}
+
+/* ============ toast ============ */
+.toast{position:absolute;left:50%;bottom:24px;z-index:25;transform:translate(-50%,8px);opacity:0;pointer-events:none;
+  display:flex;align-items:center;gap:14px;padding:12px 12px 12px 16px;min-width:440px;background:var(--k2);box-shadow:inset 0 0 0 1px var(--g1),0 16px 40px rgba(0,0,0,.6);
+  transition:opacity .16s,transform .16s}
+.toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.content[data-view=ntp] ~ .toast{bottom:108px}
+.toast .tt{flex:1;min-width:0}
+.toast .t1{font:500 14px/20px var(--ui);color:var(--ink)}
+.toast .t2{font:400 12px/16px var(--ui);color:var(--g3)}
+.tdots{display:flex;gap:0}
+.tdots i{width:4px;height:4px;position:relative}
+.tdots i::before{content:"";position:absolute;inset:1px;border-radius:50%;background:var(--ink)}
+.tdots i.off::before{background:var(--g1)}
+.toast.static{position:relative;left:auto;bottom:auto;transform:none;opacity:1;pointer-events:auto;min-width:0;width:100%;box-shadow:inset 0 0 0 1px var(--g1)}
+
+/* ============ fake ordinary sites ============ */
+.gh{background:#0d1117;color:#e6edf3;min-height:100%;font:14px/1.5 -apple-system,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif}
+.gh-top{background:#010409;border-bottom:1px solid #30363d;padding:16px 32px 0}
+.gh-row{display:flex;align-items:center;gap:12px;font-size:16px}
+.gh-row a{color:#4493f8;text-decoration:none} .gh-row b{font-weight:600}
+.gh-pill{border:1px solid #30363d;border-radius:2em;font-size:12px;padding:0 7px;color:#9198a1}
+.gh-nav{display:flex;gap:4px;margin-top:16px}
+.gh-nav span{padding:8px 12px;font-size:14px;color:#9198a1;border-bottom:2px solid transparent}
+.gh-nav span.on{color:#e6edf3;border-color:#f78166}
+.gh-main{max-width:1012px;margin:24px auto;padding:0 32px;display:grid;grid-template-columns:1fr 280px;gap:24px}
+.gh-box{border:1px solid #30363d;border-radius:6px;overflow:hidden}
+.gh-box .hd{background:#151b23;padding:12px 16px;font-size:13px;color:#9198a1;display:flex;gap:8px}
+.gh-box .hd b{color:#e6edf3}
+.gh-f{display:grid;grid-template-columns:20px 200px 1fr 90px;padding:7px 16px;border-top:1px solid #30363d;font-size:13px;color:#9198a1}
+.gh-f a{color:#e6edf3} .gh-f span:last-child{text-align:right}
+.gh-readme{margin-top:24px;padding:24px 32px}
+.gh-readme h1{font-size:28px;font-weight:600;border-bottom:1px solid #30363d;padding-bottom:8px;margin-bottom:16px}
+.gh-readme p{color:#d1d7e0;margin-bottom:12px}
+.gh-side h3{font-size:16px;margin-bottom:8px} .gh-side p{color:#9198a1;font-size:14px;margin-bottom:16px}
+.wp{background:#fff;color:#202122;min-height:100%;font:16px/1.6 sans-serif}
+.wp-top{height:56px;border-bottom:1px solid #eaecf0;display:flex;align-items:center;gap:16px;padding:0 24px}
+.wp-logo{font:24px/1 "Linux Libertine",Georgia,serif;letter-spacing:.02em}
+.wp-search{width:420px;height:32px;border:1px solid #a2a9b1;border-radius:2px;padding:0 10px;color:#72777d;display:flex;align-items:center;font-size:14px}
+.wp-body{max-width:1000px;margin:0 auto;padding:24px 32px;display:grid;grid-template-columns:1fr 280px;gap:32px}
+.wp h1{font:400 30px/1.3 "Linux Libertine",Georgia,serif;border-bottom:1px solid #a2a9b1;margin-bottom:4px}
+.wp .from{font-size:13px;color:#54595d;margin-bottom:16px}
+.wp p{margin-bottom:14px;font-size:15px}
+.wp a{color:#3366cc;text-decoration:none}
+.wp h2{font:400 24px/1.3 "Linux Libertine",Georgia,serif;border-bottom:1px solid #a2a9b1;margin:24px 0 10px}
+.wp-box{align-self:start;border:1px solid #a2a9b1;background:#f8f9fa;padding:8px;font-size:13px}
+.wp-box .im{height:180px;background:#dfe2e6;margin:6px 0}
+.wp-box dl{display:grid;grid-template-columns:90px 1fr;gap:4px 8px;margin-top:8px}
+.wp-box dt{font-weight:600}
+.gen{background:#fff;color:#202124;min-height:100%;font:15px/1.6 Arial,sans-serif;padding:48px}
+.gen h1{font-size:26px;font-weight:400;margin-bottom:24px}
+.gen .ln{height:12px;background:#eceff1;margin:10px 0;border-radius:2px}
+.gen .res{max-width:640px;margin-bottom:24px} .gen .res a{color:#1a0dab;font-size:19px} .gen .res .u{color:#188038;font-size:13px}
+
+/* ============ caption ============ */
+.caption{height:40px;flex:none;display:flex;align-items:center;gap:16px;padding:0 4px;color:var(--g3);font-size:12px;user-select:none}
+.caption .logo{width:18px;height:18px;flex:none}
+.caption b{font-weight:600;color:var(--ink);white-space:nowrap}
+.caption .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.osw{display:flex;box-shadow:inset 0 0 0 1px var(--line)}
+.osw button{height:24px;padding:0 10px;font:500 12px/16px var(--ui);color:var(--g4)}
+.osw button:hover{background:var(--k3);color:var(--ink)}
+.osw button.on{background:var(--ink);color:#000}
+.caption .btn{height:24px;padding:0 10px;font-size:12px}
+.caption .hide{color:var(--g3);font-size:12px;padding:4px 6px}
+.caption .hide:hover{color:var(--ink)}
+.stage.nocap .caption{position:fixed;left:16px;bottom:16px;height:auto;z-index:40;gap:8px;padding:6px 8px;background:var(--k2);box-shadow:inset 0 0 0 1px var(--g1)}
+.stage.nocap .caption > :not(.logo):not(.hide){display:none}
+.stage.nocap{padding-bottom:8px}
+
+/* ============ system sheet ============ */
+.sheet{position:fixed;inset:0;z-index:60;background:var(--k0);display:none;overflow:auto}
+.sheet.open{display:block}
+.sh-in{max-width:1184px;margin:0 auto;padding:40px 48px 96px}
+.sh-head{display:flex;align-items:flex-end;gap:24px;margin-bottom:40px}
+.sh-head h1{font:700 64px/52px var(--display);font-variation-settings:"ROND" 100;color:var(--ink)}
+.sh-head p{color:var(--g4);font-size:14px;line-height:20px;max-width:520px}
+.sh-head .btn{margin-left:auto}
+.sh-sec{display:grid;grid-template-columns:200px 1fr;gap:32px;padding:28px 0;position:relative}
+.sh-sec::before{content:"";--dc:var(--g1);position:absolute;left:0;right:0;top:-2px;height:4px;background:radial-gradient(circle,var(--dc) 0 1px,transparent 1.3px) 0 0/4px 4px space}
+.sh-sec h2{font:500 11px/16px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--g3);padding-top:2px}
+.pr{display:grid;grid-template-columns:28px 1fr;gap:8px 0;font-size:15px;line-height:22px}
+.pr .n{font:700 20px/22px var(--display);font-variation-settings:"ROND" 100;color:var(--g2)}
+.pr p{color:var(--ink)} .pr p span{color:var(--g3)}
+.sm{display:grid;grid-template-columns:120px repeat(3,1fr);gap:0;border-collapse:collapse}
+.sm > div{padding:12px 16px 12px 0;font-size:13px;color:var(--g4);display:flex;align-items:center;gap:12px}
+.sm .hd{font:500 11px/16px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--g3)}
+.sm .rk{color:var(--ink);font-weight:500}
+.sm .big{width:48px;height:24px}
+.tok{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px 16px}
+.tk{display:flex;gap:12px;align-items:center}
+.tk .sw{width:40px;height:40px;flex:none;box-shadow:inset 0 0 0 1px var(--line)}
+.tk .nm{font:500 12px/16px var(--mono);color:var(--ink)}
+.tk .v{font:400 12px/16px var(--mono);color:var(--g3)}
+.tk .r{font:400 12px/16px var(--ui);color:var(--g4)}
+.ts{display:flex;flex-direction:column;gap:14px}
+.ts .row{display:grid;grid-template-columns:240px 1fr;align-items:baseline;gap:16px}
+.ts .meta{font:400 12px/16px var(--mono);color:var(--g3)}
+.sp-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:32px}
+.sp-grid h3{font:500 13px/16px var(--ui);color:var(--ink);margin-bottom:12px}
+.sp-grid p{font-size:12px;line-height:18px;color:var(--g4)}
+.sp-row{display:flex;align-items:center;gap:12px;height:20px;font:400 12px/16px var(--mono);color:var(--g3)}
+.sp-row .dots{--dc:var(--g4);height:4px;background:radial-gradient(circle,var(--dc) 0 1px,transparent 1.3px) 0 0/4px 4px space}
+.sp-row .v{width:28px}
+.comp{display:flex;flex-direction:column;gap:20px}
+.cr{display:grid;grid-template-columns:120px 1fr;align-items:start;gap:16px}
+.cr > .k{font:400 12px/16px var(--ui);color:var(--g4);padding-top:8px}
+.cv{display:flex;flex-wrap:wrap;gap:16px 20px;align-items:flex-start}
+.cv figure{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.cv figcaption{font:400 11px/16px var(--mono);color:var(--g3)}
+.sfield{width:240px;height:32px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--k0);box-shadow:inset 0 0 0 1px var(--line);font-size:13.5px;color:var(--g3)}
+.sfield.f{box-shadow:inset 0 0 0 1px var(--white);color:var(--ink)}
+.sfield.v{color:var(--ink)}
+.sfield .caret{width:1px;height:16px;background:var(--ink);margin-left:-8px}
+.ckrow{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--g4);height:24px}
+.minitabs{display:flex;background:var(--k0);padding-top:8px;box-shadow:inset 0 -1px 0 var(--k1);height:40px;align-items:flex-end;width:100%;max-width:880px}
+.minitabs .tab{flex:0 1 176px}
+.minitabs .tab.is-hover{background:#0b0b0b;color:var(--ink)}
+.minitabs .tab.is-hover .x{opacity:1}
+.mspec{width:260px;background:var(--k1);box-shadow:inset 0 0 0 1px var(--line);padding:6px 0}
+.mspec .mi{cursor:default}
+.mtr{display:flex;flex-direction:column;gap:8px}
+</style>
+</head>
+<body data-os="linux">
+<div class="stage" id="stage">
+  <div class="win" id="win">
+    <div class="strip" id="strip">
+      <div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="tabs" id="tabs" role="tablist"></div>
+      <button class="newtab" id="newTab" title="New tab"></button>
+      <div class="drag"></div>
+      <div class="caps w" aria-label="Window controls">
+        <button title="Minimise"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 5.5h10" stroke="currentColor"/></svg></button>
+        <button title="Maximise"><svg width="10" height="10" viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9" fill="none" stroke="currentColor"/></svg></button>
+        <button class="cl" title="Close"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 0l10 10M10 0L0 10" stroke="currentColor"/></svg></button>
+      </div>
+      <div class="caps l" aria-label="Window controls">
+        <button title="Minimise"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M4 11.5h8" stroke="currentColor" stroke-width="1.6"/></svg></button>
+        <button title="Maximise"><svg width="16" height="16" viewBox="0 0 16 16"><rect x="4.3" y="4.3" width="7.4" height="7.4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>
+        <button title="Close"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7" stroke="currentColor" stroke-width="1.6"/></svg></button>
+      </div>
+    </div>
+    <div class="toolbar">
+      <button class="ib" id="bBack" title="Back"></button>
+      <button class="ib" id="bFwd" title="Forward"></button>
+      <button class="ib" id="bReload" title="Reload"></button>
+      <label class="omni" id="omni">
+        <span class="cell e" id="omniCell"></span>
+        <input id="addr" spellcheck="false" autocomplete="off" placeholder="Search Google or type a URL">
+        <span class="disp" id="disp"></span>
+      </label>
+      <button class="tba" id="bBlock"><span class="cell e" id="bBlockCell"></span><span id="bBlockLbl">Block</span></button>
+      <button class="ib" id="bMenu" title="Menu"></button>
+    </div>
+    <div class="content" id="content"></div>
+    <div class="toast" id="toast" role="status"></div>
+    <div class="pop" id="popBlock" role="dialog" aria-label="Block this site"></div>
+    <div class="pop" id="menu" role="menu"></div>
+  </div>
+
+  <div class="caption" id="caption">
+    <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#ff6a3d"/><path d="M14 10.5V24.5H6.6Q7.4 16 14 10.5Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/><path d="M17 6V24.5H25.4Q24.7 13 17 6Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>
+    <b>Proposal 09 · Dot</b>
+    <span class="t">A monochrome dot-matrix language. Dotted outline is empty, dotted fill is partial, solid is whole. Ember means blocked and nothing else.</span>
+    <div class="osw" id="osw" role="radiogroup" aria-label="Platform">
+      <button data-os="linux" class="on">Linux</button><button data-os="mac">macOS</button><button data-os="win">Windows</button>
+    </div>
+    <button class="btn sec" id="sysBtn">System</button>
+    <button class="hide" id="capHide">Hide</button>
+  </div>
+</div>
+
+<div class="sheet" id="sheet" role="dialog" aria-label="System"></div>
+
+<script>
+(() => {
+const $ = (s, r = document) => r.querySelector(s);
+const pad2 = n => String(n).padStart(2, '0');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const H = 36e5, D = 864e5;
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DOWL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const NTP = 'mast://newtab';
+
+/* ---------- dot-matrix glyphs: 4px pitch, 2px dots ---------- */
+function G(rows){
+  const h = rows.length, w = rows[0].length; let c = '';
+  rows.forEach((r, y) => [...r].forEach((ch, x) => { if (ch === '#') c += `<circle cx="${2 + x*4}" cy="${2 + y*4}" r="1.05"/>`; }));
+  return `<svg class="g" width="${w*4}" height="${h*4}" viewBox="0 0 ${w*4} ${h*4}" fill="currentColor" aria-hidden="true">${c}</svg>`;
+}
+const GL = {
+  back:   G(['..#..','.#...','#####','.#...','..#..']),
+  fwd:    G(['..#..','...#.','#####','...#.','..#..']),
+  reload: G(['.##.#','#..##','#....','#...#','.###.']),
+  menu:   G(['..#..','.....','..#..','.....','..#..']),
+  close:  G(['#.#','.#.','#.#']),
+  plus:   G(['.#.','###','.#.']),
+};
+const LOGO = s => `<svg width="${s}" height="${s}" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#ff6a3d"/><path d="M14 10.5V24.5H6.6Q7.4 16 14 10.5Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/><path d="M17 6V24.5H25.4Q24.7 13 17 6Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
+
+/* ---------- data ---------- */
+const CATS = [
+  {id:'social', name:'Social', sites:['x.com','twitter.com','facebook.com','instagram.com','tiktok.com','reddit.com','snapchat.com','threads.net','bsky.app','pinterest.com','tumblr.com','discord.com']},
+  {id:'video', name:'Video & streaming', sites:['youtube.com','netflix.com','twitch.tv','kick.com','primevideo.com','disneyplus.com','hulu.com','max.com']},
+  {id:'news', name:'News & forums', sites:['news.ycombinator.com','cnn.com','foxnews.com','bbc.com','nytimes.com','buzzfeed.com','9gag.com']},
+  {id:'shop', name:'Shopping', sites:['amazon.com','ebay.com','aliexpress.com','temu.com','etsy.com','shein.com']},
+  {id:'games', name:'Games', sites:['chess.com','lichess.org','roblox.com','store.steampowered.com','poki.com']},
+  {id:'yours', name:'Your sites', sites:['espn.com']},
+];
+const midnight = (t = Date.now()) => { const d = new Date(t); d.setHours(24,0,0,0); return +d; };
+const DURS = [
+  {label:'1 hour',         phrase:'for 1 hour',     end:t => t + H},
+  {label:'4 hours',        phrase:'for 4 hours',    end:t => t + 4*H},
+  {label:'Until midnight', phrase:'until midnight', end:t => midnight(t)},
+  {label:'1 week',         phrase:'for 1 week',     end:t => t + 7*D},
+  {label:'1 month',        phrase:'for 1 month',    end:t => { const d = new Date(t); d.setMonth(d.getMonth()+1); return +d; }},
+  {label:'Forever',        phrase:'forever',        end:() => Infinity},
+];
+const FOREVER = 5;
+
+const T0 = Date.now();
+const todayAt = (h, m) => { const d = new Date(); d.setHours(h, m, 0, 0); return +d; };
+const SOCIAL_SINCE = +new Date(new Date().getFullYear(), 9, 18, 21, 40);
+let blocks = {};
+CATS[0].sites.forEach(s => blocks[s] = {end:Infinity, since:SOCIAL_SINCE});
+CATS[1].sites.forEach(s => blocks[s] = {end:midnight(), since:Math.min(todayAt(9,12), T0 - H)});
+blocks['news.ycombinator.com'] = {end:T0 + 5*D - 6e4, since:T0 - 2*D};
+let stopped = 4;
+let sel = new Set();
+let dur = 2;
+let popDur = 2;
+let os = 'linux';
+
+let tabs = [
+  {id:1, hist:[NTP], i:0},
+  {id:2, hist:['github.com/chromium/chromium'], i:0},
+  {id:3, hist:['en.wikipedia.org/wiki/Bauhaus'], i:0},
+  {id:4, hist:[NTP, 'youtube.com/'], i:1},
+  {id:5, hist:['x.com/home'], i:0},
+];
+let activeId = 1, nextId = 6, viewKey = '';
+
+/* ---------- helpers ---------- */
+const cur = () => tabs.find(t => t.id === activeId);
+const urlOf = t => t.hist[t.i];
+const hostOf = u => (!u || u.startsWith('mast://')) ? '' : u.split(/[/?#]/)[0].replace(/^www\./, '');
+function blockOf(h){
+  if (!h) return null; let best = null; const now = Date.now();
+  for (const k in blocks) if ((h === k || h.endsWith('.' + k)) && blocks[k].end > now && (!best || blocks[k].end > best.end)) best = {...blocks[k], site:k};
+  return best;
+}
+const isForever = s => { const b = blockOf(s); return !!b && b.end === Infinity; };
+const hm = t => { const d = new Date(t); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
+const dShort = t => { const d = new Date(t); return d.getDate() + ' ' + MON[d.getMonth()]; };
+const dDay = t => { const d = new Date(t); return DOW[d.getDay()] + ' ' + d.getDate() + ' ' + MON[d.getMonth()]; };
+const sameDay = (a, b) => new Date(a).toDateString() === new Date(b).toDateString();
+function untilText(end){
+  const now = Date.now();
+  if (end === Infinity) return 'forever';
+  if (end === midnight(now)) return 'until midnight';
+  if (end - now < 20*H) return 'until ' + hm(end);
+  const days = Math.ceil((end - now) / D);
+  if (days <= 7) return `for ${days} more day${days > 1 ? 's' : ''}`;
+  return 'until ' + dShort(end);
+}
+function sinceText(t){ return sameDay(t, Date.now()) ? 'since ' + hm(t) + ' today' : 'since ' + MON[new Date(t).getMonth()] + ' ' + new Date(t).getDate(); }
+function endHint(end){
+  if (end === Infinity) return 'never lifts';
+  if (end === midnight()) return '00:00';
+  if (sameDay(end, Date.now())) return 'until ' + hm(end);
+  if (end - Date.now() < 24*H) return 'until ' + hm(end) + ' tmrw';
+  return 'until ' + dDay(end);
+}
+const catOf = s => CATS.find(c => c.sites.includes(s));
+const blockedCount = () => Object.keys(blocks).filter(s => blockOf(s) && blockOf(s).site === s).length;
+const cellFor = b => b ? (b.end === Infinity ? 'cell f em' : 'cell p em') : 'cell e';
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+const mod = (k, shift) => os === 'mac' ? (shift ? '⇧⌘' : '⌘') + k : 'Ctrl+' + (shift ? 'Shift+' : '') + k;
+
+/* ---------- category state ---------- */
+function catState(c){
+  const bl = c.sites.map(s => blockOf(s)).filter(Boolean);
+  if (!bl.length) return {kind:'open', cell:'cell e', text:'Open', sub:''};
+  if (bl.length === c.sites.length){
+    if (bl.every(b => b.end === Infinity)) return {kind:'ever', cell:'cell f em', text:'Blocked forever', sub:sinceText(Math.min(...bl.map(b => b.since)))};
+    const ends = [...new Set(bl.map(b => b.end))];
+    if (ends.length === 1) return {kind:'timed', cell:'cell p em', text:'Blocked ' + untilText(ends[0]), sub:sinceText(Math.min(...bl.map(b => b.since)))};
+    return {kind:'timed', cell:'cell p em', text:'Blocked', sub:'longest ' + untilText(Math.max(...bl.map(b => b.end)))};
+  }
+  const sub = bl.length === 1 ? `${bl[0].site} ${untilText(bl[0].end)}` : '';
+  return {kind:'part', cell:'cell p em', text:`${bl.length} of ${c.sites.length} blocked`, sub};
+}
+
+/* ---------- tabs ---------- */
+function titleOf(u){
+  if (u === NTP) return 'New Tab';
+  const h = hostOf(u);
+  if (blockOf(h)) return h;
+  if (h === 'github.com') return 'chromium/chromium: The official GitHub mirror';
+  if (h === 'en.wikipedia.org') return 'Bauhaus – Wikipedia';
+  if (h === 'google.com') return decodeURIComponent((u.split('q=')[1] || '').replace(/\+/g, ' ')) + ' – Google Search';
+  return h;
+}
+function favOf(u){
+  if (u === NTP) return LOGO(16);
+  const h = hostOf(u), b = blockOf(h);
+  if (b) return `<span class="${cellFor(b)}"></span>`;
+  if (h === 'github.com') return `<svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.5" fill="#f0f6fc"/><path d="M5.2 12.6c.1-1 .3-1.6.8-2-1.7-.2-3-1-3-3 0-.6.2-1.2.6-1.6-.1-.3-.2-1 .1-1.8 0 0 .6-.1 1.8.7a6 6 0 0 1 3 0c1.2-.8 1.8-.7 1.8-.7.3.8.2 1.5.1 1.8.4.4.6 1 .6 1.6 0 2-1.3 2.8-3 3 .5.4.8 1 .8 2" fill="#0d1117"/></svg>`;
+  if (h === 'en.wikipedia.org') return `<svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.5" fill="#fff"/><text x="8" y="11.6" text-anchor="middle" font-family="Georgia,serif" font-size="10" fill="#000">W</text></svg>`;
+  if (h === 'google.com') return `<svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.5" fill="#fff"/><text x="8" y="11.8" text-anchor="middle" font-family="Arial,sans-serif" font-weight="700" font-size="10" fill="#4285f4">G</text></svg>`;
+  return `<span class="cell e"></span>`;
+}
+function renderTabs(){
+  $('#tabs').innerHTML = tabs.map(t => {
+    const u = urlOf(t), b = blockOf(hostOf(u));
+    return `<div class="tab${t.id === activeId ? ' act' : ''}${b ? ' blk' : ''}" data-tab="${t.id}" role="tab" aria-selected="${t.id === activeId}" title="${esc(titleOf(u))}${b ? ' · blocked ' + untilText(b.end) : ''}">
+      <span class="fav">${favOf(u)}</span><span class="ttl">${esc(titleOf(u))}</span>
+      <button class="x" data-close="${t.id}" title="Close tab">${GL.close}</button></div>`;
+  }).join('');
+}
+
+/* ---------- toolbar ---------- */
+function renderToolbar(){
+  const t = cur(), u = urlOf(t), h = hostOf(u), b = blockOf(h);
+  $('#bBack').disabled = t.i === 0 && !(b && u !== NTP);
+  $('#bFwd').disabled = t.i >= t.hist.length - 1;
+  const inp = $('#addr');
+  if (document.activeElement !== inp) inp.value = u === NTP ? '' : u;
+  const path = u === NTP ? '' : u.slice(u.indexOf(h) + h.length);
+  $('#disp').innerHTML = u === NTP ? '' : `<b>${esc(h)}</b><span>${esc(path === '/' ? '' : path)}</span>${b ? `<em>Blocked ${untilText(b.end)}</em>` : ''}`;
+  $('#omniCell').className = u === NTP ? 'cell e dim' : cellFor(b);
+  const act = $('#bBlock');
+  act.disabled = u === NTP;
+  act.title = u === NTP ? 'Nothing to block on this page' : (b ? `${h} is blocked ${untilText(b.end)}` : `Block ${h} (${mod('B', true)})`);
+  $('#bBlockCell').className = u === NTP ? 'cell e dim' : (b ? cellFor(b) : 'cell e');
+  $('#bBlockLbl').textContent = b ? 'Blocked' : 'Block';
+}
+
+/* ---------- new tab page ---------- */
+function numHTML(n){ const s = pad2(n); const z = (s.match(/^0+/) || [''])[0].slice(0, s.length - 1); return `<span class="z">${z}</span>${s.slice(z.length)}`; }
+function ntpHTML(){
+  const now = new Date();
+  return `<div class="ntp" id="ntp"><div class="ntp-in">
+    <header class="nh">
+      <div class="stat"><div class="num" id="nBlocked"></div><div class="lbl">sites blocked</div></div>
+      <div class="stat"><div class="num" id="nStopped"></div><div class="lbl">distractions stopped today</div></div>
+      <div class="date">${DOWL[now.getDay()]} ${now.getDate()} ${MON[now.getMonth()]}</div>
+    </header>
+    <div class="sec">
+      <span class="lab">Blocklist</span><span class="rule"></span>
+      <div class="legend"><span><i class="cell e"></i>Open</span><span><i class="cell p em"></i>Blocked for a while</span><span><i class="cell f em"></i>Blocked forever</span></div>
+      <span class="vrule" style="height:12px"></span>
+      <button class="lnk" id="selOpen">Select all open</button><button class="lnk" id="selClear">Clear</button>
+    </div>
+    <div class="cats" id="cats"></div>
+  </div>
+  <div class="bar"><div class="bar-in">
+    <div class="sum" id="sum"></div>
+    <div class="meter" id="meter" role="radiogroup" aria-label="How long"></div>
+    <button class="btn pri lg" id="doBlock"></button>
+  </div></div></div>`;
+}
+function catRow(c){
+  const st = catState(c);
+  const selectable = c.sites.filter(s => !isForever(s));
+  const n = selectable.filter(s => sel.has(s)).length;
+  const dis = !selectable.length;
+  const sc = dis ? 'cell e dim' : !n ? 'cell e' : n === selectable.length ? 'cell f w' : 'cell p w';
+  const chips = c.sites.map(s => {
+    const b = blockOf(s), ever = b && b.end === Infinity, on = sel.has(s);
+    const cc = ever ? 'cell f em' : on ? 'cell f w' : b ? 'cell p em' : 'cell e';
+    return `<button class="site${on ? ' on' : ''}" data-site="${s}" ${ever ? 'disabled title="Blocked forever"' : `aria-pressed="${on}" title="${b ? 'Blocked ' + untilText(b.end) + ' · select to lengthen' : 'Select ' + s}"`}><span class="${cc}"></span>${s}</button>`;
+  }).join('');
+  const add = c.id === 'yours' ? `<span class="addwrap"><input class="addsite" id="addSite" placeholder="Add a site" spellcheck="false"></span>` : '';
+  return `<div class="cat ${st.kind}">
+    <button class="ck" data-cat="${c.id}" ${dis ? 'disabled title="Forever blocks can\'t change"' : `aria-pressed="${n === selectable.length}" title="Select ${esc(c.name)}"`}><span class="${sc}"></span></button>
+    <button class="cn" data-cat="${c.id}" ${dis ? 'disabled' : ''}><span class="nm">${esc(c.name)}</span><span class="ct">${plural(c.sites.length, 'site')}</span></button>
+    <div class="cs"><span class="${st.cell}"></span><div><div class="st">${st.text}</div>${st.sub ? `<div class="ss">${esc(st.sub)}</div>` : ''}</div></div>
+    <div class="sites">${chips}${add}</div>
+  </div>`;
+}
+function selLabel(sites){
+  if (sites.length === 1) return sites[0];
+  const whole = CATS.filter(c => { const s = c.sites.filter(x => !isForever(x)); return s.length && s.every(x => sites.includes(x)); });
+  const covered = new Set(whole.flatMap(c => c.sites));
+  if (whole.length && sites.every(s => covered.has(s))) return whole.map(c => c.name).join(', ').replace(/, ([^,]*)$/, ' and $1');
+  return plural(sites.length, 'site');
+}
+function syncNTP(){
+  if (!$('#ntp')) return;
+  const focusAdd = document.activeElement && document.activeElement.id === 'addSite';
+  $('#nBlocked').innerHTML = numHTML(blockedCount());
+  $('#nStopped').innerHTML = numHTML(stopped);
+  $('#cats').innerHTML = CATS.map(catRow).join('');
+  if (focusAdd) $('#addSite').focus();
+  const sites = [...sel];
+  const sum = $('#sum');
+  if (!sites.length){ sum.className = 'sum none'; sum.innerHTML = `<div class="s1">Pick categories or sites</div><div class="s2">Then choose how long and press Block</div>`; }
+  else {
+    const groups = [...new Set(sites.map(s => catOf(s)?.name).filter(Boolean))];
+    const longer = sites.filter(s => { const b = blockOf(s); return b && b.end >= DURS[dur].end(Date.now()); }).length;
+    sum.className = 'sum';
+    sum.innerHTML = `<div class="s1">${plural(sites.length, 'site')} selected</div><div class="s2">${esc(groups.join(' · '))}${longer ? ` · ${longer} already blocked at least that long` : ''}</div>`;
+  }
+  const m = $('#meter');
+  m.classList.toggle('ever', dur === FOREVER);
+  m.innerHTML = DURS.map((d, i) => `<button class="seg${i <= dur ? ' on' : ''}${i === dur ? ' cur' : ''}" data-dur="${i}" role="radio" aria-checked="${i === dur}"><span class="sb"></span><span class="sl">${d.label}</span></button>`).join('');
+  const btn = $('#doBlock');
+  btn.disabled = !sites.length;
+  btn.classList.toggle('ever', dur === FOREVER);
+  btn.innerHTML = sites.length ? `Block ${plural(sites.length, 'site')} <span class="bd">${DURS[dur].phrase}</span>` : 'Block';
+}
+
+/* ---------- blocked page ---------- */
+function blockedHTML(h, b){
+  const ever = b.end === Infinity, c = catOf(b.site);
+  const group = c ? c.name : 'Your sites';
+  const sub = ever
+    ? `${esc(group)} · blocked ${sinceText(b.since).replace('since ', 'since ')} · this block can't be lifted`
+    : `${esc(group)} · blocked ${sinceText(b.since)} · opens again ${b.end === midnight() ? 'at 00:00' : sameDay(b.end, Date.now()) ? 'at ' + hm(b.end) : 'on ' + dDay(b.end) + ' at ' + hm(b.end)}`;
+  return `<div class="bp ${ever ? 'ever' : 'timed'}">
+    <span class="cell ${ever ? 'f' : 'p'} em bp-band"></span>
+    <div class="bp-in">
+      <div class="bp-host">${esc(h).split(".").join('<i class="pd"></i>')}</div>
+      <div class="bp-st">${ever ? 'Blocked forever' : 'Blocked ' + untilText(b.end)}</div>
+      <div class="bp-sub">${sub}</div>
+      <div class="bp-act"><button class="btn sec" id="bpBack">${GL.back}Back</button>
+        <span class="note">${ever ? 'Forever blocks stay. There is no setting to undo them.' : 'Blocks can be lengthened from the toolbar, never shortened.'}</span></div>
+    </div></div>`;
+}
+
+/* ---------- ordinary pages ---------- */
+function githubHTML(){
+  const files = [['base','Revert "Add tab groups metrics"','2 hours ago'],['build','Roll clang 20 to 21','5 hours ago'],['chrome','[Toolbar] Clean up location bar layout','12 minutes ago'],['components','Update omnibox suggestions provider','1 hour ago'],['content','Fix renderer crash on navigation','3 hours ago'],['docs','Update Linux build instructions','yesterday'],['third_party','Roll Skia from 4a1e to 9c2d','40 minutes ago'],['ui','views: snap focus rings to pixels','2 days ago'],['AUTHORS','Add contributor','last week'],['README.md','Clarify checkout steps','last month']];
+  return `<div class="scroll"><div class="gh">
+    <div class="gh-top"><div class="gh-row"><a href="#">chromium</a><span style="color:#9198a1">/</span><a href="#"><b>chromium</b></a><span class="gh-pill">Public</span></div>
+    <div class="gh-nav"><span class="on">Code</span><span>Pull requests</span><span>Actions</span><span>Security</span><span>Insights</span></div></div>
+    <div class="gh-main"><div>
+      <div class="gh-box"><div class="hd"><b>chromium-autoroll</b> Roll Skia from 4a1e to 9c2d <span style="margin-left:auto">1,431,882 commits</span></div>
+      ${files.map(f => `<div class="gh-f"><span>${f[0].includes('.') || f[0] === 'AUTHORS' ? '▫' : '▪'}</span><a>${f[0]}</a><span>${f[1]}</span><span>${f[2]}</span></div>`).join('')}</div>
+      <div class="gh-box gh-readme"><h1>Chromium</h1><p>Chromium is an open-source browser project that aims to build a safer, faster, and more stable way for all users to experience the web.</p><p>The project's web site is https://www.chromium.org. To check out the source code locally, don't use git clone. Instead, follow the instructions on how to get the code.</p></div>
+    </div><div class="gh-side"><h3>About</h3><p>The official GitHub mirror of the Chromium source.</p><h3>Languages</h3><p>C++ 71.2% · Java 8.4% · HTML 5.9% · JavaScript 4.1% · Python 3.3%</p></div></div>
+  </div></div>`;
+}
+function wikiHTML(){
+  return `<div class="scroll"><div class="wp">
+    <div class="wp-top"><span class="wp-logo">Wikipedia</span><span class="wp-search">Search Wikipedia</span></div>
+    <div class="wp-body"><div>
+      <h1>Bauhaus</h1><div class="from">From Wikipedia, the free encyclopedia</div>
+      <p>The <b>Staatliches Bauhaus</b>, commonly known as the <b>Bauhaus</b>, was a German art school operational from 1919 to 1933 that combined crafts and the fine arts. The school became famous for its approach to design, which attempted to unify individual artistic vision with the principles of <a>mass production</a> and emphasis on function.</p>
+      <p>The Bauhaus was founded by architect <a>Walter Gropius</a> in <a>Weimar</a>. It was grounded in the idea of creating a <a>Gesamtkunstwerk</a> ("comprehensive artwork") in which all the arts would eventually be brought together.</p>
+      <h2>History</h2>
+      <p>The school existed in three German cities: Weimar from 1919 to 1925, <a>Dessau</a> from 1925 to 1932 and <a>Berlin</a> from 1932 to 1933, under three different architect-directors.</p>
+      <p>The changes of venue and leadership resulted in a constant shifting of focus, technique, instructors, and politics. When the school moved from Weimar to Dessau, the pottery shop was discontinued.</p>
+    </div><aside class="wp-box"><b>Bauhaus</b><div class="im"></div><dl><dt>Active</dt><dd>1919–1933</dd><dt>Location</dt><dd>Weimar, Dessau, Berlin</dd><dt>Founder</dt><dd>Walter Gropius</dd></dl></aside></div>
+  </div></div>`;
+}
+function genericHTML(u, h){
+  if (h === 'google.com'){
+    const q = decodeURIComponent((u.split('q=')[1] || '').replace(/\+/g, ' '));
+    return `<div class="scroll"><div class="gen"><h1>${esc(q)}</h1>${[1,2,3].map(i => `<div class="res"><div class="u">www.example${i}.com</div><a>${esc(q)}, result ${i}</a><div class="ln" style="width:92%"></div><div class="ln" style="width:70%"></div></div>`).join('')}</div></div>`;
+  }
+  return `<div class="scroll"><div class="gen"><h1>${esc(h)}</h1>${[96,88,92,60,0,94,80,72].map(w => w ? `<div class="ln" style="width:${w}%"></div>` : '<br>').join('')}</div></div>`;
+}
+
+/* ---------- view ---------- */
+function renderView(force){
+  const t = cur(), u = urlOf(t), h = hostOf(u), b = blockOf(h);
+  const key = t.id + '|' + u + '|' + (b ? (b.end === Infinity ? 'E' : 'T') : 'O');
+  const content = $('#content');
+  if (!force && key === viewKey){ if (u === NTP) syncNTP(); else if (b) content.innerHTML = blockedHTML(h, b); return; }
+  viewKey = key;
+  content.dataset.view = u === NTP ? 'ntp' : b ? 'blocked' : 'site';
+  content.innerHTML = u === NTP ? ntpHTML() : b ? blockedHTML(h, b) : h === 'github.com' ? githubHTML() : h === 'en.wikipedia.org' ? wikiHTML() : genericHTML(u, h);
+  if (u === NTP) syncNTP();
+}
+function render(force){ renderTabs(); renderToolbar(); renderView(force); }
+
+/* ---------- navigation ---------- */
+function navigate(u){
+  const t = cur(); t.hist = t.hist.slice(0, t.i + 1); t.hist.push(u); t.i++;
+  if (blockOf(hostOf(u))) stopped++;
+  closePops(); render();
+}
+function go(v){
+  v = v.trim(); if (!v) return;
+  if (/^[\w-]+(\.[\w-]+)+(\/.*)?$/.test(v.replace(/^https?:\/\//, ''))) navigate(v.replace(/^https?:\/\//, '').replace(/^www\./, ''));
+  else navigate('google.com/search?q=' + encodeURIComponent(v).replace(/%20/g, '+'));
+  $('#addr').blur();
+}
+function back(){
+  const t = cur();
+  if (t.i > 0){ t.i--; }
+  else { t.hist = [NTP]; t.i = 0; }
+  closePops(); render();
+}
+function newTab(){ tabs.push({id:nextId, hist:[NTP], i:0}); activeId = nextId++; closePops(); render(); $('#addr').focus(); }
+function closeTab(id){
+  const i = tabs.findIndex(t => t.id === id); if (i < 0) return;
+  tabs.splice(i, 1);
+  if (!tabs.length){ tabs.push({id:nextId, hist:[NTP], i:0}); activeId = nextId++; }
+  else if (activeId === id) activeId = tabs[Math.min(i, tabs.length - 1)].id;
+  closePops(); render();
+}
+
+/* ---------- blocking ---------- */
+let undoSnap = null, toastTimer = null, toastLeft = 0;
+const snapshot = () => ({blocks:JSON.parse(JSON.stringify(blocks, (k, v) => v === Infinity ? '∞' : v)), yours:[...CATS[5].sites], sel:[...sel]});
+function restore(s){
+  blocks = {}; for (const k in s.blocks) blocks[k] = {end:s.blocks[k].end === '∞' ? Infinity : s.blocks[k].end, since:s.blocks[k].since};
+  CATS[5].sites = s.yours; sel = new Set(s.sel);
+}
+function applyBlock(sites, di, snap = snapshot()){
+  const label = selLabel(sites);
+  const now = Date.now(), end = DURS[di].end(now);
+  const live = s => blocks[s] && blocks[s].end > now ? blocks[s] : null;
+  const kept = sites.filter(s => live(s) && live(s).end >= end), changed = sites.filter(s => !kept.includes(s));
+  const changedLabel = changed.length ? selLabel(changed) : '';   // name it before the block changes what counts as a whole category
+  changed.forEach(s => { const b = live(s); blocks[s] = {end, since:b ? b.since : now}; });
+  sel.clear(); if (di === FOREVER) dur = 2; closePops(); render();
+  if (!changed.length){ showToast({cell:'cell e', t1:'Nothing changed', t2:`${label} ${kept.length === 1 ? 'is' : 'are'} already blocked longer`, undo:false}); return; }
+  const ever = di === FOREVER;
+  showToast({
+    cell: ever ? 'cell f em' : 'cell p em',
+    t1: `${changedLabel} blocked ${DURS[di].phrase}`,
+    t2: ever ? 'Forever can\'t be lifted once Undo runs out' : (kept.length ? `${kept.length} already blocked at least that long. ` : '') + 'Can be lengthened later, not shortened',
+    undo: true, snap,
+  });
+}
+function showToast({cell, t1, t2, undo, snap}){
+  const el = $('#toast');
+  clearInterval(toastTimer); undoSnap = undo ? snap : null; toastLeft = 10;
+  el.innerHTML = `<span class="${cell}"></span><div class="tt"><div class="t1">${esc(t1)}</div><div class="t2">${esc(t2)}</div></div>
+    ${undo ? `<div class="tdots" id="tdots" title="Undo available for 10 seconds">${'<i></i>'.repeat(10)}</div><button class="btn pri" id="undo">Undo</button>` : ''}`;
+  el.classList.add('show');
+  toastTimer = setInterval(() => {
+    toastLeft--;
+    const d = $('#tdots'); if (d) [...d.children].forEach((i, k) => i.classList.toggle('off', k >= toastLeft));
+    if (toastLeft <= 0){ clearInterval(toastTimer); el.classList.remove('show'); undoSnap = null; }
+  }, 1000);
+}
+function undo(){
+  if (!undoSnap) return;
+  restore(undoSnap); undoSnap = null; clearInterval(toastTimer);
+  $('#toast').classList.remove('show');
+  render();
+}
+
+/* ---------- popovers ---------- */
+function place(pop, btn, alignRight = true){
+  const w = $('#win').getBoundingClientRect(), r = btn.getBoundingClientRect();
+  pop.style.top = (r.bottom - w.top + 6) + 'px';
+  pop.style.left = 'auto';
+  pop.style.right = (w.right - r.right) + 'px';
+}
+function closePops(){ ['#popBlock', '#menu'].forEach(s => $(s).classList.remove('show')); $('#bBlock').classList.remove('open'); $('#bMenu').classList.remove('open'); }
+function renderPop(){
+  const h = hostOf(urlOf(cur())), b = blockOf(h), now = Date.now();
+  const head = `<div class="ph"><span class="${cellFor(b)}"></span><div><div class="h1">${esc(h)}</div><div class="h2${b ? ' em' : ''}">${b ? 'Blocked ' + untilText(b.end) : (catOf(h) ? catOf(h).name + ' · open' : 'Open · not on your blocklist')}</div></div></div>`;
+  if (b && b.end === Infinity){
+    $('#popBlock').innerHTML = head + `<div class="rule"></div><p class="pnote" style="margin-top:0">Forever blocks can't be shortened or lifted. There is nothing to change here.</p>`;
+    return;
+  }
+  const opts = DURS.map((d, i) => {
+    const end = d.end(now), dis = b && end <= b.end, on = i === popDur;
+    return `<button class="opt${on ? ' on' : ''}${i === FOREVER ? ' ever' : ''}" data-pdur="${i}" role="radio" aria-checked="${on}" ${dis ? 'disabled title="Shorter than the current block"' : ''}>
+      <span class="cell ${dis ? 'e dim' : on ? (i === FOREVER ? 'f em' : 'f w') : 'e'}"></span>${d.label}<span class="hint">${endHint(end)}</span></button>`;
+  }).join('');
+  $('#popBlock').innerHTML = head + `<div class="rule"></div><span class="lab">${b ? 'Lengthen to' : 'Block for'}</span>${opts}
+    <button class="btn pri lg${popDur === FOREVER ? ' ever' : ''}" id="popGo">${b ? 'Lengthen' : 'Block ' + esc(h)} <span class="bd">${DURS[popDur].phrase}</span></button>
+    <p class="pnote">${b ? 'Blocks can only get longer.' : 'Undo is available for 10 seconds. After that it holds.'}</p>`;
+}
+function openPop(){
+  const btn = $('#bBlock'); if (btn.disabled) return;
+  const pop = $('#popBlock');
+  if (pop.classList.contains('show')){ closePops(); return; }
+  closePops();
+  const b = blockOf(hostOf(urlOf(cur()))), now = Date.now();
+  popDur = b ? DURS.findIndex(d => d.end(now) > b.end) : 2;
+  if (popDur < 0) popDur = FOREVER;
+  renderPop(); place(pop, btn); pop.classList.add('show'); btn.classList.add('open');
+  const f = pop.querySelector('#popGo'); if (f) f.focus();
+}
+function renderMenu(){
+  const h = hostOf(urlOf(cur())), b = blockOf(h);
+  const R = '<div class="rule"></div>';
+  $('#menu').innerHTML = [
+    `<button class="mi" data-m="newtab"><span class="sp"></span>New tab<span class="k">${mod('T')}</span></button>`,
+    `<button class="mi"><span class="sp"></span>New window<span class="k">${mod('N')}</span></button>`,
+    `<button class="mi"><span class="sp"></span>New private window<span class="k">${mod('N', true)}</span></button>`, R,
+    `<button class="mi${!h || b ? ' dis' : ''}" data-m="${!h || b ? '' : 'block'}"><span class="${!h ? 'cell e dim' : cellFor(b)}"></span>${b ? 'Blocked ' + untilText(b.end) : 'Block this site'}<span class="k">${b || !h ? '' : mod('B', true)}</span></button>`,
+    `<button class="mi" data-m="list"><span class="sp"></span>Blocklist</button>`, R,
+    `<button class="mi"><span class="sp"></span>History<span class="k">${mod(os === 'mac' ? 'Y' : 'H')}</span></button>`,
+    `<button class="mi"><span class="sp"></span>Downloads<span class="k">${os === 'mac' ? '⌥⌘L' : 'Ctrl+J'}</span></button>`,
+    `<button class="mi"><span class="sp"></span>Bookmarks<span class="k">${mod('O', true)}</span></button>`, R,
+    `<button class="mi"><span class="sp"></span>Find…<span class="k">${mod('F')}</span></button>`,
+    `<button class="mi"><span class="sp"></span>Print…<span class="k">${mod('P')}</span></button>`, R,
+    `<button class="mi"><span class="sp"></span>Settings<span class="k">${os === 'mac' ? '⌘,' : ''}</span></button>`,
+    `<button class="mi"><span class="sp"></span>${os === 'mac' ? 'Quit Mast' : 'Exit'}<span class="k">${os === 'mac' ? '⌘Q' : os === 'win' ? 'Alt+F4' : 'Ctrl+Shift+Q'}</span></button>`,
+  ].join('');
+}
+function openMenu(){
+  const m = $('#menu');
+  if (m.classList.contains('show')){ closePops(); return; }
+  closePops(); renderMenu(); place(m, $('#bMenu')); m.classList.add('show'); $('#bMenu').classList.add('open');
+}
+
+/* ---------- system sheet ---------- */
+function sheetHTML(){
+  const tokens = [
+    ['--k0','#000000','Page, frame, tab strip'],['--k1','#141414','Toolbar, active tab, menus'],['--k2','#1C1C1C','Row hover, toast'],
+    ['--k3','#262626','Button hover'],['--k4','#303030','Pressed'],['--line','#2A2A2A','1px edges'],
+    ['--g1','#3A3A3A','Unlit dots, rules'],['--g2','#5C5C5C','Empty-state dots'],['--g3','#808080','Tertiary text'],
+    ['--g4','#A8A8A8','Secondary text'],['--ink','#EDEDED','Text, selected fill'],['--ember','#FF6A3D','Blocked. Nothing else.'],
+  ];
+  const tabMini = (cls, fav, title) => `<div class="tab ${cls}"><span class="fav">${fav}</span><span class="ttl">${title}</span><button class="x" tabindex="-1">${GL.close}</button></div>`;
+  return `<div class="sh-in">
+  <div class="sh-head"><h1>System</h1><p>Proposal 09 · Dot. A dot-matrix language in black, white and greys. The dot is the atom; ember is the only colour and it only ever means blocked.</p><button class="btn sec" id="sheetClose">Close <span class="bd">Esc</span></button></div>
+
+  <section class="sh-sec"><h2>Principles</h2><div class="pr">
+    <span class="n">1</span><p>The dot is the atom. <span>Pitch 4, dot 2, cell 12. Everything sits on the 4px grid.</span></p>
+    <span class="n">2</span><p>Dotted outline is empty, dotted fill is partial, solid is whole. <span>One rule for selection, blocks, the duration control and disabled states.</span></p>
+    <span class="n">3</span><p>Ember means blocked, and nothing else. <span>White is your choice; ember is a block. Timed blocks are dotted because they end; forever is solid.</span></p>
+    <span class="n">4</span><p>Dots for display and state, plain type for reading. <span>Doto only for site names and numerals at 20px and up. Everything you read is Geist.</span></p>
+    <span class="n">5</span><p>Native where it's native. <span>Window controls, shortcuts, menus and scrollbars stay the platform's. Only radius is ours: zero.</span></p>
+  </div></section>
+
+  <section class="sh-sec"><h2>State vocabulary</h2><div class="sm">
+    <div class="hd"></div><div class="hd">Empty · dotted outline</div><div class="hd">Partial · dotted fill</div><div class="hd">Whole · solid fill</div>
+    <div class="rk">White = selection</div>
+    <div><span class="cell e"></span><span class="cell e big"></span>Not selected</div>
+    <div><span class="cell p w"></span><span class="cell p w big"></span>Some selected</div>
+    <div><span class="cell f w"></span><span class="cell f w big"></span>Selected</div>
+    <div class="rk">Ember = block</div>
+    <div><span class="cell e"></span><span class="cell e big"></span>Open</div>
+    <div><span class="cell p em"></span><span class="cell p em big"></span>Blocked for a while</div>
+    <div><span class="cell f em"></span><span class="cell f em big"></span>Blocked forever</div>
+    <div class="rk">Grey g1</div>
+    <div><span class="cell e dim"></span><span class="cell e dim big"></span>Disabled</div><div></div><div></div>
+  </div></section>
+
+  <section class="sh-sec"><h2>Colour</h2><div class="tok">
+    ${tokens.map(t => `<div class="tk"><span class="sw" style="background:${t[1]}"></span><div><div class="nm">${t[0]}</div><div class="v">${t[1]}</div><div class="r">${t[2]}</div></div></div>`).join('')}
+  </div></section>
+
+  <section class="sh-sec"><h2>Type</h2><div class="ts">
+    <div class="row"><span class="meta">Display XL · Doto 800 80/72<br>blocked site name</span><span class="bp-host" style="margin:0">x<i class="pd"></i>com</span></div>
+    <div class="row"><span class="meta">Display L · Doto 800 64/52<br>numerals</span><span style="font:800 64px/52px var(--display);font-variation-settings:'ROND' 100"><span style="color:var(--g1)">0</span>4 21</span></div>
+    <div class="row"><span class="meta">Title · Geist 500 24/32</span><span style="font:500 24px/32px var(--ui);color:var(--ember)">Blocked until midnight</span></div>
+    <div class="row"><span class="meta">Heading · Geist 500 15/20</span><span style="font:500 15px/20px var(--ui)">Video &amp; streaming</span></div>
+    <div class="row"><span class="meta">Body · Geist 400 14/20</span><span style="font:400 14px/20px var(--ui);color:var(--g4)">Blocks can be lengthened from the toolbar, never shortened.</span></div>
+    <div class="row"><span class="meta">UI · Geist 400–500 13/16</span><span style="font:400 13px/16px var(--ui)">youtube.com · netflix.com · twitch.tv</span></div>
+    <div class="row"><span class="meta">Label · Geist Mono 500 11/16 +8%</span><span class="lab">Blocklist</span></div>
+  </div></section>
+
+  <section class="sh-sec"><h2>Spacing · radius · stroke</h2><div class="sp-grid">
+    <div><h3>Spacing = n × pitch</h3>${[4,8,12,16,24,32,48].map(v => `<div class="sp-row"><span class="v">${v}</span><span class="dots" style="width:${v * 2}px"></span></div>`).join('')}</div>
+    <div><h3>Radius 0</h3><p>Every rectangle is square. Only dots are round. Window corners belong to the OS (macOS 10, Windows 8, GNOME 12).</p><h3 style="margin-top:16px">Heights</h3><p>24 chips and window-control circles · 32 controls, tabs, menu rows · 40 tab strip · 44 toolbar and primary buttons. All multiples of 4.</p></div>
+    <div><h3>Stroke</h3><p>1px solid <b style="color:var(--ink);font-weight:500">--line</b> for container edges. Dotted rule = 2px dots at 4px pitch in g1, used between rows and under the toolbar. Focus = 1px white, 2px offset. No shadows except floating surfaces.</p>
+      <div class="rule" style="margin-top:16px"></div></div>
+  </div></section>
+
+  <section class="sh-sec"><h2>Components</h2><div class="comp">
+    <div class="cr"><span class="k">Primary button</span><div class="cv">
+      <figure><button class="btn pri">Block</button><figcaption>default</figcaption></figure>
+      <figure><button class="btn pri is-hover">Block</button><figcaption>hover</figcaption></figure>
+      <figure><button class="btn pri is-press">Block</button><figcaption>pressed</figcaption></figure>
+      <figure><button class="btn pri" disabled>Block</button><figcaption>disabled</figcaption></figure>
+      <figure><button class="btn pri ever">Block forever</button><figcaption>forever</figcaption></figure>
+      <figure><button class="btn pri ever is-hover">Block forever</button><figcaption>forever hover</figcaption></figure>
+    </div></div>
+    <div class="cr"><span class="k">Secondary button</span><div class="cv">
+      <figure><button class="btn sec">Back</button><figcaption>default</figcaption></figure>
+      <figure><button class="btn sec is-hover">Back</button><figcaption>hover</figcaption></figure>
+      <figure><button class="btn sec is-press">Back</button><figcaption>pressed</figcaption></figure>
+      <figure><button class="btn sec" disabled>Back</button><figcaption>disabled</figcaption></figure>
+    </div></div>
+    <div class="cr"><span class="k">Input</span><div class="cv">
+      <figure><div class="sfield"><span class="cell e"></span>Search Google or type a URL</div><figcaption>default</figcaption></figure>
+      <figure><div class="sfield f"><span class="cell e"></span><span class="caret"></span></div><figcaption>focus</figcaption></figure>
+      <figure><div class="sfield v"><span class="cell p em"></span>youtube.com</div><figcaption>filled · blocked site</figcaption></figure>
+      <figure><span class="addwrap"><input class="addsite" placeholder="Add a site" tabindex="-1"></span><figcaption>empty add field</figcaption></figure>
+    </div></div>
+    <div class="cr"><span class="k">Checkbox</span><div class="cv">
+      <figure><div class="ckrow"><span class="cell e"></span>Games</div><figcaption>empty</figcaption></figure>
+      <figure><div class="ckrow"><span class="cell p w"></span>Games</div><figcaption>partial</figcaption></figure>
+      <figure><div class="ckrow"><span class="cell f w"></span>Games</div><figcaption>selected</figcaption></figure>
+      <figure><div class="ckrow" style="color:var(--g3)"><span class="cell e dim"></span>Social</div><figcaption>disabled</figcaption></figure>
+      <figure><div class="ckrow"><span class="cell p em"></span>youtube.com</div><figcaption>blocked a while</figcaption></figure>
+      <figure><div class="ckrow" style="color:var(--g3)"><span class="cell f em"></span>x.com</div><figcaption>blocked forever</figcaption></figure>
+    </div></div>
+    <div class="cr"><span class="k">Duration</span><div class="cv">
+      <figure class="mtr"><div class="meter">${DURS.map((d, i) => `<span class="seg${i <= 2 ? ' on' : ''}${i === 2 ? ' cur' : ''}"><span class="sb"></span><span class="sl">${d.label}</span></span>`).join('')}</div><figcaption>until midnight · a level: longer fills more</figcaption></figure>
+      <figure class="mtr"><div class="meter ever">${DURS.map((d, i) => `<span class="seg on${i === 5 ? ' cur' : ''}"><span class="sb"></span><span class="sl">${d.label}</span></span>`).join('')}</div><figcaption>forever · the whole bar turns solid ember</figcaption></figure>
+    </div></div>
+    <div class="cr"><span class="k">Tabs</span><div class="cv"><figure style="width:100%"><div class="minitabs">
+      ${tabMini('act', LOGO(16), 'New Tab')}${tabMini('', favOf('en.wikipedia.org/wiki/Bauhaus'), 'Bauhaus – Wikipedia')}${tabMini('is-hover', favOf('github.com/x'), 'chromium/chromium')}${tabMini('blk', '<span class="cell p em"></span>', 'youtube.com')}${tabMini('blk', '<span class="cell f em"></span>', 'x.com')}
+    </div><figcaption>active · inactive · hover · blocked for a while · blocked forever</figcaption></figure></div></div>
+    <div class="cr"><span class="k">Toast</span><div class="cv"><figure style="width:520px"><div class="toast static"><span class="cell p em"></span><div class="tt"><div class="t1">Games blocked until midnight</div><div class="t2">Can be lengthened later, not shortened</div></div><div class="tdots">${'<i></i>'.repeat(6)}${'<i class="off"></i>'.repeat(4)}</div><button class="btn pri" tabindex="-1">Undo</button></div><figcaption>undo window drains one dot per second, 10 dots</figcaption></figure></div></div>
+    <div class="cr"><span class="k">Menu</span><div class="cv"><figure><div class="mspec">
+      <div class="mi"><span class="sp"></span>New tab<span class="k">Ctrl+T</span></div>
+      <div class="mi is-hover"><span class="cell e"></span>Block this site<span class="k">Ctrl+Shift+B</span></div>
+      <div class="rule"></div>
+      <div class="mi dis"><span class="cell f em"></span>Blocked forever<span class="k"></span></div>
+      <div class="mi"><span class="sp"></span>Settings<span class="k"></span></div>
+    </div><figcaption>default · hover · dotted separator · disabled</figcaption></figure></div></div>
+  </div></section>
+  </div>`;
+}
+function openSheet(){ const s = $('#sheet'); s.innerHTML = sheetHTML(); s.classList.add('open'); s.scrollTop = 0; $('#sheetClose').focus(); }
+function closeSheet(){ $('#sheet').classList.remove('open'); }
+
+/* ---------- platform ---------- */
+function setOS(v){
+  os = v; document.body.dataset.os = v;
+  document.querySelectorAll('#osw button').forEach(b => { b.classList.toggle('on', b.dataset.os === v); b.setAttribute('aria-checked', b.dataset.os === v); });
+  closePops(); render();
+}
+
+/* ---------- events ---------- */
+$('#bBack').innerHTML = GL.back; $('#bFwd').innerHTML = GL.fwd; $('#bReload').innerHTML = GL.reload; $('#bMenu').innerHTML = GL.menu; $('#newTab').innerHTML = GL.plus;
+$('#bBack').onclick = back;
+$('#bFwd').onclick = () => { const t = cur(); if (t.i < t.hist.length - 1){ t.i++; render(); } };
+$('#bReload').onclick = () => render(true);
+$('#bBlock').onclick = e => { e.stopPropagation(); openPop(); };
+$('#bMenu').onclick = e => { e.stopPropagation(); openMenu(); };
+$('#newTab').onclick = newTab;
+$('#addr').addEventListener('keydown', e => { if (e.key === 'Enter') go(e.target.value); if (e.key === 'Escape'){ e.target.blur(); renderToolbar(); } });
+$('#addr').addEventListener('focus', e => e.target.select());
+$('#addr').addEventListener('blur', () => renderToolbar());
+$('#osw').onclick = e => { const b = e.target.closest('button'); if (b) setOS(b.dataset.os); };
+$('#sysBtn').onclick = openSheet;
+$('#capHide').onclick = () => { const s = $('#stage'); s.classList.toggle('nocap'); $('#capHide').textContent = s.classList.contains('nocap') ? '09 · Dot' : 'Hide'; };
+
+$('#tabs').addEventListener('mousedown', e => {
+  const x = e.target.closest('[data-close]'); if (x) return;
+  const t = e.target.closest('.tab'); if (!t) return;
+  activeId = +t.dataset.tab; closePops(); render();
+});
+$('#tabs').addEventListener('click', e => { const x = e.target.closest('[data-close]'); if (x){ e.stopPropagation(); closeTab(+x.dataset.close); } });
+$('#tabs').addEventListener('auxclick', e => { const t = e.target.closest('.tab'); if (t && e.button === 1) closeTab(+t.dataset.tab); });
+
+document.addEventListener('click', e => {
+  const el = e.target;
+  if (el.closest('#sheetClose')) return closeSheet();
+  if (el.closest('#undo')) return undo();
+  if (el.closest('#bpBack')) return back();
+  const pd = el.closest('[data-pdur]'); if (pd){ popDur = +pd.dataset.pdur; renderPop(); $('#popGo')?.focus(); return; }
+  if (el.closest('#popGo')){
+    const h = hostOf(urlOf(cur())), snap = snapshot();
+    if (!catOf(h)) CATS[5].sites.push(h);   // toolbar blocks land in "Your sites"; Undo takes it back out
+    applyBlock([h], popDur, snap);
+    return;
+  }
+  const mi = el.closest('[data-m]');
+  if (mi){ const m = mi.dataset.m; closePops(); if (m === 'newtab') newTab(); else if (m === 'list'){ if (urlOf(cur()) !== NTP) navigate(NTP); } else if (m === 'block') openPop(); return; }
+  if (!el.closest('.pop')) closePops();
+  const ck = el.closest('[data-cat]');
+  if (ck && !ck.disabled){
+    const c = CATS.find(c => c.id === ck.dataset.cat);
+    const s = c.sites.filter(x => !isForever(x));
+    const all = s.every(x => sel.has(x));
+    s.forEach(x => all ? sel.delete(x) : sel.add(x));
+    syncNTP(); return;
+  }
+  const st = el.closest('[data-site]');
+  if (st && !st.disabled){ const s = st.dataset.site; sel.has(s) ? sel.delete(s) : sel.add(s); syncNTP(); return; }
+  const dd = el.closest('[data-dur]'); if (dd && dd.closest('#meter')){ dur = +dd.dataset.dur; syncNTP(); return; }
+  if (el.closest('#doBlock')){ if (sel.size) applyBlock([...sel], dur); return; }
+  if (el.closest('#selOpen')){ CATS.forEach(c => c.sites.forEach(s => { if (!blockOf(s)) sel.add(s); })); syncNTP(); return; }
+  if (el.closest('#selClear')){ sel.clear(); syncNTP(); return; }
+});
+document.addEventListener('keydown', e => {
+  if (e.target.id === 'addSite' && e.key === 'Enter'){
+    const v = e.target.value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+    if (/^[\w-]+(\.[\w-]+)+$/.test(v) && !catOf(v)){ CATS[5].sites.push(v); sel.add(v); syncNTP(); $('#addSite').focus(); }
+    else e.target.value = v;
+    return;
+  }
+  const m = e.ctrlKey || e.metaKey;
+  if (e.key === 'Escape'){ if ($('#sheet').classList.contains('open')) closeSheet(); else closePops(); return; }
+  if (m && e.shiftKey && (e.key === 'B' || e.key === 'b')){ e.preventDefault(); openPop(); return; }
+  if (m && (e.key === 't' || e.key === 'T') && !e.shiftKey){ e.preventDefault(); newTab(); return; }
+  if (m && (e.key === 'w' || e.key === 'W')){ e.preventDefault(); closeTab(activeId); return; }
+  if (m && (e.key === 'l' || e.key === 'L')){ e.preventDefault(); $('#addr').focus(); return; }
+});
+window.addEventListener('resize', closePops);
+// keep "until" text fresh
+setInterval(() => { renderTabs(); renderToolbar(); if (urlOf(cur()) === NTP) syncNTP(); }, 30000);
+
+window.__dot = {setOS, openSheet, closeSheet, undo, openPop, openMenu, state:() => ({blocks:Object.keys(blocks).length, blocked:blockedCount(), sel:[...sel], dur, yours:[...CATS[5].sites]})};
+render(true);
+})();
+</script>
+</body>
+</html>

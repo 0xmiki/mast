@@ -1,0 +1,924 @@
+<!doctype html>
+<!--
+  Proposal 02 · Rail
+  Riskiest pieces to port to the Chromium fork (Views, Linux):
+  1. Vertical tab strip with non-rectangular, custom-painted tabs: pennant (tapered + pointed),
+     the active tab as a Bezier sail, blocked tabs as furled bundles. Needs a custom TabStyle /
+     painted TabStrip in the vertical-tabs container, plus hit-testing that follows the shapes.
+  2. Furl / unfurl animation when a tab becomes blocked (sail collapsing onto the mast, lashings
+     appearing). gfx::SlideAnimation driving path interpolation inside the tab's OnPaint.
+  3. The "yard": one continuous frame line crossing the rail and the toolbar, and the mast line
+     running the full window height behind tabs, logo and toolbar. Must be painted by the frame
+     view (OpaqueBrowserFrameView / custom caption area) so it survives tab-strip relayout.
+  4. A box-less omnibox sitting on that line, with toolbar actions and caption buttons in the
+     same 56px band (custom BrowserNonClientFrameView layout and drag region).
+  5. Block toast with a burning 10 s Undo fuse anchored over web content: a browser-side
+     overlay view (not WebUI), so it also shows over ordinary sites.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mast · Proposal 02 · Rail</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --hull:#0a0b0d;
+  --deck:#0f1114;
+  --cloth:#ebe5d9;
+  --c80:rgba(235,229,217,.8);
+  --c60:rgba(235,229,217,.6);
+  --c45:rgba(235,229,217,.45);
+  --c30:rgba(235,229,217,.3);
+  --c14:rgba(235,229,217,.14);
+  --c08:rgba(235,229,217,.08);
+  --c05:rgba(235,229,217,.05);
+  --ink:#121316;
+  --ember:#ff6a3d;
+  --ember2:#ff8f5e;
+  --emberd:#c2300f;
+  --rail:236px;
+  --mx:34px;
+  --band:56px;
+  --pad:52px;
+  --serif:"Instrument Serif", Georgia, serif;
+  --sans:"Inter Tight", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, monospace;
+}
+@media (max-width:1360px){ :root{ --rail:204px; --pad:34px; } }
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#050506;color:var(--cloth);font-family:var(--sans);font-size:14px;overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+  background:radial-gradient(1200px 700px at 20% 0%, #121318 0%, #050506 70%)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input{font:inherit;color:inherit;background:none;border:0;outline:none}
+:focus-visible{outline:1.5px solid var(--c60);outline-offset:2px;border-radius:4px}
+
+/* ---------- window ---------- */
+.win{position:fixed;inset:10px;border-radius:12px;overflow:hidden;background:var(--hull);
+  border:1px solid rgba(235,229,217,.07);box-shadow:0 30px 80px rgba(0,0,0,.55)}
+
+/* the mast: one line, full height */
+.mast{position:absolute;left:calc(var(--mx) - .75px);top:44px;bottom:0;width:1.5px;z-index:5;pointer-events:none;
+  background:linear-gradient(to bottom, rgba(235,229,217,.34), rgba(235,229,217,.16) 60%, rgba(235,229,217,.08))}
+.yard{position:absolute;top:var(--band);left:calc(var(--mx) - 15px);right:0;height:1px;background:var(--c14);z-index:4;pointer-events:none}
+.parrel{position:absolute;top:calc(var(--band) - 3px);left:calc(var(--mx) - 3.5px);width:7px;height:7px;border-radius:50%;
+  background:var(--hull);border:1.25px solid var(--c45);z-index:5;pointer-events:none}
+
+/* ---------- top band (rigging) ---------- */
+.rig{position:absolute;top:0;left:0;right:0;height:var(--band);z-index:6}
+.masthead{position:absolute;left:calc(var(--mx) - 13px);top:13px;width:26px;height:26px}
+.masthead svg{width:26px;height:26px;display:block}
+.navs{position:absolute;left:calc(var(--mx) + 30px);top:14px;display:flex;gap:2px}
+.ib{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;color:var(--c60);transition:background .15s,color .15s}
+.ib:hover{background:var(--c08);color:var(--cloth)}
+.ib[disabled]{color:var(--c30);cursor:default;background:none}
+.ib svg{width:16px;height:16px}
+.addr{position:absolute;left:calc(var(--rail) + var(--pad));right:330px;top:14px;height:28px;display:flex;align-items:center;gap:10px;min-width:0}
+.addr .ag{width:14px;height:14px;flex:none;color:var(--c45);display:grid;place-items:center}
+.addr .ag svg{width:14px;height:14px}
+.addr .url{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.005em}
+.addr .url b{font-weight:500;color:var(--cloth)}
+.addr .url span{color:var(--c45)}
+.addr input{flex:1;font-size:14px;min-width:0}
+.addr input::placeholder{color:var(--c45)}
+.addr .tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--c30);flex:none}
+.addr .tag.em{color:var(--ember)}
+.addr .tag.em2{color:var(--ember2)}
+.addr.blocked .url b{color:var(--c60)}
+.addr.blocked .ag{color:var(--ember)}
+
+.acts{position:absolute;right:136px;top:14px;display:flex;gap:6px;align-items:center}
+.blockbtn{height:28px;padding:0 13px 0 10px;border-radius:14px;display:flex;align-items:center;gap:7px;
+  color:var(--ember2);font-weight:600;font-size:13px;letter-spacing:.01em;
+  box-shadow:inset 0 0 0 1px rgba(255,106,61,.42);transition:background .15s, box-shadow .15s}
+.blockbtn:hover,.blockbtn.open{background:rgba(255,106,61,.1);box-shadow:inset 0 0 0 1px rgba(255,106,61,.7)}
+.blockbtn svg{width:14px;height:14px}
+.wc{position:absolute;right:12px;top:14px;display:flex;gap:2px;padding-left:14px}
+.wc::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:1px;background:var(--c14)}
+.wc .ib svg{width:14px;height:14px}
+
+/* ---------- rail / tabs ---------- */
+.rail{position:absolute;top:calc(var(--band) + 1px);left:0;bottom:0;width:var(--rail);z-index:4;overflow:hidden}
+.tabs{padding-top:26px;display:flex;flex-direction:column;gap:10px}
+.t{position:relative;display:block;margin-left:var(--mx);text-align:left}
+
+/* pennant */
+.pen{height:34px;max-width:calc(var(--rail) - var(--mx) - 14px);width:max-content}
+.pen .shape{display:flex;align-items:center;gap:9px;height:100%;padding:0 30px 0 12px;
+  background:var(--c05);color:var(--c80);font-size:13px;font-weight:500;
+  clip-path:polygon(0 0, calc(100% - 18px) 3px, 100% 50%, calc(100% - 18px) calc(100% - 3px), 0 100%);
+  transition:background .15s,color .15s}
+.pen:hover .shape{background:rgba(235,229,217,.1);color:var(--cloth)}
+.pen::before,.pen::after{content:"";position:absolute;left:-3px;width:6px;height:1.5px;background:var(--c45);border-radius:1px}
+.pen::before{top:3px}.pen::after{bottom:3px}
+.fav{width:14px;height:14px;flex:none;display:grid;place-items:center}
+.fav svg{width:14px;height:14px;display:block}
+.ttl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+
+/* active sail */
+.sail{height:98px;width:calc(var(--rail) - var(--mx) - 12px);cursor:default}
+.sail svg.cloth{position:absolute;inset:0 0 4px 0;width:100%;height:calc(100% - 4px);display:block}
+.sail .boom{position:absolute;left:-6px;right:-8px;bottom:0;height:2px;border-radius:1px;background:rgba(235,229,217,.55)}
+.sail .hank{position:absolute;left:-3.5px;width:7px;height:1.5px;background:var(--cloth);border-radius:1px}
+.sail .stxt{position:absolute;left:12px;right:30px;bottom:14px;color:var(--ink)}
+.sail .srow{display:flex;align-items:center;gap:8px}
+.sail .srow .ttl{font-size:14px;font-weight:600;letter-spacing:-.005em}
+.sail .sdom{font-family:var(--mono);font-size:10.5px;color:rgba(18,19,22,.52);margin-top:3px;padding-left:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sail .x{position:absolute;right:8px;bottom:12px;width:20px;height:20px;border-radius:5px;display:grid;place-items:center;color:rgba(18,19,22,.5)}
+.sail .x:hover{background:rgba(18,19,22,.08);color:var(--ink)}
+.sail .x svg{width:10px;height:10px}
+.sail.unfurl svg.cloth{animation:unfurl .55s cubic-bezier(.2,.8,.2,1) both;transform-origin:0 50%}
+.pen.unfurl .shape{animation:unfurl .5s cubic-bezier(.2,.8,.2,1) both;transform-origin:0 50%}
+@keyframes unfurl{from{transform:scaleX(.04);opacity:.4}}
+
+/* furled (blocked) */
+.furl{height:46px;width:calc(var(--rail) - var(--mx) - 12px)}
+.furl .bundle{position:absolute;left:1px;top:3px;width:8px;height:40px;border-radius:2px 4px 4px 2px;
+  background:repeating-linear-gradient(-38deg, rgba(235,229,217,.32) 0 3px, rgba(235,229,217,.15) 3px 6px)}
+.furl .lash{position:absolute;left:-4px;width:17px;height:3px;border-radius:1.5px}
+.furl.forever .lash{background:var(--ember)}
+.furl.forever .l1{top:10px}.furl.forever .l2{top:20.5px}.furl.forever .l3{top:31px}
+.furl.timed .lash{height:4px;box-shadow:inset 0 0 0 1.25px var(--ember2)}
+.furl.timed .l1{top:12px}.furl.timed .l2{top:29px}
+.furl.timed .l3{display:none}
+.furl.timed .l2::after{content:"";position:absolute;right:-2px;top:50%;width:4px;height:4px;margin-top:-2px;border-radius:50%;
+  background:var(--ember2);box-shadow:0 0 6px 1px rgba(255,143,94,.8);animation:spark 2.4s ease-in-out infinite}
+@keyframes spark{50%{opacity:.35;box-shadow:0 0 2px 0 rgba(255,143,94,.5)}}
+.furl .flab{position:absolute;left:24px;top:6px;right:0;display:flex;flex-direction:column;gap:3px}
+.furl .flab .ttl{font-size:13px;font-weight:500;color:var(--c45);transition:color .15s}
+.furl .fstat{font-family:var(--mono);font-size:10.5px;letter-spacing:.02em}
+.furl.forever .fstat{color:var(--ember)}
+.furl.timed .fstat{color:var(--ember2)}
+.furl:hover .flab .ttl{color:var(--c80)}
+.furl.cur .flab .ttl{color:var(--cloth)}
+.furl.cur .bundle{background:repeating-linear-gradient(-38deg, rgba(235,229,217,.55) 0 3px, rgba(235,229,217,.28) 3px 6px)}
+.furl.cur::before{content:"";position:absolute;left:-14px;top:-4px;width:40px;height:54px;border-radius:50%;
+  background:radial-gradient(closest-side, rgba(255,106,61,.22), transparent);pointer-events:none}
+.furl.furling .bundle{animation:roll .6s cubic-bezier(.6,0,.3,1) both}
+.furl.furling .lash{animation:lash .28s cubic-bezier(.2,.8,.2,1) both;transform-origin:4px 50%}
+.furl.furling .l1{animation-delay:.5s}.furl.furling .l2{animation-delay:.6s}.furl.furling .l3{animation-delay:.7s}
+.furl.furling .flab{animation:fade .4s .45s both}
+@keyframes roll{0%{width:170px;height:88px;top:-20px;border-radius:0 100% 0 0;background:rgba(235,229,217,.85)}
+  100%{width:8px}}
+@keyframes lash{from{transform:scaleX(0)}}
+@keyframes fade{from{opacity:0}}
+
+.newt{height:30px;margin-top:4px;width:calc(var(--rail) - var(--mx) - 12px);display:flex;align-items:center}
+.newt .ring{position:absolute;left:-8px;top:7px;width:16px;height:16px;border-radius:50%;background:var(--hull);
+  box-shadow:inset 0 0 0 1.25px var(--c30);display:grid;place-items:center;color:var(--c60);transition:box-shadow .15s,color .15s}
+.newt .ring svg{width:8px;height:8px}
+.newt .nl{margin-left:20px;font-size:12.5px;color:var(--c45);transition:color .15s}
+.newt:hover .ring{box-shadow:inset 0 0 0 1.25px var(--c80);color:var(--cloth)}
+.newt:hover .nl{color:var(--c80)}
+
+.foot{position:absolute;left:calc(var(--mx) + 18px);bottom:20px;font-family:var(--mono);font-size:10.5px;line-height:1.7;color:var(--c45);letter-spacing:.02em}
+.foot b{font-weight:500;color:var(--c80)}
+.foot .fb{color:var(--ember2)}
+.step{position:absolute;left:calc(var(--mx) - 8px);bottom:16px;width:16px;height:1.5px;background:var(--c30);z-index:5}
+
+/* ---------- content ---------- */
+.view{position:absolute;top:calc(var(--band) + 1px);left:var(--rail);right:0;bottom:0;overflow:auto;background:var(--deck);
+  border-left:1px solid rgba(235,229,217,.05)}
+
+/* ---------- new tab: blocklist ---------- */
+.ntp{min-height:100%;display:flex;flex-direction:column;padding:42px var(--pad) 0}
+.ntp-head{display:flex;align-items:baseline;gap:22px;flex-wrap:wrap}
+.ntp-head h1{font-family:var(--serif);font-weight:400;font-size:50px;line-height:1;letter-spacing:-.01em}
+.meta{font-family:var(--mono);font-size:11.5px;color:var(--c45);letter-spacing:.02em}
+.meta b{font-weight:500;color:var(--c80)}
+.ntp-body{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 196px;gap:52px;margin-top:38px;min-height:420px}
+@media (max-width:1360px){ .ntp-body{grid-template-columns:minmax(0,1fr) 172px;gap:30px} .site,.site.add input{font-size:12px} .hals{column-gap:10px} .hal-stat{font-size:10px} .hal-name{font-size:14.5px} }
+.hals{display:grid;grid-template-columns:repeat(6, auto);justify-content:space-between;column-gap:14px}
+
+.hal{position:relative;display:flex;flex-direction:column;padding-bottom:40px}
+.hal::before{content:"";position:absolute;left:5.25px;top:12px;bottom:0;width:1.5px;background:var(--c14);
+  -webkit-mask:linear-gradient(to bottom,#000 70%,transparent);mask:linear-gradient(to bottom,#000 70%,transparent);transition:background .2s}
+.hal.forever::before{background:linear-gradient(to bottom, var(--ember), rgba(255,106,61,.35))}
+.hal.timed::before{background:repeating-linear-gradient(to bottom, var(--ember2) 0 5px, transparent 5px 9px)}
+.hal.sel::before{background:var(--c80)}
+.hal.timed.sel::before{background:repeating-linear-gradient(to bottom, var(--cloth) 0 5px, transparent 5px 9px)}
+
+.hal-head{position:relative;display:flex;flex-direction:column;justify-content:flex-start;align-items:flex-start;text-align:left;padding:0 0 16px 22px;min-height:90px;cursor:pointer}
+.hal.forever .hal-head{cursor:default}
+.cleat{position:absolute;left:0;top:0;width:12px;height:12px;border-radius:50%;background:var(--deck);box-shadow:inset 0 0 0 1.5px var(--c30);transition:all .15s}
+.hal-head:hover .cleat{box-shadow:inset 0 0 0 1.5px var(--c80)}
+.hal.some .cleat{box-shadow:inset 0 0 0 1.5px var(--cloth);background:radial-gradient(circle, var(--cloth) 0 2px, var(--deck) 2.5px)}
+.hal.sel .cleat{background:var(--cloth);box-shadow:inset 0 0 0 1.5px var(--cloth)}
+.hal.forever .cleat,.hal.timed .cleat{border-radius:1.5px;width:16px;left:-2px;box-shadow:none;background:none}
+.hal.forever .cleat{height:12px;background:repeating-linear-gradient(to bottom, var(--ember) 0 2.6px, transparent 2.6px 4.7px)}
+.hal.timed .cleat{height:12px;top:0;background:linear-gradient(var(--ember2),var(--ember2)) 0 0/100% 1.25px no-repeat,
+  linear-gradient(var(--ember2),var(--ember2)) 0 3.75px/100% 1.25px no-repeat,
+  linear-gradient(var(--ember2),var(--ember2)) 0 7.75px/100% 1.25px no-repeat,
+  linear-gradient(var(--ember2),var(--ember2)) 0 11.5px/100% 1.25px no-repeat,
+  linear-gradient(var(--ember2),var(--ember2)) 0 0/1.25px 5px no-repeat,
+  linear-gradient(var(--ember2),var(--ember2)) 100% 0/1.25px 5px no-repeat,
+  linear-gradient(var(--ember2),var(--ember2)) 0 7.75px/1.25px 5px no-repeat,
+  linear-gradient(var(--ember2),var(--ember2)) 100% 7.75px/1.25px 5px no-repeat}
+.hal.timed.sel .cleat{filter:brightness(1.4)}
+.hal-name{display:block;font-size:15px;font-weight:600;letter-spacing:-.01em;line-height:1.15;margin-top:-3px;max-width:120px}
+.hal-stat{display:block;margin-top:8px;font-family:var(--mono);font-size:10.5px;line-height:1.55;color:var(--c45);letter-spacing:.02em;white-space:nowrap}
+.hal-stat .em{color:var(--ember)}
+.hal-stat .em2{color:var(--ember2)}
+.hal-stat .op{color:var(--c60)}
+
+.sites{list-style:none;display:flex;flex-direction:column}
+.site{position:relative;height:25px;display:flex;align-items:center;padding-left:22px;font-size:12.5px;color:var(--c60);white-space:nowrap;cursor:pointer;transition:color .12s}
+.site:hover{color:var(--cloth)}
+.site .tk{position:absolute;left:6px;top:50%;width:9px;height:1px;background:var(--c30);transition:all .15s}
+.site.sel{color:var(--cloth)}
+.site.sel .tk{left:6.5px;top:calc(50% - 5px);width:11px;height:10px;background:var(--cloth);clip-path:polygon(0 0,100% 50%,0 100%)}
+.hal.forever .site,.hal.timed .site{color:var(--c45)}
+.hal.timed .site.sel{color:var(--cloth)}
+.hal.forever .site{cursor:default}
+.hal.forever .site .tk{background:rgba(255,106,61,.6)}
+.hal.timed .site:not(.sel) .tk{background:rgba(255,143,94,.5)}
+.site.lashed{height:40px;align-items:flex-start;padding-top:5px;color:var(--c45)}
+.site.lashed .tk{left:1.5px;top:8px;width:9px;height:10px;background:linear-gradient(var(--ember2),var(--ember2)) 0 0/100% 1.25px no-repeat,
+  linear-gradient(var(--ember2),var(--ember2)) 0 3px/100% 1.25px no-repeat,
+  linear-gradient(var(--ember2),var(--ember2)) 0 6.5px/100% 1.25px no-repeat,
+  linear-gradient(var(--ember2),var(--ember2)) 0 9.5px/100% 1.25px no-repeat}
+.site.lashed.sel .tk{left:6.5px;top:6px;width:11px;height:10px;background:var(--cloth);clip-path:polygon(0 0,100% 50%,0 100%)}
+.site .sl{position:absolute;left:22px;top:21px;font-family:var(--mono);font-size:10px;color:var(--ember2);letter-spacing:.02em}
+.site.add{cursor:text;color:var(--c45)}
+.site.add .tk{left:2px;width:8px;height:8px;top:calc(50% - 4px);background:none;border-radius:50%;box-shadow:inset 0 0 0 1.25px var(--c30)}
+.site.add input{font-size:12.5px;width:104px}
+.site.add input::placeholder{color:var(--c30)}
+
+/* hoist: durations up a mast */
+.hoist{display:flex;flex-direction:column;padding-bottom:40px}
+.kick{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--c45);margin-bottom:14px;padding-left:24px}
+.scale{position:relative}
+.sc-line{position:absolute;left:5.25px;top:18px;bottom:18px;width:1.5px;background:var(--c30)}
+.sc-line::before{content:"";position:absolute;left:0;top:0;width:100%;height:52px;background:linear-gradient(var(--ember), var(--c30))}
+.stop{position:relative;display:flex;align-items:center;width:100%;height:36px;padding-left:26px;text-align:left;gap:8px}
+.stop .st-tick{position:absolute;left:6px;top:50%;width:9px;height:1px;background:var(--c45);transition:opacity .15s}
+.stop .st-l{font-size:13.5px;font-weight:500;color:var(--c60);transition:color .15s}
+.stop .st-t{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--c30);letter-spacing:.02em}
+.stop:hover .st-l{color:var(--cloth)}
+.stop.on .st-l{color:var(--cloth);font-weight:600}
+.stop.on .st-t{color:var(--c60)}
+.stop.on .st-tick{opacity:0}
+.stop.ever{margin-bottom:16px}
+.stop.ever .st-tick{left:-1.5px;width:15px;height:12px;margin-top:-6px;background:repeating-linear-gradient(to bottom, var(--ember) 0 2.6px, transparent 2.6px 4.7px);opacity:1!important}
+.stop.ever .st-l{color:var(--ember2)}
+.stop.ever.on .st-l{color:var(--ember)}
+.stop[disabled]{cursor:not-allowed}
+.stop[disabled] .st-l,.stop[disabled] .st-t{color:var(--c30);text-decoration:line-through;text-decoration-color:var(--c30)}
+.stop.ever[disabled] .st-l{color:rgba(255,143,94,.35)}
+.sc-mark{position:absolute;left:6.5px;top:0;width:15px;height:13px;background:var(--cloth);clip-path:polygon(0 0,100% 50%,0 100%);
+  transition:top .32s cubic-bezier(.3,.9,.25,1), background .2s;z-index:1}
+.sc-mark.ever{background:var(--ember)}
+.stop.ever.on .st-tick{opacity:0!important}
+.sc-mark.none{opacity:0}
+
+.sum{margin:22px 0 14px;min-height:54px;padding-left:2px}
+.sum .s1{font-size:13.5px;font-weight:600;line-height:1.3}
+.sum .s2{font-family:var(--mono);font-size:10.5px;color:var(--c45);margin-top:5px;line-height:1.5;letter-spacing:.02em}
+.sum .s2 .em{color:var(--ember)}
+.sum .empty{font-size:13px;color:var(--c45);line-height:1.45}
+.go{height:44px;border-radius:10px;font-weight:600;font-size:14.5px;letter-spacing:.01em;color:#fff;display:flex;align-items:center;justify-content:center;gap:9px;
+  background:linear-gradient(135deg,#ff6a3d,#c2300f);box-shadow:0 10px 30px -10px rgba(255,106,61,.55), inset 0 1px 0 rgba(255,255,255,.18);transition:filter .15s, transform .1s}
+.go:hover{filter:brightness(1.08)}
+.go:active{transform:translateY(1px)}
+.go svg{width:14px;height:14px}
+.go[disabled]{background:none;box-shadow:inset 0 0 0 1px var(--c14);color:var(--c30);cursor:default;filter:none;transform:none}
+.note{font-family:var(--mono);font-size:10px;line-height:1.55;color:var(--c30);margin-top:12px;letter-spacing:.02em}
+
+/* ---------- ordinary sites ---------- */
+.bar{height:9px;border-radius:3px;background:currentColor;opacity:.13}
+.gh{min-height:100%;background:#0d1117;color:#e6edf3;font-family:-apple-system,"Segoe UI",system-ui,sans-serif}
+.gh-top{height:62px;background:#010409;display:flex;align-items:center;gap:14px;padding:0 24px;border-bottom:1px solid #21262d}
+.gh-logo{width:30px;height:30px;border-radius:50%;background:#e6edf3;display:grid;place-items:center}
+.gh-logo i{width:14px;height:12px;background:#010409;border-radius:50% 50% 45% 45%}
+.gh-crumb{font-size:14px;color:#e6edf3}.gh-crumb span{color:#7d8590;margin:0 6px}
+.gh-search{margin-left:auto;width:280px;height:30px;border:1px solid #30363d;border-radius:6px}
+.gh-tabs{display:flex;gap:26px;padding:0 32px;height:48px;align-items:flex-end;border-bottom:1px solid #21262d;font-size:13.5px;color:#7d8590}
+.gh-tabs span{padding-bottom:12px}
+.gh-tabs span.on{color:#e6edf3;box-shadow:inset 0 -2px 0 #f78166}
+.gh-main{display:grid;grid-template-columns:1fr 280px;gap:28px;padding:26px 32px;max-width:1180px}
+.gh-files{border:1px solid #30363d;border-radius:6px;overflow:hidden}
+.gh-files div{height:38px;border-top:1px solid #21262d;display:flex;align-items:center;gap:14px;padding:0 16px;color:#7d8590}
+.gh-files div:first-child{border-top:0;background:#161b22}
+.gh-readme{border:1px solid #30363d;border-radius:6px;margin-top:20px;padding:26px 30px}
+.gh-readme h2{font-size:30px;font-weight:600;padding-bottom:10px;border-bottom:1px solid #21262d;margin-bottom:18px}
+.gh-side h3{font-size:15px;font-weight:600;margin-bottom:14px}
+.gh-side .bar{margin-bottom:12px;color:#e6edf3}
+
+.wk{min-height:100%;background:#fff;color:#202122;font-family:-apple-system,"Segoe UI",system-ui,sans-serif}
+.wk-top{height:58px;display:flex;align-items:center;gap:14px;padding:0 28px;border-bottom:1px solid #eaecf0}
+.wk-w{font-family:"Linux Libertine",Georgia,serif;font-size:22px;letter-spacing:.04em}
+.wk-search{margin-left:30px;width:360px;height:32px;border:1px solid #a2a9b1;border-radius:2px}
+.wk-main{display:grid;grid-template-columns:1fr 290px;gap:36px;padding:26px 48px;max-width:1120px}
+.wk h2{font-family:"Linux Libertine",Georgia,"Times New Roman",serif;font-weight:400;font-size:32px;border-bottom:1px solid #a2a9b1;padding-bottom:6px}
+.wk .from{font-size:12.5px;color:#54595d;margin:8px 0 22px}
+.wk .bar{color:#202122;margin-bottom:11px;opacity:.11}
+.wk .infob{border:1px solid #a2a9b1;background:#f8f9fa;padding:12px}
+.wk .infob .img{height:200px;background:#e3e5e8;margin-bottom:12px}
+
+/* ---------- blocked page ---------- */
+.blk{position:relative;min-height:100%;display:flex;align-items:center;padding:60px var(--pad) 60px calc(var(--pad) + 120px);overflow:hidden}
+.blk.forever{background:radial-gradient(900px 520px at 12% 110%, rgba(194,48,15,.22), transparent 70%), var(--deck)}
+.blk.timed{background:radial-gradient(700px 400px at 10% -10%, rgba(255,143,94,.07), transparent 70%), var(--deck)}
+.bm{position:absolute;left:calc(var(--pad) + 40px);top:0;bottom:0;width:20px}
+.bm .ln{position:absolute;left:9px;top:0;bottom:0;width:1.5px;background:linear-gradient(to bottom, transparent, var(--c14) 20%, var(--c14) 80%, transparent)}
+.blk.forever .bm .ln{background:linear-gradient(to bottom, transparent, rgba(255,106,61,.5) 30%, rgba(255,106,61,.7) 50%, rgba(255,106,61,.5) 70%, transparent)}
+.bm .bd{position:absolute;left:10px;top:calc(50% - 60px);width:12px;height:120px;border-radius:2px 6px 6px 2px;
+  background:repeating-linear-gradient(-38deg, rgba(235,229,217,.3) 0 4px, rgba(235,229,217,.14) 4px 8px)}
+.bm .bl{position:absolute;left:3px;width:26px;height:5px;border-radius:2.5px}
+.blk.forever .bm .bl{background:var(--ember);box-shadow:0 0 18px rgba(255,106,61,.35)}
+.blk.forever .b1{top:calc(50% - 38px)}.blk.forever .b2{top:calc(50% - 2.5px)}.blk.forever .b3{top:calc(50% + 33px)}
+.blk.timed .bm .bl{height:6px;box-shadow:inset 0 0 0 1.5px var(--ember2)}
+.blk.timed .b1{top:calc(50% - 30px)}.blk.timed .b2{top:calc(50% + 24px)}
+.blk.timed .b2::after{content:"";position:absolute;right:-3px;top:0;width:6px;height:6px;border-radius:50%;background:var(--ember2);box-shadow:0 0 10px 2px rgba(255,143,94,.7);animation:spark 2.4s ease-in-out infinite}
+.blk-txt{max-width:720px}
+.blk-kick{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--c45)}
+.blk h1{font-family:var(--serif);font-weight:400;font-size:clamp(64px,7.6vw,104px);line-height:.95;letter-spacing:-.015em;margin-top:18px;color:var(--cloth)}
+.blk .until{font-family:var(--serif);font-style:italic;font-size:clamp(48px,5.6vw,76px);line-height:1;margin-top:6px}
+.blk.forever .until{color:var(--ember)}
+.blk.timed .until{color:var(--ember2)}
+.blk .bnote{margin-top:26px;font-size:15px;line-height:1.55;color:var(--c60);max-width:440px}
+.blk .bnote b{font-family:var(--mono);font-weight:500;font-size:13px;color:var(--c80)}
+.back{margin-top:34px;height:40px;padding:0 18px 0 14px;border-radius:20px;box-shadow:inset 0 0 0 1px var(--c30);display:inline-flex;align-items:center;gap:9px;font-weight:600;font-size:13.5px;transition:background .15s, box-shadow .15s}
+.back:hover{background:var(--c08);box-shadow:inset 0 0 0 1px var(--c60)}
+.back svg{width:14px;height:14px}
+
+/* ---------- popovers, toast ---------- */
+.pop{position:absolute;top:calc(var(--band) + 8px);z-index:20;width:300px;background:#15171b;border-radius:12px;
+  box-shadow:0 0 0 1px rgba(235,229,217,.09), 0 24px 60px rgba(0,0,0,.6);padding:18px 18px 18px;display:none}
+.pop.on{display:block;animation:pop .16s ease-out}
+@keyframes pop{from{opacity:0;transform:translateY(-4px)}}
+.pop h3{font-size:15px;font-weight:600;letter-spacing:-.005em}
+.pop h3 .d{font-family:var(--mono);font-weight:500;font-size:13.5px}
+.pop .pn{font-size:12.5px;color:var(--c45);margin-top:5px;line-height:1.45}
+.pop .scale{margin-top:14px}
+.pop .stop{height:32px}
+.pop .sc-line{top:16px;bottom:16px}
+.pop .sc-line::before{height:46px}
+.pop .go{width:100%;margin-top:14px;height:40px;font-size:13.5px}
+.menu{width:236px;padding:6px}
+.menu button{width:100%;height:32px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-radius:7px;font-size:13px;color:var(--c80)}
+.menu button:hover{background:var(--c08);color:var(--cloth)}
+.menu button span{font-family:var(--mono);font-size:10.5px;color:var(--c30)}
+.menu hr{border:0;height:1px;background:var(--c08);margin:5px 4px}
+
+.toast{position:absolute;bottom:26px;left:calc(var(--rail) + (100% - var(--rail)) / 2);transform:translate(-50%,16px);z-index:30;
+  display:flex;align-items:center;gap:12px;height:46px;padding:0 8px 0 16px;background:#17191d;border-radius:11px;overflow:hidden;
+  box-shadow:0 0 0 1px rgba(235,229,217,.1), 0 18px 50px rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .2s, transform .25s cubic-bezier(.2,.8,.2,1);white-space:nowrap}
+.toast.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.toast .tg{color:var(--ember);display:grid}
+.toast .tg svg{width:14px;height:14px}
+.toast .tm{font-size:13.5px;font-weight:500}
+.toast .tm em{font-style:normal;color:var(--ember2)}
+.toast .undo{height:30px;padding:0 12px;border-radius:7px;font-weight:600;font-size:13px;color:var(--cloth);box-shadow:inset 0 0 0 1px var(--c30);margin-left:8px;display:flex;align-items:center;gap:8px}
+.toast .undo:hover{background:var(--c08)}
+.toast .undo span{font-family:var(--mono);font-weight:400;font-size:11px;color:var(--c45);min-width:14px}
+.toast .fuse{position:absolute;left:0;bottom:0;height:2px;width:100%;background:linear-gradient(90deg,var(--emberd),var(--ember));transform-origin:0 50%}
+.toast .fuse::after{content:"";position:absolute;right:-2px;top:-2px;width:5px;height:5px;border-radius:50%;background:#ffb08f;box-shadow:0 0 8px 2px rgba(255,106,61,.9)}
+.toast.on .fuse{animation:burn 10s linear forwards}
+@keyframes burn{to{width:0}}
+
+/* ---------- caption ---------- */
+.cap{position:fixed;right:24px;bottom:24px;z-index:50;width:296px;background:rgba(20,21,24,.94);border-radius:10px;
+  box-shadow:0 0 0 1px rgba(235,229,217,.1), 0 14px 40px rgba(0,0,0,.5);padding:13px 38px 14px 15px}
+.cap .ck{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--c80)}
+.cap .ck i{font-style:normal;color:var(--ember)}
+.cap p{font-size:12.5px;line-height:1.5;color:var(--c60);margin-top:7px}
+.cap .cx{position:absolute;right:8px;top:8px;width:22px;height:22px;border-radius:6px;display:grid;place-items:center;color:var(--c45)}
+.cap .cx:hover{background:var(--c08);color:var(--cloth)}
+.cap .cx svg{width:10px;height:10px}
+.cap.min{width:auto;padding:8px 12px;cursor:pointer}
+.cap.min p,.cap.min .cx{display:none}
+</style>
+</head>
+<body>
+
+<div class="win" id="win">
+  <div class="mast"></div>
+  <div class="yard"></div>
+  <div class="parrel"></div>
+  <div class="step"></div>
+
+  <header class="rig">
+    <div class="masthead" title="Mast">
+      <svg viewBox="0 0 32 32"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6a3d"/><stop offset="1" stop-color="#c2300f"/></linearGradient></defs>
+<rect width="32" height="32" rx="8" fill="url(#g)"/>
+<path d="M14 10.5V24.5H6.6Q7.4 16 14 10.5Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/>
+<path d="M17 6V24.5H25.4Q24.7 13 17 6Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="navs">
+      <button class="ib" id="navBack" title="Back"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 8H3.5M7.5 4 3.5 8l4 4"/></svg></button>
+      <button class="ib" disabled title="Forward"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h9.5M8.5 4l4 4-4 4"/></svg></button>
+      <button class="ib" title="Reload"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.8 6.2A5 5 0 1 0 13 9.5"/><path d="M13 2.8v3.6H9.4"/></svg></button>
+    </div>
+    <div class="addr" id="addr"></div>
+    <div class="acts">
+      <button class="blockbtn" id="blockBtn" title="Block this site"><svg viewBox="0 0 14 14"><rect x="6.25" y="0" width="1.5" height="14" fill="currentColor" opacity=".55"/><rect x="2.5" y="3.5" width="9" height="2.2" rx="1" fill="currentColor"/><rect x="2.5" y="8.3" width="9" height="2.2" rx="1" fill="currentColor"/></svg>Block</button>
+      <button class="ib" id="menuBtn" title="Menu"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3.5" r="1.3"/><circle cx="8" cy="8" r="1.3"/><circle cx="8" cy="12.5" r="1.3"/></svg></button>
+    </div>
+    <div class="wc">
+      <button class="ib" title="Minimise"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 7.5h8"/></svg></button>
+      <button class="ib" title="Maximise"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="3" y="3" width="8" height="8" rx="1.5"/></svg></button>
+      <button class="ib" title="Close"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7"/></svg></button>
+    </div>
+  </header>
+
+  <nav class="rail" aria-label="Tabs">
+    <div class="tabs" id="tabs"></div>
+    <div class="foot" id="foot"></div>
+  </nav>
+
+  <main class="view" id="view"></main>
+
+  <div class="pop" id="blockPop" role="dialog"></div>
+  <div class="pop menu" id="menuPop" role="menu">
+    <button data-m="newtab">New tab <span>Ctrl+T</span></button>
+    <button>New window <span>Ctrl+N</span></button>
+    <button>History <span>Ctrl+H</span></button>
+    <button>Downloads <span>Ctrl+J</span></button>
+    <hr>
+    <button data-m="blocklist">Blocklist <span id="menuCount">21</span></button>
+    <button>Settings</button>
+  </div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<aside class="cap" id="cap">
+  <div class="ck">Proposal 2 · <i>Rail</i></div>
+  <p>The mast is the layout. Tabs hang as flags on one line, the open tab is a full sail, and blocked tabs are furled and lashed in ember.</p>
+  <button class="cx" id="capX" title="Collapse"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M2 5h6"/></svg></button>
+</aside>
+
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const BASE = new Date(2026, 9, 30, 15, 40); // Thu 30 Oct, 15:40
+const DUR = [
+  {id:'1h',  label:'1 hour',         min:60,        phrase:'for 1 hour'},
+  {id:'4h',  label:'4 hours',        min:240,       phrase:'for 4 hours'},
+  {id:'mid', label:'Until midnight', min:500,       phrase:'until midnight'},
+  {id:'1w',  label:'1 week',         min:7*1440,    phrase:'for 1 week'},
+  {id:'1m',  label:'1 month',        min:31*1440,   phrase:'for 1 month'},
+  {id:'ever',label:'Forever',        min:Infinity,  phrase:'forever'},
+];
+const durById = id => DUR.find(d => d.id === id);
+
+const CATS = [
+  {id:'social', name:'Social', sites:['x.com','twitter.com','facebook.com','instagram.com','tiktok.com','reddit.com','snapchat.com','threads.net','bsky.app','pinterest.com','tumblr.com','discord.com']},
+  {id:'video', name:'Video & streaming', sites:['youtube.com','netflix.com','twitch.tv','kick.com','primevideo.com','disneyplus.com','hulu.com','max.com']},
+  {id:'news', name:'News & forums', sites:['news.ycombinator.com','cnn.com','foxnews.com','bbc.com','nytimes.com','buzzfeed.com','9gag.com']},
+  {id:'shop', name:'Shopping', sites:['amazon.com','ebay.com','aliexpress.com','temu.com','etsy.com','shein.com']},
+  {id:'games', name:'Games', sites:['chess.com','lichess.org','roblox.com','store.steampowered.com','poki.com']},
+  {id:'yours', name:'Your sites', sites:['espn.com']},
+];
+const catOf = d => CATS.find(c => c.sites.includes(d));
+
+const blocks = {};
+CATS[0].sites.forEach(d => blocks[d] = {end:Infinity, since:'Oct 18'});
+CATS[1].sites.forEach(d => blocks[d] = {end:500, since:'Oct 30'});
+blocks['news.ycombinator.com'] = {end:5*1440, since:'Oct 28'};
+const STOPPED_TODAY = 4;
+
+const ICON = {
+  ntp:'<svg viewBox="0 0 32 32"><path d="M14 10.5V24.5H6.6Q7.4 16 14 10.5Z" fill="currentColor"/><path d="M17 6V24.5H25.4Q24.7 13 17 6Z" fill="currentColor"/></svg>',
+  github:'<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="currentColor"/><ellipse cx="8" cy="8.2" rx="3.4" ry="2.9" fill="var(--fg-cut,#0a0b0d)"/></svg>',
+  wiki:'<svg viewBox="0 0 16 16"><text x="8" y="12.2" text-anchor="middle" font-family="Georgia,serif" font-size="12.5" fill="currentColor">W</text></svg>',
+  youtube:'<svg viewBox="0 0 16 16"><rect x="1" y="3" width="14" height="10" rx="3" fill="currentColor"/><path d="M6.5 5.7v4.6L10.4 8z" fill="var(--fg-cut,#0a0b0d)"/></svg>',
+  x:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 2.5l10 11M13 2.5l-10 11"/></svg>',
+  globe:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="8" cy="8" r="6"/><path d="M2 8h12M8 2c2 2 2 10 0 12M8 2c-2 2-2 10 0 12"/></svg>',
+};
+const LASH = '<svg viewBox="0 0 14 14"><rect x="6.25" y="0" width="1.5" height="14" fill="currentColor" opacity=".55"/><rect x="2.5" y="3.5" width="9" height="2.2" rx="1" fill="currentColor"/><rect x="2.5" y="8.3" width="9" height="2.2" rx="1" fill="currentColor"/></svg>';
+const LOCK = '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="3" y="6.2" width="8" height="5.8" rx="1.4"/><path d="M4.8 6.2V4.6a2.2 2.2 0 0 1 4.4 0v1.6"/></svg>';
+const SEARCH = '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><circle cx="6" cy="6" r="4"/><path d="M9 9l3 3"/></svg>';
+
+let tabs = [
+  {id:1, kind:'ntp',    title:'New Tab',             icon:'ntp',     domain:null},
+  {id:2, kind:'github', title:'0xmiki/mast',         icon:'github',  domain:'github.com', path:'/0xmiki/mast'},
+  {id:3, kind:'wiki',   title:'Odysseus — Wikipedia',icon:'wiki',    domain:'en.wikipedia.org', path:'/wiki/Odysseus'},
+  {id:4, kind:'site',   title:'YouTube',             icon:'youtube', domain:'youtube.com', path:'/'},
+  {id:5, kind:'site',   title:'Home / X',            icon:'x',       domain:'x.com', path:'/home'},
+];
+let nextId = 6;
+let activeId = 1;
+let lastOkId = 1;
+let sel = new Set();
+let dur = 'mid';
+let popDur = 'mid';
+const wasBlocked = new Map();
+let viewKey = '';
+
+/* ---------- time labels ---------- */
+const pad2 = n => String(n).padStart(2,'0');
+const at = m => new Date(BASE.getTime() + m*60000);
+const mon = d => d.toLocaleDateString('en-US',{month:'short', day:'numeric'});
+function stopTime(min){
+  if (min === Infinity) return 'never lifts';
+  if (min === 500) return '00:00';
+  const d = at(min);
+  return min < 500 ? pad2(d.getHours())+':'+pad2(d.getMinutes()) : mon(d);
+}
+function endLong(end){
+  if (end === Infinity) return 'Forever';
+  if (end === 500) return 'Until midnight';
+  if (end < 500) return 'Until ' + stopTime(end);
+  return 'Until ' + mon(at(end));
+}
+function endShort(end){
+  if (end === Infinity) return 'forever';
+  if (end <= 500) return 'till ' + stopTime(end);
+  const days = Math.round(end/1440);
+  return days < 7 ? days + ' days left' : 'till ' + mon(at(end));
+}
+const blockOf = t => t.domain ? blocks[t.domain] || null : null;
+const blockedCount = () => Object.keys(blocks).length;
+
+/* ---------- rail ---------- */
+function pennant(t){
+  return `<button class="t pen" data-id="${t.id}" title="${t.title}"><span class="shape"><i class="fav">${ICON[t.icon]}</i><span class="ttl">${t.title}</span></span></button>`;
+}
+function sail(t, cls){
+  const seam = 'stroke="rgba(18,19,22,.07)" stroke-width="1" fill="none" vector-effect="non-scaling-stroke"';
+  return `<div class="t sail ${cls}" data-id="${t.id}" style="--fg-cut:#ebe5d9">
+    <svg class="cloth" viewBox="0 0 180 94" preserveAspectRatio="none">
+      <defs><clipPath id="sc"><path d="M0 0H26Q160 16 180 94H0Z"/></clipPath>
+      <linearGradient id="sg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f2ede3"/><stop offset="1" stop-color="#ddd6c8"/></linearGradient></defs>
+      <path d="M0 0H26Q160 16 180 94H0Z" fill="url(#sg)"/>
+      <g clip-path="url(#sc)"><path d="M0 30 Q90 26 200 40" ${seam}/><path d="M0 58 Q90 54 200 66" ${seam}/></g>
+    </svg>
+    <i class="hank" style="top:2px"></i><i class="hank" style="top:46px"></i><i class="hank" style="top:88px"></i>
+    <i class="boom"></i>
+    <div class="stxt"><div class="srow"><i class="fav" style="color:#121316">${ICON[t.icon]}</i><span class="ttl">${t.title}</span></div>
+      <div class="sdom">${t.domain ? t.domain + (t.path && t.path !== '/' ? t.path : '') : 'mast://newtab'}</div></div>
+    <button class="x" data-close="${t.id}" title="Close tab"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M2 2l6 6M8 2 2 8"/></svg></button>
+  </div>`;
+}
+function furled(t, b, cls){
+  const kind = b.end === Infinity ? 'forever' : 'timed';
+  return `<button class="t furl ${kind} ${t.id===activeId?'cur':''} ${cls}" data-id="${t.id}" title="${t.domain}: ${endLong(b.end).toLowerCase()}">
+    <i class="bundle"></i><i class="lash l1"></i><i class="lash l2"></i><i class="lash l3"></i>
+    <span class="flab"><span class="ttl">${t.title}</span><span class="fstat">${endShort(b.end)}</span></span></button>`;
+}
+function renderRail(){
+  const html = tabs.map(t => {
+    const b = blockOf(t);
+    const before = wasBlocked.get(t.id);
+    wasBlocked.set(t.id, !!b);
+    if (b) return furled(t, b, before === false ? 'furling' : '');
+    const anim = before === true ? 'unfurl' : '';
+    return t.id === activeId ? sail(t, anim) : pennant(t).replace('class="t pen"', `class="t pen ${anim}"`);
+  }).join('');
+  $('#tabs').innerHTML = html + `<button class="t newt" id="newTab" title="New tab (Ctrl+T)"><i class="ring"><svg viewBox="0 0 8 8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M4 .8v6.4M.8 4h6.4"/></svg></i><span class="nl">New tab</span></button>`;
+  $('#menuCount').textContent = blockedCount();
+  $('#foot').innerHTML = `<div><b>${blockedCount()}</b> sites <span class="fb">blocked</span></div><div><b>${STOPPED_TODAY}</b> stopped today</div>`;
+}
+
+/* ---------- top band ---------- */
+function renderTop(){
+  const t = tabs.find(x => x.id === activeId);
+  const a = $('#addr');
+  const b = blockOf(t);
+  a.className = 'addr' + (b ? ' blocked' : '');
+  if (t.kind === 'ntp'){
+    a.innerHTML = `<i class="ag">${SEARCH}</i><input id="omni" placeholder="Search Google or type a URL" aria-label="Address"><span class="tag">Google</span>`;
+  } else if (b){
+    a.innerHTML = `<i class="ag">${LASH}</i><span class="url"><b>${t.domain}</b><span>${t.path === '/' ? '' : t.path}</span></span><span class="tag ${b.end===Infinity?'em':'em2'}">${b.end===Infinity?'blocked forever':'blocked '+endShort(b.end)}</span>`;
+  } else {
+    a.innerHTML = `<i class="ag">${LOCK}</i><span class="url"><b>${t.domain}</b><span>${t.path}</span></span>`;
+  }
+  $('#navBack').disabled = t.kind === 'ntp';
+}
+
+/* ---------- views ---------- */
+function renderView(){
+  const t = tabs.find(x => x.id === activeId);
+  const b = blockOf(t);
+  const key = t.id + ':' + (b ? 'b' + b.end : t.kind);
+  const v = $('#view');
+  if (key === viewKey && t.kind === 'ntp'){ renderHals(); updateHoist(); return; }
+  viewKey = key;
+  v.scrollTop = 0;
+  if (b) v.innerHTML = blockedPage(t, b);
+  else if (t.kind === 'ntp') { v.innerHTML = ntpPage(); renderHals(); updateHoist(); }
+  else if (t.kind === 'github') v.innerHTML = githubPage();
+  else if (t.kind === 'wiki') v.innerHTML = wikiPage();
+  else v.innerHTML = githubPage();
+}
+function renderAll(){ renderRail(); renderTop(); renderView(); }
+
+function bars(ws, h){ return ws.map(w => `<div class="bar" style="width:${w}%${h?';height:'+h+'px':''}"></div>`).join(''); }
+function githubPage(){
+  return `<div class="gh"><div class="gh-top"><div class="gh-logo"><i></i></div><div class="gh-crumb">0xmiki<span>/</span><b>mast</b></div><div class="gh-search"></div></div>
+  <div class="gh-tabs"><span class="on">Code</span><span>Issues</span><span>Pull requests</span><span>Actions</span><span>Settings</span></div>
+  <div class="gh-main"><div>
+    <div class="gh-files">${[0,1,2,3,4,5].map(i => `<div><span class="bar" style="width:${[30,18,22,14,26,20][i]}%;height:8px;color:#e6edf3"></span><span class="bar" style="margin-left:auto;width:${[10,14,12,9,13,11][i]}%;height:8px;color:#e6edf3"></span></div>`).join('')}</div>
+    <div class="gh-readme"><h2>Mast</h2><div style="color:#e6edf3">${bars([96,88,92,60])}<div style="height:14px"></div>${bars([90,94,70])}</div></div>
+  </div><div class="gh-side"><h3>About</h3>${bars([92,80,64])}<div style="height:18px"></div>${bars([40,46,38])}</div></div></div>`;
+}
+function wikiPage(){
+  return `<div class="wk"><div class="wk-top"><span class="wk-w">W<span style="font-size:15px;letter-spacing:.12em"> IKIPEDIA</span></span><div class="wk-search"></div></div>
+  <div class="wk-main"><div><h2>Odysseus</h2><div class="from">From Wikipedia, the free encyclopedia</div>
+    ${bars([98,95,99,92,97,64])}<div style="height:18px"></div>${bars([96,99,90,94,72])}<div style="height:18px"></div>${bars([94,97,88,50])}</div>
+    <div class="infob"><div class="img"></div>${bars([80,62,74,58,70])}</div></div></div>`;
+}
+function blockedPage(t, b){
+  const ever = b.end === Infinity;
+  return `<section class="blk ${ever?'forever':'timed'}">
+    <div class="bm"><i class="ln"></i><i class="bd"></i><i class="bl b1"></i><i class="bl b2"></i>${ever?'<i class="bl b3"></i>':''}</div>
+    <div class="blk-txt">
+      <div class="blk-kick">Blocked</div>
+      <h1>${t.domain}</h1>
+      <div class="until">${ever ? 'forever.' : endLong(b.end).toLowerCase() + '.'}</div>
+      <p class="bnote">${ever
+        ? `Blocked since <b>${b.since}</b>. A forever block can’t be shortened or lifted.`
+        : `Opens again at <b>${stopTime(b.end)}</b>${b.end===500?' tonight':''}. It can be lengthened, never shortened.`}</p>
+      <button class="back" id="backBtn"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 8H3.5M7.5 4 3.5 8l4 4"/></svg>Back</button>
+    </div></section>`;
+}
+
+/* ---------- new tab: blocklist ---------- */
+function scaleHTML(){
+  return `<i class="sc-line"></i><i class="sc-mark"></i>` + DUR.slice().reverse().map(d =>
+    `<button class="stop ${d.id==='ever'?'ever':''}" data-dur="${d.id}"><i class="st-tick"></i><span class="st-l">${d.label}</span><span class="st-t">${stopTime(d.min)}</span></button>`).join('');
+}
+function ntpPage(){
+  return `<section class="ntp">
+    <div class="ntp-head"><h1>Blocklist</h1><p class="meta" id="ntpMeta"></p></div>
+    <div class="ntp-body">
+      <div class="hals" id="hals"></div>
+      <aside class="hoist">
+        <div class="kick">How long</div>
+        <div class="scale" id="scale">${scaleHTML()}</div>
+        <div class="sum" id="sum"></div>
+        <button class="go" id="go"></button>
+        <div class="note" id="note"></div>
+      </aside>
+    </div></section>`;
+}
+function catState(c){
+  const ends = c.sites.map(d => blocks[d] ? blocks[d].end : null);
+  const n = ends.filter(e => e !== null).length;
+  if (n === 0) return {kind:'open', n};
+  if (n === c.sites.length && ends.every(e => e === ends[0])) return {kind: ends[0] === Infinity ? 'forever' : 'timed', end: ends[0], n};
+  return {kind:'partial', n};
+}
+const selectable = c => c.sites.filter(d => !(blocks[d] && blocks[d].end === Infinity));
+function renderHals(){
+  const host = $('#hals'); if (!host) return;
+  host.innerHTML = CATS.map(c => {
+    const st = catState(c);
+    const sl = selectable(c);
+    const all = sl.length && sl.every(d => sel.has(d));
+    const some = sl.some(d => sel.has(d));
+    const cnt = c.sites.length + (c.sites.length === 1 ? ' site' : ' sites');
+    let stat;
+    if (st.kind === 'forever') stat = `<span class="em">Forever</span><br>since ${c.sites.map(d => blocks[d].since).sort((a,b) => Date.parse(b+' 2026') - Date.parse(a+' 2026'))[0]}`;
+    else if (st.kind === 'timed') stat = `<span class="em2">${endLong(st.end)}</span><br>${cnt}`;
+    else if (st.kind === 'partial') stat = `<span class="op">${st.n} of ${c.sites.length} blocked</span><br>${cnt}`;
+    else stat = `<span class="op">Open</span><br>${cnt}`;
+    const rows = c.sites.map(d => {
+      const b = blocks[d];
+      const own = b && st.kind === 'partial';
+      return `<li class="site ${own?'lashed':''} ${sel.has(d)?'sel':''}" data-d="${d}" ${b && b.end===Infinity?'title="Blocked forever"':''}><i class="tk"></i>${d}${own?`<span class="sl">${endShort(b.end)}</span>`:''}</li>`;
+    }).join('') + (c.id === 'yours' ? `<li class="site add"><i class="tk"></i><input id="addSite" placeholder="Add a site" spellcheck="false" aria-label="Add a site"></li>` : '');
+    return `<div class="hal ${st.kind} ${all?'sel':some?'some':''}" data-cat="${c.id}">
+      <button class="hal-head" data-cat="${c.id}" ${st.kind==='forever'?'title="Blocked forever. Nothing to change."':''}><i class="cleat"></i><span class="hal-name">${c.name}</span><span class="hal-stat">${stat}</span></button>
+      <ul class="sites">${rows}</ul></div>`;
+  }).join('');
+  $('#ntpMeta').innerHTML = `<b>${blockedCount()}</b> sites blocked · <b>${STOPPED_TODAY}</b> distractions stopped today`;
+}
+function durDisabled(d, domains){
+  return domains.some(x => blocks[x] && d.min <= blocks[x].end);
+}
+function firstAllowed(cur, domains){
+  const c = durById(cur);
+  if (!durDisabled(c, domains)) return cur;
+  const ok = DUR.find(d => d.min >= c.min && !durDisabled(d, domains)) || DUR.find(d => !durDisabled(d, domains));
+  return ok ? ok.id : cur;
+}
+function updateScale(scaleEl, value, domains, empty){
+  scaleEl.querySelectorAll('.stop').forEach(s => {
+    const d = durById(s.dataset.dur);
+    s.disabled = durDisabled(d, domains);
+    s.title = s.disabled ? 'Blocks only lengthen' : '';
+    s.classList.toggle('on', s.dataset.dur === value);
+  });
+  const on = scaleEl.querySelector(`.stop[data-dur="${value}"]`);
+  const mark = scaleEl.querySelector('.sc-mark');
+  mark.classList.toggle('ever', value === 'ever');
+  mark.classList.toggle('none', !!empty);
+  if (on) mark.style.top = (on.offsetTop + on.offsetHeight/2 - 6.5) + 'px';
+}
+function describe(domains){
+  const set = new Set(domains);
+  const parts = [];
+  let rest = [...set];
+  CATS.forEach(c => {
+    const sl = selectable(c);
+    if (sl.length > 1 && sl.every(d => set.has(d))){ parts.push(c.name); rest = rest.filter(d => !sl.includes(d)); }
+  });
+  if (rest.length === 1) parts.push(rest[0]);
+  else if (rest.length) parts.push(rest.length + ' sites');
+  return parts.length > 1 ? parts.slice(0,-1).join(', ') + ' and ' + parts.at(-1) : parts[0];
+}
+function updateHoist(){
+  const scale = $('#scale'); if (!scale) return;
+  const domains = [...sel];
+  dur = firstAllowed(dur, domains);
+  updateScale(scale, dur, domains, !domains.length);
+  const d = durById(dur);
+  const go = $('#go');
+  if (!domains.length){
+    $('#sum').innerHTML = `<div class="empty">Pick categories or single sites on the left, then a length.</div>`;
+    go.disabled = true; go.innerHTML = 'Block';
+  } else {
+    const ends = d.min === Infinity ? '<span class="em">forever</span>' : (d.id === 'mid' ? 'until 00:00' : d.min < 500 ? 'until ' + stopTime(d.min) : 'until ' + stopTime(d.min));
+    $('#sum').innerHTML = `<div class="s1">${describe(domains)}</div><div class="s2">${domains.length} ${domains.length===1?'site':'sites'} · ${ends}</div>`;
+    go.disabled = false; go.innerHTML = LASH + (d.min === Infinity ? 'Block forever' : 'Block');
+  }
+  const anyBlocked = domains.some(x => blocks[x]);
+  $('#note').textContent = anyBlocked ? 'Shorter lengths are off. Blocks only lengthen.' : (d.min === Infinity && domains.length ? 'Forever can’t be lifted once Undo runs out.' : '');
+}
+
+/* ---------- blocking ---------- */
+function applyBlock(domains, durMin, subject, extraUndo){
+  const prev = domains.map(d => [d, blocks[d] ? {...blocks[d]} : null]);
+  domains.forEach(d => {
+    const cur = blocks[d];
+    if (!cur || durMin > cur.end) blocks[d] = {end:durMin, since: cur ? cur.since : 'Oct 30'};
+  });
+  sel.clear();
+  renderAll();
+  const phrase = DUR.find(x => x.min === durMin).phrase;
+  toast(`${subject} blocked <em>${phrase}</em>`, () => {
+    prev.forEach(([d,p]) => { if (p) blocks[d] = p; else delete blocks[d]; });
+    if (extraUndo) extraUndo();
+    renderAll();
+  });
+}
+let tInt = null, tUndo = null;
+function toast(msg, undo){
+  const el = $('#toast');
+  clearInterval(tInt);
+  el.classList.remove('on'); void el.offsetWidth;
+  el.innerHTML = `<span class="tg">${LASH}</span><span class="tm">${msg}</span><button class="undo" id="undoBtn">Undo <span id="tc">10</span></button><i class="fuse"></i>`;
+  el.classList.add('on');
+  tUndo = undo;
+  let left = 10;
+  tInt = setInterval(() => {
+    left--; const c = $('#tc'); if (c) c.textContent = left;
+    if (left <= 0){ clearInterval(tInt); tUndo = null; el.classList.remove('on'); }
+  }, 1000);
+}
+function undo(){
+  if (!tUndo) return;
+  const fn = tUndo; tUndo = null; clearInterval(tInt);
+  $('#toast').classList.remove('on');
+  fn();
+}
+
+/* ---------- toolbar block popover ---------- */
+function openBlockPop(){
+  closePops();
+  const t = tabs.find(x => x.id === activeId);
+  const b = blockOf(t);
+  const pop = $('#blockPop');
+  if (t.kind === 'ntp'){
+    pop.innerHTML = `<h3>Nothing to block here</h3><p class="pn">Open a site and press Block, or pick from the blocklist on this page.</p>`;
+  } else if (b && b.end === Infinity){
+    pop.innerHTML = `<h3><span class="d">${t.domain}</span> is blocked forever</h3><p class="pn">Since ${b.since}. Nothing is longer than forever.</p>`;
+  } else {
+    popDur = firstAllowed(b ? 'ever' : popDur, [t.domain]);
+    if (b) popDur = DUR.find(d => !durDisabled(d,[t.domain])).id;
+    pop.innerHTML = `<h3>${b ? 'Lengthen' : 'Block'} <span class="d">${t.domain}</span></h3>
+      <p class="pn">${b ? `Blocked ${endLong(b.end).toLowerCase()}. Only longer lengths are open.` : 'Can be lengthened later, never shortened.'}</p>
+      <div class="scale" id="popScale">${scaleHTML()}</div><button class="go" id="popGo"></button>`;
+  }
+  pop.classList.add('on');
+  const w = $('#win').getBoundingClientRect(), r = $('#blockBtn').getBoundingClientRect();
+  pop.style.left = Math.round(r.right - w.left - pop.offsetWidth + 40) + 'px';
+  $('#blockBtn').classList.add('open');
+  updatePop();
+}
+function updatePop(){
+  const s = $('#popScale'); if (!s) return;
+  const t = tabs.find(x => x.id === activeId);
+  updateScale(s, popDur, [t.domain]);
+  const d = durById(popDur);
+  $('#popGo').innerHTML = LASH + (d.min === Infinity ? `Block ${t.domain} forever` : `Block ${t.domain}`);
+}
+function popBlock(){
+  const t = tabs.find(x => x.id === activeId);
+  const yours = CATS.find(c => c.id === 'yours');
+  let added = false;
+  if (!catOf(t.domain)){ yours.sites.push(t.domain); added = true; }
+  closePops();
+  applyBlock([t.domain], durById(popDur).min, t.domain, () => {
+    if (added) yours.sites = yours.sites.filter(d => d !== t.domain);
+  });
+}
+function openMenu(){
+  closePops();
+  const pop = $('#menuPop');
+  pop.classList.add('on');
+  const w = $('#win').getBoundingClientRect(), r = $('#menuBtn').getBoundingClientRect();
+  pop.style.left = Math.round(r.right - w.left - pop.offsetWidth) + 'px';
+}
+function closePops(){
+  document.querySelectorAll('.pop.on').forEach(p => p.classList.remove('on'));
+  $('#blockBtn').classList.remove('open');
+}
+
+/* ---------- tabs ---------- */
+function activate(id){
+  activeId = id;
+  const t = tabs.find(x => x.id === id);
+  if (!blockOf(t)) lastOkId = id;
+  closePops();
+  renderAll();
+}
+function newTab(){
+  const t = {id:nextId++, kind:'ntp', title:'New Tab', icon:'ntp', domain:null};
+  tabs.push(t); wasBlocked.set(t.id, false);
+  activate(t.id);
+}
+function closeTab(id){
+  const i = tabs.findIndex(t => t.id === id);
+  tabs.splice(i, 1);
+  if (!tabs.length){ newTab(); return; }
+  if (activeId === id){ const n = tabs[Math.max(0, i-1)]; activate(n.id); } else renderAll();
+}
+function goBack(){
+  const t = tabs.find(x => x.id === lastOkId && !blockOf(x)) || tabs.find(x => x.kind === 'ntp');
+  if (t) activate(t.id); else newTab();
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', e => {
+  const el = e.target;
+  const close = el.closest('[data-close]');
+  if (close){ e.stopPropagation(); closeTab(+close.dataset.close); return; }
+  const tab = el.closest('.t[data-id]');
+  if (tab){ activate(+tab.dataset.id); return; }
+  if (el.closest('#newTab')){ newTab(); return; }
+  if (el.closest('#blockBtn')){ $('#blockPop').classList.contains('on') ? closePops() : openBlockPop(); return; }
+  if (el.closest('#menuBtn')){ $('#menuPop').classList.contains('on') ? closePops() : openMenu(); return; }
+  const m = el.closest('#menuPop button');
+  if (m){ closePops(); if (m.dataset.m === 'newtab') newTab(); if (m.dataset.m === 'blocklist'){ const n = tabs.find(t => t.kind==='ntp'); n ? activate(n.id) : newTab(); } return; }
+  const pstop = el.closest('#popScale .stop');
+  if (pstop){ if (!pstop.disabled){ popDur = pstop.dataset.dur; updatePop(); } return; }
+  if (el.closest('#popGo')){ popBlock(); return; }
+  if (el.closest('#blockPop')) return;
+  if (!el.closest('.pop')) closePops();
+
+  if (el.closest('#undoBtn')){ undo(); return; }
+  if (el.closest('#backBtn') || el.closest('#navBack')){ if (activeId !== lastOkId || blockOf(tabs.find(x=>x.id===activeId))) goBack(); return; }
+
+  const head = el.closest('.hal-head');
+  if (head){
+    const c = CATS.find(x => x.id === head.dataset.cat);
+    const sl = selectable(c);
+    if (!sl.length) return;
+    const all = sl.every(d => sel.has(d));
+    sl.forEach(d => all ? sel.delete(d) : sel.add(d));
+    renderHals(); updateHoist(); return;
+  }
+  const site = el.closest('.site[data-d]');
+  if (site){
+    const d = site.dataset.d;
+    if (blocks[d] && blocks[d].end === Infinity) return;
+    sel.has(d) ? sel.delete(d) : sel.add(d);
+    renderHals(); updateHoist(); return;
+  }
+  const stop = el.closest('#scale .stop');
+  if (stop){ if (!stop.disabled){ dur = stop.dataset.dur; updateHoist(); } return; }
+  if (el.closest('#go')){
+    const domains = [...sel]; if (!domains.length) return;
+    applyBlock(domains, durById(dur).min, describe(domains));
+  }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closePops();
+  if (e.target.id === 'addSite' && e.key === 'Enter'){
+    const v = e.target.value.trim().toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/.*$/,'');
+    if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(v)) return;
+    const yours = CATS.find(c => c.id === 'yours');
+    if (!catOf(v)) yours.sites.push(v);
+    if (!(blocks[v] && blocks[v].end === Infinity)) sel.add(v);
+    renderHals(); updateHoist();
+    const i = $('#addSite'); if (i) i.focus();
+  }
+});
+$('#capX').addEventListener('click', e => { e.stopPropagation(); $('#cap').classList.add('min'); });
+$('#cap').addEventListener('click', () => $('#cap').classList.remove('min'));
+window.addEventListener('resize', () => { updateHoist(); updatePop(); });
+
+tabs.forEach(t => wasBlocked.set(t.id, !!blockOf(t)));
+renderAll();
+document.fonts && document.fonts.ready.then(() => updateHoist());
+})();
+</script>
+</body>
+</html>

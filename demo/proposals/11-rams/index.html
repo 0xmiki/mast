@@ -1,0 +1,755 @@
+<!doctype html>
+<!--
+  Proposal 11 · Rams — a browser designed by Dieter Rams' ten principles.
+
+  Riskiest pieces to port to Chromium Views:
+  1. Status indicators (ring / solid dot) in tabs and the location bar: custom-painted views, small but new.
+  2. Segmented duration control in the toolbar Block bubble: a custom views::View (no upstream equivalent).
+  3. Warm-grey palette: every surface goes through our colour mixer; upstream Material tokens must not leak.
+  4. Removing the NTP search box and relying on the omnibox (a product decision, trivial to build).
+  5. Native window controls per platform: already upstream (macOS traffic lights, Windows caption buttons,
+     GTK on Linux); we only set spacing around them.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mast · Proposal 11 · Rams</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+	/*
+	 * One set of tokens. Light and dark share every rule; only values change.
+	 * Signal colour is used for exactly two things: the act of blocking, and the state of being blocked.
+	 */
+	:root {
+		--bg: #141414;        /* tab strip, window ground */
+		--surface: #1c1c1c;   /* toolbar, active tab, pages */
+		--field: #262626;     /* inputs, hovered controls */
+		--pressed: #303030;
+		--seg: #262626;       /* segmented track */
+		--seg-on: #1c1c1c;    /* chosen segment */
+		--line: #2c2c2c;
+		--text: #e9e7e3;
+		--text-2: #a29f99;
+		--text-3: #6f6c67;
+		--signal: #ff6a3d;
+		--signal-text: #1a0d07;
+		--shadow: 0 8px 28px rgb(0 0 0 / 0.45), 0 0 0 1px var(--line);
+		--r: 6px;             /* the only radius for boxes */
+		--font: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+		color-scheme: dark;
+	}
+	:root.light {
+		--bg: #e4e2de;
+		--surface: #f3f2ef;
+		--field: #ffffff;
+		--pressed: #e9e7e3;
+		--seg: #e4e2de;
+		--seg-on: #ffffff;
+		--line: #d5d2cc;
+		--text: #1d1c1a;
+		--text-2: #5f5c57;
+		--text-3: #8f8c86;
+		--signal: #e8541f;
+		--signal-text: #ffffff;
+		--shadow: 0 8px 28px rgb(0 0 0 / 0.12), 0 0 0 1px var(--line);
+		color-scheme: light;
+	}
+
+	* { box-sizing: border-box; }
+	html, body { margin: 0; height: 100%; overflow: hidden; }
+	body {
+		background: var(--bg);
+		color: var(--text);
+		font: 13px/1.45 var(--font);
+		font-feature-settings: 'tnum' 1, 'cv11' 1;
+		-webkit-font-smoothing: antialiased;
+	}
+	button, input { font: inherit; color: inherit; }
+	button { cursor: pointer; }
+	:focus-visible { outline: 2px solid var(--text-2); outline-offset: 2px; }
+
+	.window { display: flex; flex-direction: column; height: 100vh; }
+
+	/* ── Tab strip ─────────────────────────────────────────── */
+	.strip {
+		display: flex;
+		align-items: flex-end;
+		height: 40px;
+		padding: 0 8px;
+		background: var(--bg);
+		user-select: none;
+	}
+	.tabs { display: flex; align-items: flex-end; gap: 2px; flex: 1; min-width: 0; height: 100%; }
+	.tab {
+		position: relative;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex: 0 1 216px;
+		min-width: 56px;
+		height: 32px;
+		padding: 0 6px 0 10px;
+		border-radius: var(--r) var(--r) 0 0;
+		color: var(--text-2);
+		cursor: default;
+	}
+	.tab:hover { background: color-mix(in srgb, var(--surface) 50%, transparent); }
+	.tab.active { background: var(--surface); color: var(--text); }
+	.tab .t { flex: 0 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+	.tab .x {
+		display: grid; place-items: center; margin-left: auto;
+		width: 20px; height: 20px; border: 0; border-radius: 50%;
+		background: none; color: var(--text-3); opacity: 0;
+	}
+	.tab:hover .x, .tab.active .x { opacity: 1; }
+	.tab .x:hover { background: var(--field); color: var(--text); }
+	.tab.blocked .fav { opacity: 0.4; filter: grayscale(1); }
+	.tab.blocked .t { color: var(--text-3); }
+	.newtab {
+		display: grid; place-items: center;
+		width: 28px; height: 28px; margin: 0 0 2px 4px;
+		border: 0; border-radius: 50%; background: none; color: var(--text-2);
+	}
+	.newtab:hover { background: var(--field); color: var(--text); }
+
+	/* Favicons: drawn plainly, as the sites ship them. */
+	.fav { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 4px; font-size: 10px; font-weight: 600; flex: none; }
+
+	/* Indicator: the product's one symbol. Ring = open or selected, ring in signal = blocked for a time, solid = forever. */
+	.ind { width: 8px; height: 8px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1.5px var(--text-3); }
+	.ind.timed { box-shadow: inset 0 0 0 1.5px var(--signal); }
+	.ind.forever { background: var(--signal); box-shadow: none; }
+
+	/* Window controls: native per platform. */
+	.wc { display: none; align-self: stretch; align-items: center; }
+	.p-linux .wc.linux, .p-windows .wc.windows { display: flex; }
+	.p-mac .wc.mac { display: flex; }
+	.wc.linux { gap: 8px; padding: 0 6px 0 14px; }
+	.wc.linux span { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--field); color: var(--text-2); }
+	.wc.windows { margin-right: -8px; align-self: flex-start; height: 32px; }
+	.wc.windows span { display: grid; place-items: center; width: 46px; height: 32px; color: var(--text-2); }
+	.wc.windows span:hover { background: var(--field); }
+	.wc.windows span.close:hover { background: #c42b1c; color: #fff; }
+	.wc.mac { gap: 8px; padding: 0 18px 0 6px; }
+	.wc.mac span { width: 12px; height: 12px; border-radius: 50%; }
+	.wc.mac span:nth-child(1) { background: #ff5f57; }
+	.wc.mac span:nth-child(2) { background: #febc2e; }
+	.wc.mac span:nth-child(3) { background: #28c840; }
+	.p-mac .strip { padding-left: 0; }
+
+	/* ── Toolbar ───────────────────────────────────────────── */
+	.toolbar {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		height: 44px;
+		padding: 0 8px;
+		background: var(--surface);
+		border-bottom: 1px solid var(--line);
+	}
+	.ib {
+		display: grid; place-items: center;
+		width: 32px; height: 32px; border: 0; border-radius: 50%;
+		background: none; color: var(--text-2);
+	}
+	.ib:hover:not(:disabled), .ib.on { background: var(--field); color: var(--text); }
+	.ib:active:not(:disabled) { background: var(--pressed); }
+	.ib:disabled { color: var(--text-3); opacity: 0.5; cursor: default; }
+	.address {
+		display: flex; align-items: center; gap: 8px;
+		flex: 1; min-width: 0; height: 32px; margin: 0 6px; padding: 0 12px;
+		border-radius: var(--r); background: var(--field);
+	}
+	.address:focus-within { box-shadow: 0 0 0 1px var(--text-3); }
+	.address input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font-size: 13.5px; }
+	.address input::placeholder { color: var(--text-3); }
+	.address .lock { color: var(--text-3); display: grid; }
+	.address .state { display: flex; align-items: center; gap: 6px; color: var(--signal); font-size: 12px; font-weight: 500; white-space: nowrap; }
+	.tb-block {
+		display: inline-flex; align-items: center; gap: 8px;
+		height: 32px; padding: 0 12px; border: 0; border-radius: var(--r);
+		background: none; color: var(--text-2); font-weight: 500;
+	}
+	.tb-block:hover, .tb-block.on { background: var(--field); color: var(--text); }
+	.tb-block.is-blocked { color: var(--signal); }
+	.pop-wrap { position: relative; }
+
+	/* ── Popovers, menu, toast ─────────────────────────────── */
+	.pop {
+		position: absolute; top: calc(100% + 6px); right: 0; z-index: 20;
+		width: 300px; padding: 16px; border-radius: 10px;
+		background: var(--surface); box-shadow: var(--shadow);
+	}
+	.pop h3 { margin: 0; font-size: 15px; font-weight: 600; }
+	.pop p { margin: 4px 0 0; color: var(--text-2); }
+	.pop .seg { margin-top: 14px; }
+	.pop .primary { width: 100%; margin-top: 12px; }
+	.menu { width: 232px; padding: 6px; }
+	.menu button {
+		display: flex; justify-content: space-between; width: 100%; height: 32px; padding: 0 10px;
+		border: 0; border-radius: 4px; background: none; text-align: left;
+	}
+	.menu button:hover { background: var(--field); }
+	.menu kbd { font: inherit; color: var(--text-3); }
+	.menu hr { border: 0; border-top: 1px solid var(--line); margin: 6px 4px; }
+	.scrim { position: fixed; inset: 0; z-index: 15; border: 0; background: none; cursor: default; }
+
+	.toast {
+		position: fixed; left: 50%; bottom: 24px; z-index: 30; transform: translateX(-50%);
+		display: flex; align-items: center; gap: 14px;
+		padding: 10px 10px 10px 16px; border-radius: 10px;
+		background: var(--surface); box-shadow: var(--shadow);
+		white-space: nowrap;
+	}
+	.toast button { height: 28px; padding: 0 12px; border: 0; border-radius: 4px; background: var(--field); font-weight: 500; }
+	.toast button:hover { background: var(--pressed); }
+	.toast .secs { color: var(--text-3); margin-left: 4px; }
+
+	/* ── Shared controls ───────────────────────────────────── */
+	.primary, .secondary {
+		display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+		height: 36px; padding: 0 18px; border: 0; border-radius: var(--r); font-weight: 600;
+	}
+	.primary { background: var(--signal); color: var(--signal-text); }
+	.primary:hover:not(:disabled) { filter: brightness(1.06); }
+	.primary:active:not(:disabled) { filter: brightness(0.94); }
+	.primary:disabled { background: var(--field); color: var(--text-3); cursor: default; }
+	.secondary { background: var(--field); }
+	.secondary:hover { background: var(--pressed); }
+
+	.check {
+		display: grid; place-items: center;
+		width: 16px; height: 16px; padding: 0; border: 1.5px solid var(--text-3); border-radius: 4px;
+		background: none; flex: none;
+	}
+	.check:hover:not(:disabled) { border-color: var(--text-2); }
+	.check.on, .check.mixed { border-color: var(--text); background: var(--text); color: var(--bg); }
+	.check:disabled { cursor: default; border-color: var(--line); }
+
+	.seg { display: grid; grid-template-columns: repeat(6, 1fr); padding: 2px; border-radius: var(--r); background: var(--seg); }
+	.seg.compact { grid-template-columns: repeat(3, 1fr); row-gap: 2px; }
+	.seg button {
+		height: 30px; padding: 0 6px; border: 0; border-radius: 4px; background: none;
+		color: var(--text-2); font-weight: 500; white-space: nowrap;
+	}
+	.seg button:hover:not(:disabled) { color: var(--text); }
+	.seg button.on { background: var(--seg-on); color: var(--text); box-shadow: 0 1px 2px rgb(0 0 0 / 0.25), 0 0 0 1px var(--line); }
+	.seg button:disabled { color: var(--text-3); opacity: 0.5; cursor: default; }
+
+	/* ── Page area ─────────────────────────────────────────── */
+	.page { flex: 1; min-height: 0; overflow: auto; background: var(--surface); }
+
+	/* New tab: the blocklist, nothing else. */
+	.ntp { max-width: 760px; margin: 0 auto; padding: 56px 32px 40px; }
+	.ntp header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 20px; }
+	.ntp h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+	.ntp .meta { color: var(--text-3); }
+	.ntp .meta b { color: var(--text-2); font-weight: 500; }
+	.cats { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+	.cat { border-bottom: 1px solid var(--line); }
+	.cat .row { display: flex; align-items: center; gap: 14px; height: 52px; padding: 0 4px; }
+	.cat .name { display: flex; align-items: baseline; gap: 8px; flex: 1; min-width: 0; padding: 0; border: 0; background: none; text-align: left; font-size: 15px; font-weight: 500; }
+	.cat .name .n { color: var(--text-3); font-size: 13px; font-weight: 400; }
+	.status { display: flex; align-items: center; gap: 8px; color: var(--text-3); white-space: nowrap; }
+	.status.blocked { color: var(--signal); }
+	.status .sub { color: var(--text-3); }
+	.exp { display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 50%; background: none; color: var(--text-3); }
+	.exp:hover { background: var(--field); color: var(--text); }
+	.exp svg { transition: transform 0.15s; }
+	.cat.open .exp svg { transform: rotate(180deg); }
+	.sites { margin: 0; padding: 0 4px 12px 34px; list-style: none; }
+	.sites li { display: flex; align-items: center; gap: 14px; height: 32px; }
+	.sites .d { flex: 1; color: var(--text-2); }
+	.sites li.is-blocked .d { color: var(--text); }
+	.sites .add { flex: 1; height: 28px; padding: 0 10px; border: 0; border-radius: 4px; outline: 0; background: var(--field); }
+	.sites .add:focus { box-shadow: 0 0 0 1px var(--text-3); }
+
+	.action { display: grid; grid-template-columns: 1fr auto; gap: 10px 16px; align-items: center; margin-top: 28px; }
+	.action .label { grid-column: 1 / -1; color: var(--text-3); }
+	.action .end { grid-column: 1 / -1; min-height: 19px; color: var(--text-3); }
+	.action .end.warn { color: var(--signal); }
+
+	/* Ordinary site */
+	.site { max-width: 960px; margin: 0 auto; padding: 40px 32px; }
+	.site .crumbs { color: var(--text-3); }
+	.site h1 { margin: 6px 0 18px; font: 400 32px/1.2 Georgia, 'Times New Roman', serif; }
+	.site p { max-width: 640px; margin: 0 0 14px; color: var(--text-2); font: 15px/1.7 Georgia, serif; }
+	.site .grid { display: grid; grid-template-columns: 1fr 260px; gap: 40px; }
+	.site .box { height: 180px; border-radius: var(--r); background: var(--field); }
+	.site .rows div { height: 12px; margin: 10px 0; border-radius: 3px; background: var(--field); }
+
+	/* Blocked page: the facts, and a way back. */
+	.wall { display: grid; place-content: center; min-height: 100%; padding: 40px 32px 12vh; }
+	.wall .card { width: min(520px, 100%); }
+	.wall .status { font-weight: 500; }
+	.wall h1 { margin: 10px 0 6px; font-size: 40px; font-weight: 600; letter-spacing: -0.025em; line-height: 1.1; }
+	.wall .facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 24px; margin: 24px 0 28px; padding: 16px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+	.wall .facts dt { color: var(--text-3); }
+	.wall .facts dd { margin: 0; }
+	.wall .facts dd.signal { color: var(--signal); }
+
+	/* ── Proposal caption (not part of the product) ────────── */
+	.caption {
+		position: fixed; left: 16px; bottom: 16px; z-index: 40;
+		width: 300px; padding: 14px; border-radius: 10px;
+		background: var(--surface); box-shadow: var(--shadow); font-size: 12px;
+	}
+	.caption.min { width: auto; }
+	.caption.min .more { display: none; }
+	.caption .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+	.caption strong { font-weight: 600; }
+	.caption p { margin: 8px 0 12px; color: var(--text-2); }
+	.caption .seg { grid-template-columns: repeat(3, 1fr); }
+	.caption .seg + .seg { margin-top: 6px; grid-template-columns: repeat(2, 1fr); }
+	.caption .secondary { width: 100%; height: 32px; margin-top: 8px; }
+	.caption .hide { border: 0; background: none; color: var(--text-3); }
+
+	.sheet { position: fixed; inset: 0; z-index: 50; overflow: auto; background: var(--surface); }
+	.sheet .in { max-width: 880px; margin: 0 auto; padding: 56px 32px 64px; }
+	.sheet header { display: flex; justify-content: space-between; align-items: flex-start; }
+	.sheet h1 { margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -0.02em; }
+	.sheet header p { margin: 6px 0 0; color: var(--text-2); max-width: 560px; }
+	.sheet ol { margin: 36px 0 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+	.sheet li { display: grid; grid-template-columns: 40px 220px 1fr; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+	.sheet li .num { color: var(--text-3); }
+	.sheet li .p { font-weight: 600; }
+	.sheet li .how { color: var(--text-2); }
+	.sheet h2 { margin: 40px 0 14px; font-size: 15px; font-weight: 600; }
+	.tokens { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+	.tokens div { display: grid; gap: 6px; color: var(--text-2); font-size: 12px; }
+	.tokens i { height: 44px; border-radius: var(--r); box-shadow: inset 0 0 0 1px var(--line); }
+	.specimen { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+</style>
+</head>
+<body class="p-linux">
+<div class="window">
+	<div class="strip">
+		<div class="wc mac" aria-hidden="true"><span></span><span></span><span></span></div>
+		<div class="tabs" id="tabs"></div>
+		<div class="wc linux" aria-hidden="true">
+			<span><svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 5h8" stroke="currentColor" stroke-width="1.4"/></svg></span>
+			<span><svg width="10" height="10" viewBox="0 0 10 10"><rect x="1.5" y="1.5" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1.4"/></svg></span>
+			<span><svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" stroke-width="1.4"/></svg></span>
+		</div>
+		<div class="wc windows" aria-hidden="true">
+			<span><svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 5h10" stroke="currentColor"/></svg></span>
+			<span><svg width="10" height="10" viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor"/></svg></span>
+			<span class="close"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 0l10 10M10 0L0 10" stroke="currentColor"/></svg></span>
+		</div>
+	</div>
+
+	<div class="toolbar">
+		<button class="ib" id="back" aria-label="Back"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 8H3M7 4L3 8l4 4"/></svg></button>
+		<button class="ib" id="fwd" aria-label="Forward" disabled><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg></button>
+		<button class="ib" aria-label="Reload"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5v3h-3"/></svg></button>
+		<label class="address">
+			<span class="lock" id="lock"></span>
+			<input id="addr" spellcheck="false" placeholder="Search Google or type a URL" />
+			<span class="state" id="addrState"></span>
+		</label>
+		<div class="pop-wrap">
+			<button class="tb-block" id="tbBlock"></button>
+			<div id="blockPop"></div>
+		</div>
+		<div class="pop-wrap">
+			<button class="ib" id="menuBtn" aria-label="Menu"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3.5" r="1.3"/><circle cx="8" cy="8" r="1.3"/><circle cx="8" cy="12.5" r="1.3"/></svg></button>
+			<div id="menu"></div>
+		</div>
+	</div>
+
+	<main class="page" id="page"></main>
+</div>
+
+<div id="toast"></div>
+
+<aside class="caption" id="caption">
+	<div class="top">
+		<strong>Proposal 11 · Rams</strong>
+		<button class="hide" id="capHide">Hide</button>
+	</div>
+	<div class="more">
+		<p>Designed by Dieter Rams’ ten principles. Less, but better: one colour for one meaning, native where the platform owns it, nothing that isn’t needed.</p>
+		<div class="seg" id="platform">
+			<button data-p="linux" class="on">Linux</button><button data-p="mac">macOS</button><button data-p="windows">Windows</button>
+		</div>
+		<div class="seg" id="theme">
+			<button data-t="dark" class="on">Dark</button><button data-t="light">Light</button>
+		</div>
+		<button class="secondary" id="openSheet">The ten principles</button>
+	</div>
+</aside>
+
+<div id="sheet"></div>
+
+<script>
+const H = 3600e3, D = 24 * H;
+const now = () => Date.now();
+const midnight = () => { const d = new Date(); d.setHours(24, 0, 0, 0); return d.getTime(); };
+const hm = (t) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+const day = (t) => new Date(t).toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+const CATS = [
+	{ id: 'social', name: 'Social', sites: ['x.com','twitter.com','facebook.com','instagram.com','tiktok.com','reddit.com','snapchat.com','threads.net','bsky.app','pinterest.com','tumblr.com','discord.com'] },
+	{ id: 'video', name: 'Video & streaming', sites: ['youtube.com','netflix.com','twitch.tv','kick.com','primevideo.com','disneyplus.com','hulu.com','max.com'] },
+	{ id: 'news', name: 'News & forums', sites: ['news.ycombinator.com','cnn.com','foxnews.com','bbc.com','nytimes.com','buzzfeed.com','9gag.com'] },
+	{ id: 'shop', name: 'Shopping', sites: ['amazon.com','ebay.com','aliexpress.com','temu.com','etsy.com','shein.com'] },
+	{ id: 'games', name: 'Games', sites: ['chess.com','lichess.org','roblox.com','store.steampowered.com','poki.com'] },
+	{ id: 'yours', name: 'Your sites', sites: ['espn.com'], custom: true },
+];
+const DUR = [
+	{ id: '1h', label: '1 hour', until: () => now() + H },
+	{ id: '4h', label: '4 hours', until: () => now() + 4 * H },
+	{ id: 'today', label: 'Today', until: midnight },
+	{ id: 'week', label: '1 week', until: () => now() + 7 * D },
+	{ id: 'month', label: '1 month', until: () => now() + 30 * D },
+	{ id: 'forever', label: 'Forever', until: () => null },
+];
+
+/* State. A block is { since, until } with until === null for forever. */
+const oct18 = new Date(new Date().getFullYear(), 9, 18, 10, 0).getTime();
+const blocks = {};
+CATS[0].sites.forEach((d) => (blocks[d] = { since: oct18, until: null }));
+CATS[1].sites.forEach((d) => (blocks[d] = { since: now() - 3 * H, until: midnight() }));
+blocks['news.ycombinator.com'] = { since: now() - 2 * D, until: now() + 5 * D };
+let stoppedToday = 4;
+let selected = new Set();
+let open = new Set();
+let dur = 'today';
+let popDur = 'today';
+let recent = null;
+
+const tabs = [
+	{ id: 1, url: 'mast://newtab', title: 'New Tab' },
+	{ id: 2, url: 'https://github.com/mast-browser/mast', title: 'mast-browser/mast' },
+	{ id: 3, url: 'https://en.wikipedia.org/wiki/Dieter_Rams', title: 'Dieter Rams — Wikipedia' },
+	{ id: 4, url: 'https://www.youtube.com/', title: 'YouTube' },
+	{ id: 5, url: 'https://x.com/home', title: 'X' },
+];
+let active = 1;
+
+const outlasts = (a, b) => a === null || (b !== null && a >= b);
+const blockOf = (d) => { const b = blocks[d]; return b && (b.until === null || b.until > now()) ? b : null; };
+const hostOf = (url) => url.startsWith('mast://') ? '' : new URL(url).hostname.replace(/^www\./, '');
+const blockFor = (url) => { const h = hostOf(url); if (!h) return null; const d = Object.keys(blocks).find((d) => (h === d || h.endsWith('.' + d)) && blockOf(d)); return d ? { domain: d, ...blockOf(d) } : null; };
+const allSites = () => CATS.flatMap((c) => c.sites);
+const activeCount = () => allSites().filter(blockOf).length;
+const catOf = (d) => CATS.find((c) => c.sites.includes(d));
+
+function untilText(u) {
+	if (u === null) return 'Blocked forever';
+	if (u === midnight()) return 'Until midnight';
+	const left = u - now();
+	if (left < D && new Date(u).getDate() === new Date().getDate()) return 'Until ' + hm(u);
+	if (left < 2 * D) return 'Until tomorrow ' + hm(u);
+	return 'Until ' + day(u);
+}
+function leftText(u) {
+	const ms = u - now();
+	if (ms >= 2 * D) return Math.floor(ms / D) + ' days left';
+	const h = Math.floor(ms / H), m = Math.floor((ms % H) / 60e3);
+	return (h ? h + ' h ' : '') + m + ' min left';
+}
+/* "at midnight", "at 18:20", "tomorrow at 09:12", "on Nov 10" */
+function endsText(u) {
+	if (u === midnight()) return 'at midnight';
+	const t = untilText(u);
+	if (t.startsWith('Until tomorrow ')) return 'tomorrow at ' + t.slice(15);
+	if (u - now() < D) return 'at ' + hm(u);
+	return 'on ' + day(u);
+}
+const ind = (b) => `<i class="ind ${b ? (b.until === null ? 'forever' : 'timed') : ''}"></i>`;
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const FAV = {
+	'': ['var(--signal)', '#fff', logoMini()],
+	'github.com': ['#f0f0f0', '#111', 'G'],
+	'en.wikipedia.org': ['#f0f0f0', '#111', 'W'],
+	'youtube.com': ['#ff0033', '#fff', '▶'],
+	'x.com': ['#000', '#fff', 'X'],
+};
+function logoMini() {
+	return '<svg width="16" height="16" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#ff6a3d"/><path d="M14 10.5V24.5H6.6Q7.4 16 14 10.5Z" fill="#fff"/><path d="M17 6V24.5H25.4Q24.7 13 17 6Z" fill="#fff"/></svg>';
+}
+function fav(url) {
+	const f = FAV[hostOf(url)] ?? ['var(--field)', 'var(--text-2)', hostOf(url)[0]?.toUpperCase()];
+	if (!hostOf(url)) return `<span class="fav">${f[2]}</span>`;
+	return `<span class="fav" style="background:${f[0]};color:${f[1]}">${f[2]}</span>`;
+}
+const chevron = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4.5l3 3 3-3"/></svg>';
+const tick = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 5.2l2 2 4-4.4"/></svg>';
+const dash = '<svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" stroke-width="2"><path d="M2.5 5h5"/></svg>';
+
+/* ── Render ─────────────────────────────────────── */
+function renderTabs() {
+	document.getElementById('tabs').innerHTML = tabs.map((t) => {
+		const b = blockFor(t.url);
+		return `<div class="tab ${t.id === active ? 'active' : ''} ${b ? 'blocked' : ''}" data-tab="${t.id}" title="${esc(t.title)}${b ? ' · ' + untilText(b.until) : ''}">
+			${fav(t.url)}<span class="t">${esc(t.title)}</span>${b ? ind(b) : ''}
+			<button class="x" aria-label="Close tab"><svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.4"><path d="M2 2l6 6M8 2l-6 6"/></svg></button>
+		</div>`;
+	}).join('') + `<button class="newtab" aria-label="New tab"><svg width="14" height="14" viewBox="0 0 14 14" stroke="currentColor" stroke-width="1.5"><path d="M7 2v10M2 7h10"/></svg></button>`;
+}
+
+function renderToolbar() {
+	const t = tabs.find((t) => t.id === active);
+	const b = blockFor(t.url);
+	const host = hostOf(t.url);
+	const addr = document.getElementById('addr');
+	if (document.activeElement !== addr) addr.value = host ? t.url.replace(/^https:\/\/(www\.)?/, '').replace(/\/$/, '') : '';
+	document.getElementById('lock').innerHTML = host ? '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2.5" y="5.5" width="7" height="5" rx="1"/><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5"/></svg>' : '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="5.2" cy="5.2" r="3.4"/><path d="M7.8 7.8L10.5 10.5"/></svg>';
+	document.getElementById('addrState').innerHTML = b ? `${ind(b)}${b.until === null ? 'Blocked forever' : untilText(b.until)}` : '';
+	const btn = document.getElementById('tbBlock');
+	btn.hidden = !host;
+	btn.className = 'tb-block' + (b ? ' is-blocked' : '') + (popOpen ? ' on' : '');
+	btn.innerHTML = b ? `${ind(b)} Blocked` : `${ind(null)} Block`;
+	document.getElementById('back').disabled = active === 1;
+}
+
+function catSummary(c) {
+	const bs = c.sites.map(blockOf).filter(Boolean);
+	if (!c.sites.length || !bs.length) return { kind: 'open' };
+	if (bs.length < c.sites.length) return { kind: 'some', n: bs.length };
+	const first = bs.reduce((a, b) => (a.until === null ? b : b.until === null ? a : b.until < a.until ? b : a));
+	return { kind: 'all', b: first };
+}
+
+function renderNTP() {
+	const free = (sites) => sites.filter((d) => blockOf(d)?.until !== null);
+	const rows = CATS.map((c) => {
+		const s = catSummary(c);
+		const f = free(c.sites);
+		const picked = f.filter((d) => selected.has(d)).length;
+		const forever = c.sites.length && !f.length;
+		const state = forever ? '' : picked && picked === f.length ? 'on' : picked ? 'mixed' : '';
+		const status = s.kind === 'all'
+			? `<span class="status blocked">${ind(s.b)}${s.b.until === null ? 'Blocked forever' : untilText(s.b.until)}</span>`
+			: s.kind === 'some'
+				? `<span class="status blocked">${ind({ until: 1 })}${s.n} of ${c.sites.length} blocked</span>`
+				: `<span class="status">${ind(null)}Open</span>`;
+		const sites = open.has(c.id) ? `<ul class="sites">${c.sites.map((d) => {
+			const b = blockOf(d);
+			const fv = b?.until === null;
+			return `<li class="${b ? 'is-blocked' : ''}">
+				<button class="check ${selected.has(d) ? 'on' : ''}" ${fv ? 'disabled title="Blocked forever"' : ''} data-site="${d}" aria-label="Select ${d}">${selected.has(d) ? tick : ''}</button>
+				<span class="d">${d}</span>
+				${b ? `<span class="status blocked">${ind(b)}${b.until === null ? 'Forever' : untilText(b.until)}</span>` : `<span class="status">Open</span>`}
+			</li>`;
+		}).join('')}${c.custom ? `<li><span class="check" style="visibility:hidden"></span><input class="add" id="addSite" placeholder="Add a site, e.g. espn.com" spellcheck="false" /></li>` : ''}</ul>` : '';
+		return `<li class="cat ${open.has(c.id) ? 'open' : ''}">
+			<div class="row">
+				<button class="check ${state}" ${forever ? 'disabled title="Blocked forever"' : ''} data-cat="${c.id}" aria-label="Select ${c.name}">${state === 'on' ? tick : state === 'mixed' ? dash : ''}</button>
+				<button class="name" data-toggle="${c.id}">${c.name}<span class="n">${c.sites.length}</span></button>
+				${status}
+				<button class="exp" data-toggle="${c.id}" aria-label="Show sites">${chevron}</button>
+			</div>${sites}
+		</li>`;
+	}).join('');
+	const n = selected.size;
+	const d = DUR.find((x) => x.id === dur);
+	const u = d.until();
+	const end = !n ? 'Select categories or sites, then choose how long.'
+		: u === null ? 'Forever has no end. After 10 seconds it can’t be undone.'
+		: `Ends ${endsText(u)}. Blocks can be extended, never shortened.`;
+	return `<div class="ntp">
+		<header><h1>Blocklist</h1><span class="meta"><b>${activeCount()}</b> sites blocked · <b>${stoppedToday}</b> stopped today</span></header>
+		<ul class="cats">${rows}</ul>
+		<div class="action">
+			<span class="label">How long</span>
+			<div class="seg" id="dur">${DUR.map((x) => `<button data-dur="${x.id}" class="${x.id === dur ? 'on' : ''}">${x.label}</button>`).join('')}</div>
+			<button class="primary" id="doBlock" ${n ? '' : 'disabled'}>${n ? `Block ${n} ${n === 1 ? 'site' : 'sites'}` : 'Block'}</button>
+			<span class="end ${n && u === null ? 'warn' : ''}">${end}</span>
+		</div>
+	</div>`;
+}
+
+function renderSite(t) {
+	const wiki = t.url.includes('wikipedia');
+	return `<div class="site">
+		<div class="crumbs">${wiki ? 'Wikipedia · Article' : 'mast-browser / mast'}</div>
+		<h1>${wiki ? 'Dieter Rams' : 'mast'}</h1>
+		<div class="grid">
+			<div>
+				<p>${wiki ? 'Dieter Rams is a German industrial designer closely associated with the consumer products company Braun and the functionalist school of industrial design. His approach is summed up in the phrase “Less, but better”.' : 'A browser that blocks distractions, built into the browser itself so it can’t be switched off like an extension.'}</p>
+				<p>${wiki ? 'In the late 1970s Rams asked himself whether his design was good design. As good design cannot be measured in a finite way, he set out to express the ten most important principles for what he considered good design.' : 'Chromium fork for Linux, with macOS and Windows to follow. Patches, overrides and our own sources live in this repository.'}</p>
+				<div class="rows"><div style="width:92%"></div><div style="width:86%"></div><div style="width:64%"></div></div>
+			</div>
+			<div><div class="box"></div><div class="rows"><div></div><div style="width:70%"></div></div></div>
+		</div>
+	</div>`;
+}
+
+function renderBlocked(t, b) {
+	const c = catOf(b.domain);
+	const forever = b.until === null;
+	return `<div class="wall"><div class="card">
+		<span class="status blocked">${ind(b)}${forever ? 'Blocked forever' : 'Blocked ' + untilText(b.until).toLowerCase()}</span>
+		<h1>${hostOf(t.url)}</h1>
+		<dl class="facts">
+			<dt>List</dt><dd>${c ? c.name : 'Your sites'}</dd>
+			<dt>Since</dt><dd>${day(b.since)}, ${hm(b.since)}</dd>
+			<dt>Ends</dt><dd class="${forever ? 'signal' : ''}">${forever ? 'Never' : (b.until === midnight() ? 'Midnight' : untilText(b.until).replace('Until ', '')) + ' · ' + leftText(b.until)}</dd>
+		</dl>
+		<button class="secondary" id="goBack"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 8H3M7 4L3 8l4 4"/></svg> Back</button>
+	</div></div>`;
+}
+
+function renderPage() {
+	const t = tabs.find((t) => t.id === active);
+	const b = blockFor(t.url);
+	document.getElementById('page').innerHTML = !hostOf(t.url) ? renderNTP() : b ? renderBlocked(t, b) : renderSite(t);
+}
+
+let popOpen = false, menuOpen = false;
+function renderPop() {
+	const el = document.getElementById('blockPop');
+	if (!popOpen) { el.innerHTML = ''; return; }
+	const t = tabs.find((t) => t.id === active);
+	const host = hostOf(t.url);
+	const entry = allSites().find((d) => host === d || host.endsWith('.' + d)) ?? host;
+	const b = blockOf(entry);
+	if (b && !outlasts(DUR.find((x) => x.id === popDur).until(), b.until)) popDur = DUR.find((x) => outlasts(x.until(), b.until)).id;
+	el.innerHTML = `<button class="scrim" data-close="pop" aria-label="Close"></button><div class="pop">
+		<h3>${b ? (b.until === null ? 'Blocked forever' : 'Blocked ' + untilText(b.until).toLowerCase()) : 'Block ' + entry}</h3>
+		<p>${b ? (b.until === null ? entry + ' will stay blocked. This can’t change.' : 'You can make this longer, never shorter.') : 'Choose how long.'}</p>
+		${b?.until === null ? '' : `<div class="seg compact" id="popDur">${DUR.map((x) => `<button data-pdur="${x.id}" class="${x.id === popDur ? 'on' : ''}" ${b && !outlasts(x.until(), b.until) ? 'disabled' : ''}>${x.label}</button>`).join('')}</div>
+		<button class="primary" id="popBlock" data-entry="${entry}">${b ? 'Extend' : 'Block'}</button>`}
+	</div>`;
+}
+function renderMenu() {
+	document.getElementById('menu').innerHTML = menuOpen ? `<button class="scrim" data-close="menu" aria-label="Close"></button><div class="pop menu">
+		<button>New tab<kbd>${kbd('T')}</kbd></button><button>New window<kbd>${kbd('N')}</kbd></button>
+		<hr><button data-go="1">Blocklist</button><button>History<kbd>${kbd('H')}</kbd></button><button>Downloads</button>
+		<hr><button>Settings</button><button>About Mast</button></div>` : '';
+}
+const kbd = (k) => (document.body.classList.contains('p-mac') ? '⌘' : 'Ctrl+') + k;
+
+function render() { renderTabs(); renderToolbar(); renderPage(); renderPop(); renderMenu(); }
+
+/* ── Actions ───────────────────────────────────── */
+function block(domains, until) {
+	const before = {};
+	let changed = 0;
+	for (const d of domains) {
+		const cur = blockOf(d);
+		if (cur && outlasts(cur.until, until)) continue;
+		before[d] = cur ? { ...cur } : null;
+		blocks[d] = { since: cur?.since ?? now(), until };
+		if (!allSites().includes(d)) CATS[5].sites.push(d);
+		changed++;
+	}
+	if (!changed) return toast('Already blocked at least that long.');
+	recent = { at: now(), before };
+	toast(`Blocked ${changed === 1 ? domains[0] : changed + ' sites'} ${until === null ? 'forever' : untilText(until).toLowerCase()}.`, true);
+}
+function undo() {
+	if (!recent || now() - recent.at > 10e3) return;
+	for (const [d, b] of Object.entries(recent.before)) b ? (blocks[d] = b) : delete blocks[d];
+	recent = null;
+	toast('Undone.');
+	render();
+}
+let toastTimer;
+function toast(text, withUndo) {
+	clearInterval(toastTimer);
+	const el = document.getElementById('toast');
+	const paint = () => {
+		const left = recent ? Math.ceil((10e3 - (now() - recent.at)) / 1e3) : 0;
+		if (withUndo && left <= 0) { el.innerHTML = ''; clearInterval(toastTimer); return; }
+		el.innerHTML = `<div class="toast">${text}${withUndo ? `<button id="undo">Undo<span class="secs">${left}</span></button>` : ''}</div>`;
+	};
+	paint();
+	toastTimer = setInterval(paint, 250);
+	if (!withUndo) setTimeout(() => { clearInterval(toastTimer); el.innerHTML = ''; }, 2600);
+}
+
+document.addEventListener('click', (e) => {
+	const t = e.target.closest('button, .tab');
+	if (!t) return;
+	if (t.classList.contains('tab')) { active = +t.dataset.tab; popOpen = menuOpen = false; if (!e.target.closest('.x')) render(); return; }
+	if (t.dataset.cat) {
+		const c = CATS.find((c) => c.id === t.dataset.cat);
+		const free = c.sites.filter((d) => blockOf(d)?.until !== null);
+		const all = free.every((d) => selected.has(d));
+		free.forEach((d) => (all ? selected.delete(d) : selected.add(d)));
+	} else if (t.dataset.site) {
+		selected.has(t.dataset.site) ? selected.delete(t.dataset.site) : selected.add(t.dataset.site);
+	} else if (t.dataset.toggle) {
+		open.has(t.dataset.toggle) ? open.delete(t.dataset.toggle) : open.add(t.dataset.toggle);
+	} else if (t.dataset.dur) dur = t.dataset.dur;
+	else if (t.dataset.pdur) popDur = t.dataset.pdur;
+	else if (t.id === 'doBlock') { block([...selected], DUR.find((x) => x.id === dur).until()); selected.clear(); }
+	else if (t.id === 'popBlock') { block([t.dataset.entry], DUR.find((x) => x.id === popDur).until()); popOpen = false; }
+	else if (t.id === 'undo') return undo();
+	else if (t.id === 'tbBlock') { popOpen = !popOpen; menuOpen = false; }
+	else if (t.id === 'menuBtn') { menuOpen = !menuOpen; popOpen = false; }
+	else if (t.dataset.close) { popOpen = menuOpen = false; }
+	else if (t.dataset.go) { active = +t.dataset.go; menuOpen = false; }
+	else if (t.id === 'goBack' || t.id === 'back') { active = 1; }
+	else if (t.dataset.p) {
+		document.body.className = 'p-' + t.dataset.p;
+		document.querySelectorAll('#platform button').forEach((b) => b.classList.toggle('on', b === t));
+	} else if (t.dataset.t) {
+		document.documentElement.classList.toggle('light', t.dataset.t === 'light');
+		document.querySelectorAll('#theme button').forEach((b) => b.classList.toggle('on', b === t));
+		return;
+	} else if (t.id === 'capHide') {
+		const c = document.getElementById('caption');
+		c.classList.toggle('min');
+		t.textContent = c.classList.contains('min') ? 'Show' : 'Hide';
+		return;
+	} else if (t.id === 'openSheet') return openSheet();
+	else if (t.id === 'closeSheet') return (document.getElementById('sheet').innerHTML = '');
+	else return;
+	render();
+});
+document.addEventListener('keydown', (e) => {
+	if (e.key === 'Escape') { popOpen = menuOpen = false; document.getElementById('sheet').innerHTML = ''; render(); }
+	if (e.key === 'Enter' && e.target.id === 'addSite') {
+		const d = e.target.value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+		if (d && !allSites().includes(d)) { CATS[5].sites.push(d); selected.add(d); }
+		render();
+		document.getElementById('addSite')?.focus();
+	}
+	if (e.key === 'Enter' && e.target.id === 'addr') e.target.blur();
+});
+
+/* ── The ten principles, and what each one decided ── */
+const PRINCIPLES = [
+	['Is innovative', 'The innovation is the product: blocking lives in the browser, where an extension can’t switch it off. The design doesn’t try to be novel on top of that; it makes the new thing obvious.'],
+	['Makes a product useful', 'The new tab page does one job: the blocklist. No search box (the address bar already searches), no tiles, no feed. Picking and blocking is two clicks.'],
+	['Is aesthetic', 'One typeface in three weights, one radius, one grid of 4px, warm neutral greys. Calm proportions instead of ornament.'],
+	['Makes a product understandable', 'One symbol for state everywhere: an empty ring is open, a signal ring is blocked for a time, a solid dot is blocked forever. Labels say exactly what happens.'],
+	['Is unobtrusive', 'The chrome is two quiet rows and stays out of the way of the page. Colour appears only when something is blocked or about to be.'],
+	['Is honest', 'No fake materials, lights or depth. A forever block says “Blocked forever” and “Ends: never”. The Undo window shows its real seconds.'],
+	['Is long-lasting', 'Nothing fashionable to date it: no gradients, glass, glows or trend fonts. Neutral tokens that work in light and dark.'],
+	['Is thorough down to the last detail', 'Every control has rest, hover, pressed, focus and disabled states. Durations that would shorten a block are disabled, not hidden. Shortcuts follow the platform (⌘ or Ctrl).'],
+	['Is environmentally friendly', 'Dark by default, no animation loops, no web fonts beyond one family, no images on the new tab page. Native window controls instead of redrawn ones.'],
+	['Is as little design as possible', 'Less, but better: everything above that wasn’t needed was removed — stats are one line, the logo isn’t repeated on the page, and the signal colour has one meaning.'],
+];
+function openSheet() {
+	const tok = (n, v) => `<div><i style="background:var(${v})"></i>${n}<span style="color:var(--text-3)">${v}</span></div>`;
+	document.getElementById('sheet').innerHTML = `<div class="sheet"><div class="in">
+		<header><div><h1>Ten principles</h1><p>Each of Dieter Rams’ principles, and the decision it made in Mast.</p></div><button class="secondary" id="closeSheet">Close</button></header>
+		<ol>${PRINCIPLES.map((p, i) => `<li><span class="num">${String(i + 1).padStart(2, '0')}</span><span class="p">Good design ${p[0].toLowerCase()}</span><span class="how">${p[1]}</span></li>`).join('')}</ol>
+		<h2>Tokens</h2>
+		<div class="tokens">${tok('Ground', '--bg')}${tok('Surface', '--surface')}${tok('Field', '--field')}${tok('Line', '--line')}${tok('Signal', '--signal')}${tok('Text', '--text')}${tok('Text 2', '--text-2')}${tok('Text 3', '--text-3')}${tok('Pressed', '--pressed')}</div>
+		<h2>Type</h2>
+		<div class="specimen"><span style="font-size:40px;font-weight:600;letter-spacing:-0.025em">Inter 40</span><span style="font-size:20px;font-weight:600">20 Semibold</span><span style="font-size:15px;font-weight:500">15 Medium</span><span>13 Regular</span><span style="font-size:12px;color:var(--text-3)">12 Regular</span></div>
+		<h2>State</h2>
+		<div class="specimen"><span class="status">${ind(null)}Open</span><span class="status blocked">${ind({ until: 1 })}Until midnight</span><span class="status blocked">${ind({ until: null })}Blocked forever</span></div>
+		<h2>Controls</h2>
+		<div class="specimen"><button class="primary">Block 8 sites</button><button class="primary" disabled>Block</button><button class="secondary">Back</button><span class="check"></span><span class="check on">${tick}</span><span class="check mixed">${dash}</span><span class="check" style="border-color:var(--line)"></span>
+		<div class="seg" style="width:420px;grid-template-columns:repeat(3,1fr)"><button>1 hour</button><button class="on">Today</button><button disabled>Shorter</button></div></div>
+	</div></div>`;
+}
+
+/* The caption is not part of the product: on narrow windows it starts out of the way. */
+if (innerWidth < 1400) { document.getElementById('caption').classList.add('min'); document.getElementById('capHide').textContent = 'Show'; }
+render();
+setInterval(() => { if (!document.activeElement || document.activeElement.tagName !== 'INPUT') { renderToolbar(); if (hostOf(tabs.find((t) => t.id === active).url)) renderPage(); } }, 30e3);
+</script>
+</body>
+</html>

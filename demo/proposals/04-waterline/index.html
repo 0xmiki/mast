@@ -1,0 +1,1143 @@
+<!--
+  Proposal 04 · Waterline
+  Riskiest pieces to port to the Chromium fork (Views, Linux):
+  1. Bottom-anchored chrome: BrowserView lays out TabStrip + toolbar BELOW the contents view. Fullscreen,
+     immersive mode, tab-drag/detach, hover cards and every bubble anchored to the toolbar assume a top strip.
+  2. Keel tabs: custom TabStyle paths that hang down from the waterline with variable depth (active deepest);
+     hit-testing, drag images and the tab-strip animation code all need the inverted geometry.
+  3. Omnibox popup that grows UPWARD from the bottom with results in reversed visual order
+     (OmniboxPopupView positioning, keyboard Up = next result).
+  4. The waterline itself: a 1-2px custom-painted view at the top edge of the band whose state (none / fuse / solid)
+     is driven per tab by the blocklist service; spark flicker should be a small compositor-layer animation.
+     Glow is painted only inside the band, never over web content.
+  5. Client-side window controls and drag regions living in the bottom band (CSD on X11 + Wayland).
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mast · Proposal 04 · Waterline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300..700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --band:60px;
+  --ink:#ece8e2; --ink2:#a9abad; --ink3:#6c727a; --ink4:#3b4148; --ink5:#232931;
+  --ember:#ff6a3d; --ember2:#ff8f5e; --ember3:#c2300f;
+  --hull:#0b0f14; --hull2:#070a0d;
+  --serif:'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+  --sans:'Geist', ui-sans-serif, system-ui, sans-serif;
+  --mono:'Geist Mono', ui-monospace, 'SFMono-Regular', monospace;
+  --pad:clamp(56px, 7vw, 112px);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#000;overflow:hidden}
+body{font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased;font-feature-settings:"ss01","cv11","zero"}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:1px solid var(--ember2);outline-offset:2px}
+input{font:inherit;color:inherit;background:none;border:0;outline:0}
+svg{display:block}
+
+#win{position:fixed;inset:0;overflow:hidden;background:#05070a}
+#hair{position:absolute;left:0;right:0;top:0;height:1px;background:rgba(128,128,128,.22);z-index:30;pointer-events:none}
+
+/* ───────────────── viewport (web contents) ───────────────── */
+#viewport{position:absolute;left:0;right:0;top:0;bottom:var(--band);overflow:hidden}
+.view{position:absolute;inset:0;overflow:auto;display:none}
+.view.on{display:block}
+.view::-webkit-scrollbar{width:10px}
+.view::-webkit-scrollbar-thumb{background:rgba(128,128,128,.25);border-radius:10px;border:3px solid transparent;background-clip:content-box}
+
+/* ───────────────── shared line language ───────────────── */
+.line{position:absolute;left:0;right:0;height:1px;background:rgba(255,255,255,.07)}
+.line .ash,.line .emb,.line .spk{position:absolute;top:0;height:100%;display:none}
+.line .ash{left:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.22) 0 2px,transparent 2px 6px)}
+.line .emb{right:0;background:linear-gradient(90deg,#ffc29d,var(--ember) 14%,var(--ember) 72%,var(--ember3))}
+.line .spk{width:9px;height:9px;top:50%;border-radius:50%;
+  background:radial-gradient(circle,#fff8ee 0,#ffc18f 35%,rgba(255,106,61,.0) 72%);
+  box-shadow:0 0 10px 2px rgba(255,106,61,.55);transform:translate(-50%,-50%);animation:flick 1.3s infinite}
+.line.fuse{background:transparent}
+.line.fuse .ash,.line.fuse .emb,.line.fuse .spk{display:block}
+.line.forever{background:var(--ember);box-shadow:0 0 0 .5px rgba(255,106,61,.4),0 1px 14px rgba(255,106,61,.45)}
+@keyframes flick{
+  0%{transform:translate(-50%,-50%) scale(1);opacity:1}
+  23%{transform:translate(-50%,-50%) scale(.72);opacity:.82}
+  41%{transform:translate(-50%,-50%) scale(1.18);opacity:1}
+  67%{transform:translate(-50%,-50%) scale(.86);opacity:.9}
+  100%{transform:translate(-50%,-50%) scale(1);opacity:1}
+}
+
+/* ───────────────── NEW TAB: horizon ───────────────── */
+#v-ntp{background:#06080b}
+#v-ntp.on{display:flex;flex-direction:column}
+.sky{position:relative;flex:1 1 auto;min-height:150px;
+  background:
+    radial-gradient(60% 120% at 74% 108%, rgba(255,106,61,.11), rgba(255,106,61,0) 60%),
+    linear-gradient(180deg,#030507 0%,#070a0e 45%,#0e141b 100%)}
+.brand{position:absolute;left:var(--pad);top:30px;display:flex;align-items:center;gap:10px;
+  font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+.brand svg{width:18px;height:18px}
+.sky-foot{position:absolute;left:var(--pad);right:var(--pad);bottom:0;display:flex;align-items:flex-end;justify-content:space-between;gap:32px}
+.sky-title{font-family:var(--serif);font-weight:400;font-size:clamp(52px,5.4vw,76px);line-height:.74;letter-spacing:-.015em;color:var(--ink);padding-bottom:2px}
+.sky-title em{font-style:italic;color:var(--ink2)}
+.tally{display:flex;gap:40px;padding-bottom:16px}
+.tally div{display:flex;align-items:baseline;gap:10px}
+.tally b{font-family:var(--serif);font-weight:400;font-size:34px;line-height:1;color:var(--ink)}
+.tally span{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.horizon{position:relative;height:1px;flex:none;background:linear-gradient(90deg,rgba(255,255,255,.05),rgba(255,255,255,.24) 18%,rgba(255,255,255,.24) 82%,rgba(255,255,255,.05))}
+.sea{flex:none;padding:6px var(--pad) 0;background:linear-gradient(180deg,#0a0e13 0%,#06080b 100%)}
+
+.row{position:relative;display:grid;grid-template-columns:30px minmax(170px,210px) 1fr 200px;column-gap:24px;align-items:start;padding:15px 0 14px}
+.row:hover{background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.018) 20%,rgba(255,255,255,.018) 80%,rgba(255,255,255,0))}
+.row .line{bottom:0;top:auto}
+.row .line.forever{box-shadow:0 1px 10px rgba(255,106,61,.35)}
+.row .preview{position:absolute;left:0;right:0;bottom:0;height:1px;display:none;
+  background:repeating-linear-gradient(90deg,var(--ember) 0 6px,transparent 6px 11px);opacity:.75}
+.row.has-sel .preview{display:block}
+.row.has-sel .line{opacity:.0}
+.row.has-sel.locked-some .line{opacity:1}
+.hit{display:contents}
+.mark{width:16px;height:16px;margin-top:9px;border-radius:50%;border:1px solid var(--ink4);position:relative;transition:border-color .15s}
+.mark::after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--ember);transform:scale(0);transition:transform .16s cubic-bezier(.3,1.6,.5,1)}
+.row:hover .mark{border-color:var(--ink3)}
+.row.sel .mark{border-color:var(--ember)}
+.row.sel .mark::after{transform:scale(1)}
+.row.part .mark{border-color:var(--ember)}
+.row.part .mark::after{transform:scale(1);inset:7px 3px;border-radius:1px}
+.row.locked .mark{border:0;border-radius:0;height:2px;width:16px;margin-top:16px;background:var(--ember);box-shadow:0 0 8px rgba(255,106,61,.6)}
+.row.locked .mark::after{display:none}
+.cname{cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:5px;min-width:0}
+.row.locked .cname{cursor:default}
+.ctitle{font-family:var(--serif);font-size:27px;line-height:1.05;color:var(--ink);white-space:nowrap;transition:color .15s}
+.row:not(.sel):not(.locked) .ctitle{color:#d8d4ce}
+.row.sel .ctitle{color:#fff}
+.ccount{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+.sites{display:flex;flex-wrap:wrap;gap:5px 16px;padding-top:7px;min-width:0}
+.site{position:relative;font-family:var(--mono);font-size:12px;line-height:18px;color:var(--ink3);padding:0;transition:color .12s}
+.site:hover{color:var(--ink)}
+.site.sel{color:var(--ink)}
+.site.sel::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:1px;background:var(--ember)}
+.site.lock{cursor:default;color:#7d7f83}
+.site.lock:hover{color:#7d7f83}
+.row.locked .site{color:#5f646b}
+.site .mini{position:absolute;left:0;right:0;bottom:-3px;height:1px}
+.site.solo{color:var(--ember2)}
+.addsite{font-family:var(--mono);font-size:12px;line-height:18px;color:var(--ink4);border-bottom:1px dashed var(--ink4)}
+.addsite:hover{color:var(--ink2);border-color:var(--ink3)}
+.addin{font-family:var(--mono);font-size:12px;line-height:18px;width:150px;color:var(--ink);border-bottom:1px solid var(--ember)}
+.addin::placeholder{color:var(--ink4)}
+.cstat{text-align:right;padding-top:6px;display:flex;flex-direction:column;gap:5px;align-items:flex-end}
+.cstat b{font-family:var(--mono);font-weight:500;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink4)}
+.cstat span{font-family:var(--mono);font-size:11px;color:var(--ink3)}
+.cstat.forever b{color:var(--ember)}
+.cstat.timed b{color:var(--ember2)}
+.cstat.partial b{color:var(--ink2)}
+
+.dock{flex:none;display:grid;grid-template-columns:1fr auto;align-items:end;gap:56px;padding:30px var(--pad) 30px;background:#06080b}
+.dock-k{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:14px}
+.ruler{position:relative;height:46px;margin-right:24px}
+.rtrack{position:absolute;left:0;right:0;top:30px;height:1px;background:rgba(255,255,255,.12)}
+.rfill{position:absolute;left:0;top:0;height:1px;background:var(--ember);transition:width .35s cubic-bezier(.3,.7,.2,1);box-shadow:0 0 8px rgba(255,106,61,.55)}
+.ruler.inf .rtrack{background:var(--ember)}
+.stop{position:absolute;top:0;height:46px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;white-space:nowrap}
+.stop:first-of-type{transform:none;align-items:flex-start}
+.stop:last-of-type{transform:translateX(-100%);align-items:flex-end}
+.slab{font-size:13.5px;color:var(--ink3);line-height:18px;transition:color .15s}
+.stop:hover .slab{color:var(--ink2)}
+.stop .tick{width:1px;height:7px;margin-top:9px;background:rgba(255,255,255,.28)}
+.stop.on .slab{color:var(--ink);font-weight:500}
+.stop.on .tick{height:13px;margin-top:6px;width:2px;background:var(--ember);box-shadow:0 0 8px rgba(255,106,61,.7)}
+.stop.inf .slab{font-family:var(--serif);font-style:italic;font-size:19px;line-height:18px;letter-spacing:.01em}
+.stop.inf.on .slab{color:var(--ember2)}
+.dock-r{display:flex;flex-direction:column;align-items:flex-end;gap:12px;min-width:260px}
+.summary{font-size:13px;color:var(--ink3);max-width:340px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.summary b{font-weight:500;color:var(--ink2)}
+.bbtn{height:44px;padding:0 24px;border-radius:22px;background:var(--ember);color:#1b0802;font-weight:600;font-size:14.5px;letter-spacing:.005em;
+  box-shadow:0 0 0 1px rgba(255,143,94,.6) inset,0 8px 30px -10px rgba(255,106,61,.65);transition:transform .12s, background .15s}
+.bbtn:hover{background:var(--ember2)}
+.bbtn:active{transform:translateY(1px)}
+.bbtn[disabled]{background:transparent;color:var(--ink4);box-shadow:0 0 0 1px var(--ink5) inset;cursor:default}
+
+/* ───────────────── BLOCKED page ───────────────── */
+#v-blocked{background:#05070a}
+#v-blocked.on{display:flex;flex-direction:column}
+.b-sky{flex:1.35 1 0;position:relative;display:flex;flex-direction:column;justify-content:flex-end;padding:0 var(--pad);
+  background:linear-gradient(180deg,#030406,#0a0e13)}
+.b-kicker{position:absolute;top:30px;left:var(--pad);display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+.b-kicker svg{width:18px;height:18px}
+.b-domain{font-family:var(--serif);font-weight:400;font-size:clamp(110px,12.5vw,190px);line-height:.8;letter-spacing:-.025em;color:var(--ink);white-space:nowrap;
+  margin-bottom:-.06em;position:relative;z-index:1}
+.b-hz{position:relative;height:1px;flex:none}
+.b-hz .line{top:0;height:1px}
+.b-hz .line.fuse{height:2px;top:-.5px}
+.b-hz .line.fuse .emb{box-shadow:0 0 12px rgba(255,106,61,.5)}
+.b-hz .line.fuse .spk{width:13px;height:13px;top:1px}
+.b-hz .line.forever{height:2px;top:-.5px;box-shadow:0 0 18px 1px rgba(255,106,61,.6),0 18px 60px rgba(255,106,61,.18)}
+.b-ticks{position:absolute;left:var(--pad);right:var(--pad);top:14px;height:14px;font-family:var(--mono);font-size:11px;color:var(--ink3)}
+.b-ticks > span{position:absolute;top:0;white-space:nowrap}
+.b-ticks .t-l{left:0}
+.b-ticks .t-r{right:0;color:var(--ember2)}
+.b-ticks .t-n{transform:translateX(-50%);color:var(--ink)}
+.b-sea{flex:1 1 0;padding:58px var(--pad) 0;background:linear-gradient(180deg,#0a0d12,#05070a)}
+.forever .b-sea{background:linear-gradient(180deg,rgba(255,106,61,.085),rgba(255,106,61,0) 46%),linear-gradient(180deg,#0a0d12,#05070a)}
+.b-phrase{font-family:var(--serif);font-size:clamp(38px,3.6vw,52px);line-height:1.05;color:var(--ink2)}
+.b-phrase em{font-style:italic;color:var(--ink)}
+.forever .b-phrase em{color:var(--ember)}
+.b-meta{margin-top:14px;font-size:14.5px;color:var(--ink3);max-width:560px;line-height:1.55}
+.b-actions{margin-top:30px;display:flex;align-items:center;gap:20px}
+.ghost{height:40px;padding:0 20px;border-radius:20px;box-shadow:0 0 0 1px rgba(255,255,255,.16) inset;font-size:14px;font-weight:500;color:var(--ink);display:inline-flex;align-items:center;gap:10px}
+.ghost:hover{box-shadow:0 0 0 1px rgba(255,255,255,.32) inset;background:rgba(255,255,255,.03)}
+.ghost svg{width:14px;height:14px}
+.textbtn{font-size:14px;color:var(--ember2)}
+.textbtn:hover{color:#ffb08a}
+
+/* ───────────────── ordinary sites ───────────────── */
+#v-gh{background:#0d1117;color:#e6edf3}
+.gh-top{height:64px;display:flex;align-items:center;gap:16px;padding:0 32px;background:#010409;border-bottom:1px solid #21262d}
+.gh-top svg{width:30px;height:30px;color:#e6edf3}
+.gh-crumb{font-size:15px;color:#e6edf3}.gh-crumb b{font-weight:600}
+.gh-sp{flex:1}
+.g{background:#21262d;border-radius:6px;height:12px}
+.gh-nav{display:flex;gap:28px;padding:0 32px;border-bottom:1px solid #21262d;height:48px;align-items:flex-end}
+.gh-nav span{font-size:14px;color:#9198a1;padding-bottom:13px}
+.gh-nav span.on{color:#e6edf3;box-shadow:0 2px 0 #9198a1}
+.gh-main{max-width:1240px;margin:0 auto;padding:28px 32px 80px;display:grid;grid-template-columns:1fr 296px;gap:32px}
+.gh-files{border:1px solid #30363d;border-radius:8px;overflow:hidden}
+.gh-files .hd{background:#151b23;height:52px;display:flex;align-items:center;gap:12px;padding:0 16px;border-bottom:1px solid #30363d}
+.gh-files .fr{height:41px;display:flex;align-items:center;gap:14px;padding:0 16px;border-top:1px solid #21262d}
+.gh-files .fr:first-of-type{border-top:0}
+.gh-readme{margin-top:24px;border:1px solid #30363d;border-radius:8px;padding:28px 32px 36px}
+.gh-readme h1{font-size:30px;font-weight:600;letter-spacing:-.01em;padding-bottom:10px;border-bottom:1px solid #30363d;margin-bottom:18px}
+.gh-readme .g{height:10px;margin-top:12px;background:#1d232b}
+.gh-side h3{font-size:16px;font-weight:600;margin-bottom:14px}
+.gh-side .g{height:10px;margin-top:12px;background:#1d232b}
+
+#v-wiki{background:#fff;color:#202122}
+.wk-top{height:62px;display:flex;align-items:center;gap:18px;padding:0 28px;border-bottom:1px solid #eaecf0}
+.wk-logo{width:40px;height:40px;border-radius:50%;background:#f2f3f5;display:grid;place-items:center;font-family:'Linux Libertine',Georgia,serif;font-size:22px;color:#202122}
+.wk-word{font-family:'Linux Libertine',Georgia,serif;font-size:18px;letter-spacing:.02em}
+.wk-word small{display:block;font-family:var(--sans);font-size:11px;color:#54595d;letter-spacing:0}
+.wk-search{flex:0 1 440px;height:36px;border:1px solid #a2a9b1;border-radius:2px;margin-left:24px}
+.wk-body{display:grid;grid-template-columns:190px 1fr;gap:40px;max-width:1240px;padding:28px 28px 80px;margin:0 auto}
+.wk-side .w{height:9px;background:#eaecf0;border-radius:2px;margin:14px 0}
+.wk-art h1{font-family:'Linux Libertine',Georgia,'Times New Roman',serif;font-weight:400;font-size:34px;border-bottom:1px solid #a2a9b1;padding-bottom:6px}
+.wk-art .from{font-size:13px;color:#54595d;margin:10px 0 18px}
+.wk-flow{overflow:hidden}
+.wk-info{float:right;width:270px;margin:0 0 18px 26px;border:1px solid #a2a9b1;background:#f8f9fa;padding:12px}
+.wk-info .pic{height:200px;background:linear-gradient(160deg,#d8d4cb,#b9b2a6);margin:8px 0 12px}
+.wk-info .cap{font-family:Georgia,serif;text-align:center;font-weight:bold;font-size:15px}
+.wk-flow .w{height:10px;background:#eaecf0;border-radius:2px;margin:11px 0}
+.wk-art h2{font-family:'Linux Libertine',Georgia,serif;font-weight:400;font-size:25px;border-bottom:1px solid #a2a9b1;padding-bottom:4px;margin:28px 0 12px;clear:none}
+
+#v-generic{background:#101215}
+.gen{max-width:880px;margin:0 auto;padding:92px 40px}
+.gen .k{font-family:var(--mono);font-size:12px;color:var(--ink3)}
+.gen h1{font-family:var(--sans);font-weight:600;font-size:40px;letter-spacing:-.02em;margin:12px 0 34px;word-break:break-all}
+.gen .g{background:#1b1f25;height:11px;margin:14px 0;border-radius:4px}
+.gen .card{border:1px solid #1e232a;border-radius:10px;padding:20px 22px;margin:18px 0}
+.gen .card .g:first-child{height:14px;width:42%;background:#262c34}
+
+/* ───────────────── BAND (all chrome) ───────────────── */
+#band{position:absolute;left:0;right:0;bottom:0;height:var(--band);z-index:20;
+  background:linear-gradient(180deg,var(--hull) 0%,var(--hull2) 100%);
+  display:flex;align-items:center;user-select:none}
+#band::before{content:"";position:absolute;left:0;right:0;top:0;height:30px;pointer-events:none;opacity:0;transition:opacity .5s;
+  background:linear-gradient(180deg,rgba(255,106,61,.13),rgba(255,106,61,0))}
+#band.lit-timed::before{opacity:.45}
+#band.lit-forever::before{opacity:1}
+#wl{top:0;z-index:3;transition:background .3s;background:rgba(255,255,255,.13)}
+#wl .ash,#wl .emb,#wl .spk{transition:left .6s cubic-bezier(.3,.7,.2,1),width .6s cubic-bezier(.3,.7,.2,1)}
+#wl.forever{height:2px;box-shadow:0 1px 16px 1px rgba(255,106,61,.55)}
+#wl.fuse .emb{height:2px;box-shadow:0 1px 10px rgba(255,106,61,.4)}
+#wl .spk{width:11px;height:11px;top:1px}
+
+.b-left{display:flex;align-items:center;gap:2px;padding:0 10px 0 16px;flex:none;height:100%}
+.logo{width:24px;height:24px;margin-right:12px}
+.ib{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;color:var(--ink2)}
+.ib svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.ib:hover{background:rgba(255,255,255,.05);color:var(--ink)}
+.ib[disabled]{color:var(--ink4);cursor:default;background:none}
+
+#tabs{flex:1 1 auto;min-width:0;height:100%;display:flex;align-items:flex-start;gap:3px;padding:0 10px}
+.tab{position:relative;flex:1 1 0;min-width:0;max-width:172px;height:33px;display:flex;align-items:center;gap:8px;padding:0 16px 0 18px;
+  clip-path:polygon(0 0,100% 0,calc(100% - 10px) 100%,10px 100%);
+  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.028));color:var(--ink3);font-size:12.5px;
+  transition:height .22s cubic-bezier(.3,.7,.2,1),background .15s,color .15s}
+.tab:hover{background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.045));color:var(--ink2)}
+.tab.active{flex:0 0 196px;max-width:196px;height:46px;color:var(--ink);padding-top:2px;
+  background:linear-gradient(180deg,#26303c 0%,#18202a 100%)}
+.tab .fav{width:14px;height:14px;flex:none;display:grid;place-items:center;color:currentColor;opacity:.9}
+.tab .fav svg{width:14px;height:14px}
+.tab .ttl{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;
+  -webkit-mask-image:linear-gradient(90deg,#000 80%,transparent);mask-image:linear-gradient(90deg,#000 80%,transparent)}
+.tab.blk .ttl{font-family:var(--mono);font-size:11.5px}
+.tab.blk .fav{opacity:.45}
+.tab .x{width:18px;height:18px;border-radius:5px;display:none;place-items:center;color:var(--ink3);flex:none;margin-right:-6px}
+.tab .x svg{width:10px;height:10px;stroke:currentColor;stroke-width:1.6;fill:none;stroke-linecap:round}
+.tab .x:hover{background:rgba(255,255,255,.08);color:var(--ink)}
+.tab.active .x,.tab:hover .x{display:grid}
+.tab .line{top:auto;bottom:0;left:10px;right:10px;background:transparent}
+.tab .line.forever{height:2px;background:var(--ember)}
+.tab .line.fuse{height:2px}
+.tab .line.fuse .ash,.tab .line.fuse .emb{height:2px}
+.tab .line .spk{width:7px;height:7px;top:1px}
+.newtab{flex:none;width:34px;height:24px;clip-path:polygon(0 0,100% 0,calc(100% - 8px) 100%,8px 100%);background:rgba(255,255,255,.03);display:grid;place-items:center;color:var(--ink3)}
+.newtab:hover{background:rgba(255,255,255,.07);color:var(--ink)}
+.newtab svg{width:11px;height:11px;stroke:currentColor;stroke-width:1.6;fill:none;stroke-linecap:round}
+
+#addr{flex:none;width:clamp(220px,19vw,330px);height:36px;position:relative;border-radius:10px;background:rgba(255,255,255,.035);
+  box-shadow:0 0 0 1px rgba(255,255,255,.05) inset;display:flex;align-items:center;gap:10px;padding:0 12px;cursor:text;transition:background .15s,box-shadow .15s}
+#addr:hover{background:rgba(255,255,255,.055)}
+#addr.focus{background:#141a22;box-shadow:0 0 0 1px rgba(255,143,94,.45) inset;border-radius:0 0 10px 10px}
+.prompt{font-family:var(--mono);font-size:13px;color:var(--ink3);flex:none}
+#addr.focus .prompt{color:var(--ember2)}
+.afield{position:relative;flex:1;min-width:0;height:100%}
+#ain:focus-visible{outline:0}
+#ain{position:absolute;inset:0;width:100%;font-family:var(--mono);font-size:12.5px;color:transparent;caret-color:var(--ember2)}
+#addr.focus #ain{color:var(--ink)}
+#ain::placeholder{color:var(--ink3)}
+#addr.focus #ain::placeholder{color:var(--ink4)}
+#adisp{position:absolute;inset:0;display:flex;align-items:center;font-family:var(--mono);font-size:12.5px;white-space:nowrap;overflow:hidden;pointer-events:none;
+  -webkit-mask-image:linear-gradient(90deg,#000 85%,transparent);mask-image:linear-gradient(90deg,#000 85%,transparent)}
+#adisp .h{color:var(--ink)}#adisp .p{color:var(--ink3)}#adisp .ph{color:var(--ink3)}
+#addr.focus #adisp{display:none}
+.atag[hidden]{display:none}
+.atag{flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ember2);display:flex;align-items:center;gap:6px}
+.atag i{width:10px;height:2px;background:var(--ember)}
+.kbd{flex:none;font-family:var(--mono);font-size:10px;color:var(--ink4);letter-spacing:.04em}
+#addr.focus .kbd{display:none}
+
+.b-right{display:flex;align-items:center;gap:6px;padding:0 12px 0 14px;flex:none;height:100%}
+#blockBtn{height:34px;padding:0 14px 0 12px;border-radius:17px;display:flex;align-items:center;gap:9px;font-size:13px;font-weight:500;color:var(--ember2);
+  box-shadow:0 0 0 1px rgba(255,106,61,.32) inset;margin-right:4px;transition:background .15s, box-shadow .15s}
+#blockBtn i{width:12px;height:2px;background:var(--ember);border-radius:1px}
+#blockBtn:hover,#blockBtn.open{background:rgba(255,106,61,.09);box-shadow:0 0 0 1px rgba(255,106,61,.6) inset}
+#blockBtn.dim{color:var(--ink3);box-shadow:0 0 0 1px var(--ink5) inset}
+#blockBtn.dim i{background:var(--ink4)}
+.sep{width:1px;height:18px;background:rgba(255,255,255,.07);margin:0 6px}
+.wc{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:var(--ink3)}
+.wc svg{width:12px;height:12px;stroke:currentColor;stroke-width:1.4;fill:none;stroke-linecap:round}
+.wc:hover{background:rgba(255,255,255,.07);color:var(--ink)}
+.wc.close:hover{background:rgba(255,106,61,.16);color:var(--ember2)}
+#menuBtn.open{background:rgba(255,255,255,.07);color:var(--ink)}
+
+/* ───────────────── panels that rise above the waterline ───────────────── */
+.rise{position:absolute;bottom:var(--band);z-index:19;background:#0d1218;
+  box-shadow:0 0 0 1px rgba(255,255,255,.07) inset,0 -24px 60px -20px rgba(0,0,0,.8);
+  border-radius:14px 14px 0 0;transform-origin:50% 100%;
+  opacity:0;transform:translateY(8px) scaleY(.97);pointer-events:none;transition:opacity .16s,transform .2s cubic-bezier(.3,.7,.2,1)}
+.rise.open{opacity:1;transform:none;pointer-events:auto}
+.rise::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:rgba(255,255,255,.08)}
+
+#cmd{padding:14px 0 8px}
+.c-hint{display:flex;justify-content:space-between;padding:0 18px 10px;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--ink4);border-bottom:1px solid rgba(255,255,255,.05);margin-bottom:6px}
+.c-list{display:flex;flex-direction:column-reverse}
+.c-item{display:flex;align-items:center;gap:14px;padding:0 18px;height:44px;text-align:left;width:100%;position:relative}
+.c-item.on{background:rgba(255,255,255,.045)}
+.c-item.on::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:2px;background:var(--ember2);border-radius:2px}
+.c-ic{width:16px;height:16px;flex:none;color:var(--ink3);display:grid;place-items:center}
+.c-ic svg{width:15px;height:15px}
+.c-main{flex:1;min-width:0;display:flex;align-items:baseline;gap:12px;white-space:nowrap;overflow:hidden}
+.c-t{font-size:14px;color:var(--ink);overflow:hidden;text-overflow:ellipsis}
+.c-item mark{background:none;color:#fff;font-weight:600}
+.c-u mark{color:var(--ink);font-weight:500}
+.c-u{font-family:var(--mono);font-size:11.5px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis}
+.c-tag{flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink4)}
+.c-tag.blk{color:var(--ember2);display:flex;align-items:center;gap:7px}
+.c-tag.blk i{display:block;width:14px;height:2px;background:var(--ember)}
+.c-tag.blk i.f{background:linear-gradient(90deg,rgba(255,255,255,.25) 0 40%,var(--ember) 40%)}
+.c-item.blocked .c-t{color:var(--ink2)}
+
+#bpop{width:360px;padding:22px 22px 20px}
+.p-k{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)}
+.p-d{font-family:var(--serif);font-size:40px;line-height:1;margin:10px 0 6px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p-s{font-size:13px;color:var(--ink3);line-height:1.5}
+.p-s em{font-style:normal;color:var(--ember2)}
+.p-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:18px 0 18px}
+.chip{height:36px;border-radius:9px;font-size:13px;color:var(--ink2);box-shadow:0 0 0 1px rgba(255,255,255,.08) inset}
+.chip:hover{color:var(--ink);box-shadow:0 0 0 1px rgba(255,255,255,.18) inset}
+.chip.on{color:var(--ink);box-shadow:0 0 0 1px var(--ember) inset;background:rgba(255,106,61,.08)}
+.chip.inf{font-family:var(--serif);font-style:italic;font-size:17px}
+.chip[disabled]{color:var(--ink4);box-shadow:0 0 0 1px rgba(255,255,255,.04) inset;cursor:default;text-decoration:line-through;text-decoration-color:rgba(255,255,255,.18)}
+#bpop .bbtn{width:100%}
+.p-line{position:relative;height:2px;margin:18px 0 4px}
+.p-line .line{top:0;height:2px}
+
+#menu{width:248px;padding:8px}
+.m-it{display:flex;justify-content:space-between;align-items:center;width:100%;height:36px;padding:0 12px;border-radius:8px;font-size:13.5px;color:var(--ink2)}
+.m-it:hover{background:rgba(255,255,255,.05);color:var(--ink)}
+.m-it kbd{font-family:var(--mono);font-size:10.5px;color:var(--ink4)}
+.m-sep{height:1px;background:rgba(255,255,255,.06);margin:6px 4px}
+.m-foot{display:flex;align-items:center;gap:10px;padding:10px 12px 6px;font-family:var(--mono);font-size:10.5px;color:var(--ink4);letter-spacing:.05em}
+.m-foot svg{width:16px;height:16px}
+
+/* ───────────────── toast ───────────────── */
+#toast{position:absolute;left:50%;bottom:calc(var(--band) + 18px);z-index:25;min-width:380px;max-width:640px;
+  background:#121820;border-radius:12px;box-shadow:0 0 0 1px rgba(255,255,255,.08) inset,0 20px 50px -12px rgba(0,0,0,.85);
+  transform:translate(-50%,12px);opacity:0;pointer-events:none;transition:opacity .2s,transform .25s cubic-bezier(.3,.7,.2,1);overflow:hidden}
+#toast.open{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.t-b{display:flex;align-items:center;gap:16px;padding:14px 14px 14px 18px}
+.t-m{flex:1;font-size:14px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-m em{font-style:normal;color:var(--ember2)}
+.t-m em.inf{font-family:var(--serif);font-style:italic;font-size:17px;color:var(--ember)}
+.t-u{flex:none;height:32px;padding:0 14px;border-radius:16px;font-size:13px;font-weight:500;color:var(--ink);box-shadow:0 0 0 1px rgba(255,255,255,.16) inset;display:flex;align-items:center;gap:8px}
+.t-u:hover{background:rgba(255,255,255,.06)}
+.t-u span{font-family:var(--mono);font-size:11px;color:var(--ink3);min-width:14px;text-align:right}
+.t-f{position:relative;height:2px;background:rgba(255,255,255,.05)}
+.t-f i{position:absolute;left:0;top:0;height:2px;width:100%;background:linear-gradient(90deg,var(--ember3),var(--ember) 80%,#ffc29d)}
+.t-f i::after{content:"";position:absolute;right:-4px;top:-3px;width:8px;height:8px;border-radius:50%;background:radial-gradient(circle,#fff8ee,#ffb37a 40%,transparent 72%);box-shadow:0 0 8px 2px rgba(255,106,61,.55)}
+#toast.noundo .t-u,#toast.noundo .t-f{display:none}
+
+/* ───────────────── caption ───────────────── */
+#cap{position:absolute;top:16px;right:16px;z-index:40;max-width:330px;background:rgba(8,11,15,.92);border-radius:12px;
+  box-shadow:0 0 0 1px rgba(255,255,255,.08) inset;padding:14px 16px 15px;color:var(--ink2);font-size:12.5px;line-height:1.5}
+#cap .ch{display:flex;align-items:center;gap:10px;justify-content:space-between}
+#cap .ct{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink)}
+#cap .ct b{color:var(--ember2);font-weight:500}
+#cap p{margin-top:8px}
+#cap button{font-family:var(--mono);font-size:11px;color:var(--ink3);width:20px;height:20px;border-radius:5px}
+#cap button:hover{background:rgba(255,255,255,.07);color:var(--ink)}
+#cap.min{padding:8px 10px 8px 14px}
+#cap.min p{display:none}
+
+@media (max-width:1340px){
+  #addr{width:212px}
+  #addr .kbd{display:none}
+  .tab{padding:0 13px 0 16px}
+  .tab.active{flex-basis:172px;max-width:172px}
+  .b-left{padding-left:14px}
+  .logo{margin-right:8px}
+  .b-right{padding-left:10px}
+  .row{grid-template-columns:28px 178px 1fr 176px;column-gap:20px}
+  .ctitle{font-size:25px}
+  .tally{gap:28px}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6a3d"/><stop offset="1" stop-color="#c2300f"/></linearGradient></defs></svg>
+<div id="win">
+  <div id="hair"></div>
+
+  <main id="viewport">
+    <!-- NEW TAB · horizon -->
+    <section class="view" id="v-ntp" aria-label="New tab">
+      <div class="sky">
+        <div class="brand"><svg viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="url(#g1)"/><path d="M14 10.5V24.5H6.6Q7.4 16 14 10.5Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/><path d="M17 6V24.5H25.4Q24.7 13 17 6Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>Mast</div>
+        <div class="sky-foot">
+          <h1 class="sky-title">The blocklist</h1>
+          <div class="tally"><div><b id="tStop">4</b><span>stopped today</span></div><div><b id="tSites">21</b><span>sites blocked</span></div></div>
+        </div>
+      </div>
+      <div class="horizon"></div>
+      <div class="sea" id="rows"></div>
+      <div class="dock">
+        <div class="dock-l">
+          <div class="dock-k">Block for</div>
+          <div class="ruler" id="ruler"></div>
+        </div>
+        <div class="dock-r">
+          <div class="summary" id="summary"></div>
+          <button class="bbtn" id="ntpBlock">Block</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- BLOCKED -->
+    <section class="view" id="v-blocked" aria-label="Blocked page">
+      <div class="b-sky">
+        <div class="b-kicker"><svg viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="url(#g1)"/><path d="M14 10.5V24.5H6.6Q7.4 16 14 10.5Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/><path d="M17 6V24.5H25.4Q24.7 13 17 6Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg><span id="bKick">Blocked by Mast</span></div>
+        <h1 class="b-domain" id="bDomain">x.com</h1>
+      </div>
+      <div class="b-hz"><div class="line" id="bLine"><i class="ash"></i><i class="emb"></i><i class="spk"></i></div><div class="b-ticks" id="bTicks"></div></div>
+      <div class="b-sea">
+        <p class="b-phrase" id="bPhrase"></p>
+        <p class="b-meta" id="bMeta"></p>
+        <div class="b-actions">
+          <button class="ghost" id="bBack"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3L5 8l5 5"/></svg>Back</button>
+          <button class="textbtn" id="bLonger">Make it longer</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- GITHUB -->
+    <section class="view" id="v-gh" aria-label="GitHub">
+      <div class="gh-top">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        <div class="gh-crumb">0xmiki / <b>mast</b></div>
+        <div class="gh-sp"></div>
+        <div class="g" style="width:220px;height:30px;background:#0d1117;border:1px solid #30363d"></div>
+        <div class="g" style="width:30px;height:30px;border-radius:50%;background:#30363d"></div>
+      </div>
+      <div class="gh-nav"><span class="on">Code</span><span>Issues</span><span>Pull requests</span><span>Actions</span><span>Projects</span><span>Settings</span></div>
+      <div class="gh-main">
+        <div>
+          <div style="display:flex;gap:10px;margin-bottom:16px"><div class="g" style="width:96px;height:32px"></div><div class="g" style="width:80px;height:32px;background:#161b22"></div><div style="flex:1"></div><div class="g" style="width:86px;height:32px;background:#238636"></div></div>
+          <div class="gh-files">
+            <div class="hd"><div class="g" style="width:24px;height:24px;border-radius:50%;background:#30363d"></div><div class="g" style="width:280px;height:10px;background:#30363d"></div><div style="flex:1"></div><div class="g" style="width:90px;height:10px"></div></div>
+            <div id="ghRows"></div>
+          </div>
+          <div class="gh-readme">
+            <h1>Mast</h1>
+            <div class="g" style="width:92%"></div><div class="g" style="width:86%"></div><div class="g" style="width:64%"></div>
+            <div class="g" style="width:30%;height:16px;margin-top:30px;background:#262c35"></div>
+            <div class="g" style="width:88%"></div><div class="g" style="width:79%"></div><div class="g" style="width:83%"></div><div class="g" style="width:40%"></div>
+          </div>
+        </div>
+        <aside class="gh-side">
+          <h3>About</h3>
+          <div class="g" style="width:96%"></div><div class="g" style="width:70%"></div>
+          <div style="display:flex;gap:6px;margin:18px 0;flex-wrap:wrap"><div class="g" style="width:66px;height:22px;border-radius:11px;background:#121d2f"></div><div class="g" style="width:74px;height:22px;border-radius:11px;background:#121d2f"></div><div class="g" style="width:52px;height:22px;border-radius:11px;background:#121d2f"></div></div>
+          <div class="g" style="width:40%"></div><div class="g" style="width:52%"></div><div class="g" style="width:46%"></div>
+          <h3 style="margin-top:34px">Releases</h3><div class="g" style="width:60%"></div><div class="g" style="width:38%"></div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- WIKIPEDIA -->
+    <section class="view" id="v-wiki" aria-label="Wikipedia">
+      <div class="wk-top"><div class="wk-logo">W</div><div class="wk-word">WIKIPEDIA<small>The Free Encyclopedia</small></div><div class="wk-search"></div></div>
+      <div class="wk-body">
+        <div class="wk-side"><div class="w" style="width:70%"></div><div class="w" style="width:84%"></div><div class="w" style="width:60%"></div><div class="w" style="width:76%"></div><div class="w" style="width:50%;margin-top:34px"></div><div class="w" style="width:80%"></div><div class="w" style="width:66%"></div></div>
+        <article class="wk-art">
+          <h1>Ulysses</h1>
+          <div class="from">From Wikipedia, the free encyclopedia</div>
+          <div class="wk-flow">
+            <div class="wk-info"><div class="cap">Ulysses and the Sirens</div><div class="pic"></div><div class="w" style="width:90%"></div><div class="w" style="width:70%"></div><div class="w" style="width:82%"></div></div>
+            <div class="w" style="width:96%"></div><div class="w" style="width:92%"></div><div class="w" style="width:98%"></div><div class="w" style="width:62%"></div>
+            <div class="w" style="width:94%;margin-top:22px"></div><div class="w" style="width:90%"></div><div class="w" style="width:97%"></div><div class="w" style="width:88%"></div><div class="w" style="width:45%"></div>
+            <h2>The Sirens</h2>
+            <div class="w" style="width:93%"></div><div class="w" style="width:96%"></div><div class="w" style="width:90%"></div><div class="w" style="width:71%"></div>
+            <h2>Tied to the mast</h2>
+            <div class="w" style="width:95%"></div><div class="w" style="width:89%"></div><div class="w" style="width:58%"></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- GENERIC -->
+    <section class="view" id="v-generic" aria-label="Page">
+      <div class="gen"><div class="k" id="genK"></div><h1 id="genH"></h1>
+        <div class="card"><div class="g"></div><div class="g" style="width:88%"></div><div class="g" style="width:70%"></div></div>
+        <div class="card"><div class="g"></div><div class="g" style="width:92%"></div><div class="g" style="width:60%"></div></div>
+        <div class="card"><div class="g"></div><div class="g" style="width:84%"></div><div class="g" style="width:76%"></div></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- rising panels -->
+  <div class="rise" id="cmd" role="listbox" aria-label="Suggestions">
+    <div class="c-hint"><span>↑ ↓ move · enter go · esc close</span><span>Google</span></div>
+    <div class="c-list" id="clist"></div>
+  </div>
+  <div class="rise" id="bpop" role="dialog" aria-label="Block this site"></div>
+  <div class="rise" id="menu" role="menu">
+    <button class="m-it" data-m="newtab">New tab <kbd>Ctrl T</kbd></button>
+    <button class="m-it">New window <kbd>Ctrl N</kbd></button>
+    <div class="m-sep"></div>
+    <button class="m-it" data-m="list">Blocklist</button>
+    <button class="m-it">History <kbd>Ctrl H</kbd></button>
+    <button class="m-it">Downloads <kbd>Ctrl J</kbd></button>
+    <button class="m-it">Bookmarks</button>
+    <div class="m-sep"></div>
+    <button class="m-it">Settings</button>
+    <div class="m-foot"><svg viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="url(#g1)"/><path d="M14 10.5V24.5H6.6Q7.4 16 14 10.5Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/><path d="M17 6V24.5H25.4Q24.7 13 17 6Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>Mast 0.1 · Chromium 142</div>
+  </div>
+
+  <div id="toast" role="status" aria-live="polite">
+    <div class="t-b"><div class="t-m" id="tMsg"></div><button class="t-u" id="tUndo">Undo <span id="tN">10</span></button></div>
+    <div class="t-f"><i id="tFuse"></i></div>
+  </div>
+
+  <!-- THE BAND: every piece of chrome lives below the waterline -->
+  <footer id="band">
+    <div class="line" id="wl"><i class="ash"></i><i class="emb"></i><i class="spk"></i></div>
+    <div class="b-left">
+      <svg class="logo" viewBox="0 0 32 32" aria-label="Mast"><rect width="32" height="32" rx="8" fill="url(#g1)"/><path d="M14 10.5V24.5H6.6Q7.4 16 14 10.5Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/><path d="M17 6V24.5H25.4Q24.7 13 17 6Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>
+      <button class="ib" id="navBack" title="Back"><svg viewBox="0 0 16 16"><path d="M10 3L5 8l5 5"/></svg></button>
+      <button class="ib" id="navFwd" title="Forward"><svg viewBox="0 0 16 16"><path d="M6 3l5 5-5 5"/></svg></button>
+      <button class="ib" id="navRe" title="Reload"><svg viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.46-3.54"/><path d="M13 2.5V5h-2.5"/></svg></button>
+    </div>
+    <div id="tabs" role="tablist"></div>
+    <div id="addr">
+      <span class="prompt">›</span>
+      <div class="afield"><input id="ain" spellcheck="false" autocomplete="off" placeholder="Search or type a URL" aria-label="Address and search"><div id="adisp"></div></div>
+      <span class="atag" id="atag" hidden><i></i><span></span></span>
+      <span class="kbd">Ctrl L</span>
+    </div>
+    <div class="b-right">
+      <button id="blockBtn" title="Block this site"><i></i>Block</button>
+      <button class="ib" id="menuBtn" title="Menu"><svg viewBox="0 0 16 16"><circle cx="3.5" cy="8" r=".9" fill="currentColor" stroke="none"/><circle cx="8" cy="8" r=".9" fill="currentColor" stroke="none"/><circle cx="12.5" cy="8" r=".9" fill="currentColor" stroke="none"/></svg></button>
+      <div class="sep"></div>
+      <button class="wc" title="Minimize"><svg viewBox="0 0 12 12"><path d="M2.5 6h7"/></svg></button>
+      <button class="wc" title="Maximize"><svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7" rx="1.2"/></svg></button>
+      <button class="wc close" title="Close"><svg viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6"/></svg></button>
+    </div>
+  </footer>
+
+  <aside id="cap">
+    <div class="ch"><div class="ct"><b>Proposal 04</b> · Waterline</div><button id="capT" title="Collapse">–</button></div>
+    <p>The page runs to the top edge; all chrome sits in one band below it. The band's top edge is the waterline: a burning fuse when the tab is blocked for a while, solid ember when it's forever.</p>
+  </aside>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const H = 3600e3, D = 24 * H;
+/* demo clock: Friday Oct 30 2026, 4:48 pm */
+const T0 = new Date(2026, 9, 30, 16, 48, 0).getTime(), L0 = Date.now();
+const now = () => T0 + (Date.now() - L0);
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+const CATS = [
+  {id:'social', name:'Social', sites:['x.com','twitter.com','facebook.com','instagram.com','tiktok.com','reddit.com','snapchat.com','threads.net','bsky.app','pinterest.com','tumblr.com','discord.com']},
+  {id:'video', name:'Video & streaming', sites:['youtube.com','netflix.com','twitch.tv','kick.com','primevideo.com','disneyplus.com','hulu.com','max.com']},
+  {id:'news', name:'News & forums', sites:['news.ycombinator.com','cnn.com','foxnews.com','bbc.com','nytimes.com','buzzfeed.com','9gag.com']},
+  {id:'shop', name:'Shopping', sites:['amazon.com','ebay.com','aliexpress.com','temu.com','etsy.com','shein.com']},
+  {id:'games', name:'Games', sites:['chess.com','lichess.org','roblox.com','store.steampowered.com','poki.com']},
+  {id:'mine', name:'Your sites', sites:['espn.com']},
+];
+
+let blocks = {};
+const oct18 = new Date(2026, 9, 18, 10, 12).getTime();
+const nine = new Date(2026, 9, 30, 9, 0).getTime();
+const midnight0 = new Date(2026, 9, 31, 0, 0).getTime();
+CATS[0].sites.forEach(d => blocks[d] = {since: oct18, start: oct18, until: Infinity});
+CATS[1].sites.forEach(d => blocks[d] = {since: nine, start: nine, until: midnight0});
+blocks['news.ycombinator.com'] = {since: T0 - 2*D, start: T0 - 2*D, until: T0 + 5*D};
+let stopped = 4;
+
+const DURS = [
+  {k:'1h', label:'1 hour', phr:'for 1 hour', end:t => t + H},
+  {k:'4h', label:'4 hours', phr:'for 4 hours', end:t => t + 4*H},
+  {k:'mid', label:'Until midnight', phr:'until midnight', end:t => { const d = new Date(t); d.setHours(24,0,0,0); return d.getTime(); }},
+  {k:'1w', label:'1 week', phr:'for 1 week', end:t => t + 7*D},
+  {k:'1m', label:'1 month', phr:'for 1 month', end:t => { const d = new Date(t); d.setMonth(d.getMonth()+1); return d.getTime(); }},
+  {k:'inf', label:'Forever', phr:'forever', end:() => Infinity},
+];
+const dur = k => DURS.find(d => d.k === k);
+let ntpDur = '4h';
+let popDur = '4h';
+const sel = new Set();
+
+/* ── helpers ── */
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtTime = t => { const d = new Date(t); let h = d.getHours(), m = d.getMinutes(); const ap = h >= 12 ? 'pm' : 'am'; h = h % 12 || 12; return h + (m ? ':' + String(m).padStart(2,'0') : '') + ' ' + ap; };
+const fmtDate = t => { const d = new Date(t); return MON[d.getMonth()] + ' ' + d.getDate(); };
+const fmtDateL = t => { const d = new Date(t); return MONL[d.getMonth()] + ' ' + d.getDate(); };
+const nextMidnight = () => dur('mid').end(now());
+function untilPhrase(u) {
+  if (u === Infinity) return 'forever';
+  const md = nextMidnight();
+  if (u === md) return 'until midnight';
+  if (u < md) return 'until ' + fmtTime(u);
+  if (u - now() < 2*D) return 'until tomorrow, ' + fmtTime(u);
+  return 'until ' + fmtDate(u);
+}
+function left(u) {
+  const ms = u - now(); if (ms <= 0) return 'ending';
+  if (ms >= 2*D) return Math.round(ms / D) + ' days';
+  const tm = Math.ceil(ms / 60000), h = Math.floor(tm / 60), m = tm % 60;
+  return h ? `${h}h ${String(m).padStart(2,'0')}m` : `${m}m`;
+}
+function leftLong(u) {
+  const ms = u - now();
+  if (ms >= 2*D) return Math.round(ms / D) + ' more days';
+  const tm = Math.ceil(ms / 60000), h = Math.floor(tm / 60), m = tm % 60;
+  const hs = h ? h + (h === 1 ? ' hour' : ' hours') : '', ms_ = m ? m + (m === 1 ? ' minute' : ' minutes') : '';
+  return [hs, ms_].filter(Boolean).join(' ') + ' left';
+}
+const elapsed = b => Math.max(0, Math.min(1, (now() - b.start) / (b.until - b.start)));
+const norm = h => h.toLowerCase().replace(/^(www|m|mobile)\./, '');
+function blockOf(host) {
+  let h = norm(host);
+  while (h.includes('.')) {
+    const b = blocks[h];
+    if (b && b.until > now()) return {d: h, ...b};
+    h = h.slice(h.indexOf('.') + 1);
+  }
+  return null;
+}
+const isBlocked = d => { const b = blocks[d]; return b && b.until > now() ? b : null; };
+const catOf = d => CATS.find(c => c.sites.includes(d));
+/* line markup: kind none|fuse|forever */
+function lineState(el, b) {
+  el.classList.remove('fuse', 'forever');
+  if (!b) return;
+  if (b.until === Infinity) { el.classList.add('forever'); return; }
+  el.classList.add('fuse');
+  const p = (elapsed(b) * 100).toFixed(2) + '%';
+  el.querySelector('.ash').style.width = p;
+  el.querySelector('.emb').style.left = p;
+  el.querySelector('.spk').style.left = p;
+}
+const lineHTML = (cls = '') => `<div class="line ${cls}"><i class="ash"></i><i class="emb"></i><i class="spk"></i></div>`;
+
+/* ── icons ── */
+const LOGO = '<svg viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="url(#g1)"/><path d="M14 10.5V24.5H6.6Q7.4 16 14 10.5Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/><path d="M17 6V24.5H25.4Q24.7 13 17 6Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+const GH = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>';
+function fav(host) {
+  const h = norm(host || '');
+  if (!host) return LOGO;
+  if (h === 'github.com') return GH;
+  if (h.endsWith('wikipedia.org')) return '<svg viewBox="0 0 14 14"><text x="7" y="11.2" text-anchor="middle" font-family="Georgia,serif" font-size="12" fill="currentColor">W</text></svg>';
+  if (h === 'youtube.com') return '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1" y="2.8" width="12" height="8.4" rx="2.4"/><path d="M5.8 5.2v3.6L8.9 7z" fill="currentColor" stroke="none"/></svg>';
+  if (h === 'x.com' || h === 'twitter.com') return '<svg viewBox="0 0 14 14"><path d="M2.2 2h2.9l7 10H9.2z" fill="currentColor"/><path d="M11.6 2L2.6 12" stroke="currentColor" stroke-width="1.2"/></svg>';
+  if (h.startsWith('google.')) return '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="6" cy="6" r="4"/><path d="M9 9l3.2 3.2" stroke-linecap="round"/></svg>';
+  return `<svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="6" fill="none" stroke="currentColor" stroke-width="1"/><text x="7" y="9.6" text-anchor="middle" font-family="Geist Mono,monospace" font-size="7" fill="currentColor">${esc(h[0] || '·').toUpperCase()}</text></svg>`;
+}
+
+/* ── tabs ── */
+let tabs = [
+  {id:1, hist:['mast://newtab'], i:0},
+  {id:2, hist:['github.com/0xmiki/mast'], i:0},
+  {id:3, hist:['en.wikipedia.org/wiki/Ulysses'], i:0},
+  {id:4, hist:['mast://newtab', 'youtube.com/watch?v=lcvjX-1mx1E'], i:1},
+  {id:5, hist:['mast://newtab', 'x.com/home'], i:1},
+];
+let active = 1, nextId = 6;
+const tabById = id => tabs.find(t => t.id === id);
+const cur = () => tabById(active);
+const urlOf = t => t.hist[t.i];
+const hostOf = u => u.startsWith('mast://') ? '' : u.split(/[/?#]/)[0];
+function viewOf(u) {
+  if (u.startsWith('mast://')) return 'ntp';
+  const h = norm(hostOf(u));
+  if (blockOf(h)) return 'blocked';
+  if (h === 'github.com') return 'gh';
+  if (h.endsWith('wikipedia.org')) return 'wiki';
+  return 'generic';
+}
+function titleOf(u) {
+  const v = viewOf(u), h = norm(hostOf(u));
+  if (v === 'ntp') return 'New Tab';
+  if (v === 'blocked') return blockOf(h).d;
+  if (v === 'gh') return '0xmiki/mast';
+  if (v === 'wiki') return 'Ulysses — Wikipedia';
+  if (h.startsWith('google.')) return decodeURIComponent((u.split('q=')[1] || '').replace(/\+/g,' ')) + ' – Google Search';
+  return h;
+}
+
+function renderTabs() {
+  const el = $('#tabs');
+  el.innerHTML = tabs.map(t => {
+    const u = urlOf(t), v = viewOf(u), b = v === 'blocked' ? blockOf(hostOf(u)) : null;
+    return `<button class="tab ${t.id === active ? 'active' : ''} ${b ? 'blk' : ''}" role="tab" data-id="${t.id}" title="${esc(titleOf(u))}">
+      <span class="fav">${fav(hostOf(u))}</span><span class="ttl">${esc(titleOf(u))}</span>
+      <span class="x" data-close="${t.id}" title="Close tab"><svg viewBox="0 0 10 10"><path d="M2 2l6 6M8 2L2 8"/></svg></span>
+      ${lineHTML()}</button>`;
+  }).join('') + '<button class="newtab" id="newTab" title="New tab"><svg viewBox="0 0 11 11"><path d="M5.5 1.5v8M1.5 5.5h8"/></svg></button>';
+  el.querySelectorAll('.tab').forEach(n => {
+    const t = tabById(+n.dataset.id), u = urlOf(t);
+    lineState(n.querySelector('.line'), viewOf(u) === 'blocked' ? blockOf(hostOf(u)) : null);
+  });
+}
+$('#tabs').addEventListener('click', e => {
+  const c = e.target.closest('[data-close]');
+  if (c) { closeTab(+c.dataset.close); e.stopPropagation(); return; }
+  if (e.target.closest('#newTab')) { newTab(); return; }
+  const t = e.target.closest('.tab'); if (t) { active = +t.dataset.id; closeAll(); render(); }
+});
+function newTab() { const t = {id: nextId++, hist:['mast://newtab'], i:0}; tabs.push(t); active = t.id; closeAll(); render(); }
+function closeTab(id) {
+  if (tabs.length === 1) { tabs[0].hist = ['mast://newtab']; tabs[0].i = 0; render(); return; }
+  const ix = tabs.findIndex(t => t.id === id); tabs.splice(ix, 1);
+  if (active === id) active = tabs[Math.min(ix, tabs.length - 1)].id;
+  render();
+}
+function navigate(u) {
+  const t = cur(); t.hist = t.hist.slice(0, t.i + 1); t.hist.push(u); t.i++;
+  if (viewOf(u) === 'blocked') stopped++;
+  closeAll(); render();
+}
+
+/* ── NTP ── */
+function catInfo(c) {
+  const bl = c.sites.map(isBlocked), n = bl.filter(Boolean).length;
+  const selectable = c.sites.filter(d => !(isBlocked(d) && isBlocked(d).until === Infinity));
+  const nsel = selectable.filter(d => sel.has(d)).length;
+  let st = {kind:'open'};
+  if (n === c.sites.length) {
+    const b = bl.reduce((a, x) => x.until < a.until ? x : a);
+    st = {kind: b.until === Infinity ? 'forever' : 'timed', b};
+  } else if (n) st = {kind:'partial', n};
+  return {st, selectable, nsel};
+}
+function renderRows() {
+  const rows = $('#rows');
+  const focusAdd = document.activeElement && document.activeElement.classList.contains('addin');
+  rows.innerHTML = CATS.map(c => {
+    const {st, selectable, nsel} = catInfo(c);
+    const locked = !selectable.length;
+    const cls = ['row', locked ? 'locked' : '', nsel && nsel === selectable.length ? 'sel' : nsel ? 'part' : '', nsel ? 'has-sel' : '',
+      (st.kind === 'partial' || st.kind === 'timed') && nsel < selectable.length ? 'locked-some' : ''].join(' ');
+    let stat;
+    if (st.kind === 'forever') stat = `<div class="cstat forever"><b>Forever</b><span>since ${fmtDate(st.b.since)}</span></div>`;
+    else if (st.kind === 'timed') stat = `<div class="cstat timed"><b>${esc(untilPhrase(st.b.until).replace(/^until /,'Until '))}</b><span>${left(st.b.until)} left</span></div>`;
+    else if (st.kind === 'partial') {
+      const one = c.sites.find(isBlocked), b = isBlocked(one);
+      stat = st.n === 1
+        ? `<div class="cstat partial"><b>1 site · ${b.until === Infinity ? 'forever' : left(b.until)}</b><span>${esc(one)}</span></div>`
+        : `<div class="cstat partial"><b>${st.n} of ${c.sites.length} blocked</b><span>the rest open</span></div>`;
+    } else stat = `<div class="cstat"><b>Open</b><span>${c.sites.length} ${c.sites.length === 1 ? 'site' : 'sites'}</span></div>`;
+    const sites = c.sites.map(d => {
+      const b = isBlocked(d), lockd = b && b.until === Infinity;
+      const solo = b && st.kind === 'partial';
+      return `<button class="site ${sel.has(d) ? 'sel' : ''} ${lockd ? 'lock' : ''} ${solo ? 'solo' : ''}" data-d="${esc(d)}" title="${b ? esc(d) + ' · blocked ' + esc(untilPhrase(b.until)) : esc(d)}">${esc(d)}${solo ? '<span class="mini">' + lineHTML() + '</span>' : ''}</button>`;
+    }).join('') + (c.id === 'mine' ? '<button class="addsite" id="addSite">+ add a site</button>' : '');
+    return `<div class="${cls}" data-cat="${c.id}">
+      <button class="mark" data-cat-t="${c.id}" aria-label="Select ${esc(c.name)}" ${locked ? 'disabled title="Blocked forever"' : ''}></button>
+      <button class="cname" data-cat-t="${c.id}" ${locked ? 'disabled' : ''}><span class="ctitle">${esc(c.name)}</span><span class="ccount">${c.sites.length} ${c.sites.length === 1 ? 'site' : 'sites'}</span></button>
+      <div class="sites">${sites}</div>${stat}
+      ${lineHTML()}<div class="preview"></div></div>`;
+  }).join('');
+  rows.querySelectorAll('.row').forEach(r => {
+    const c = CATS.find(x => x.id === r.dataset.cat), {st} = catInfo(c);
+    lineState(r.querySelector(':scope > .line'), st.b || null);
+    r.querySelectorAll('.site.solo').forEach(s => lineState(s.querySelector('.line'), isBlocked(s.dataset.d)));
+    const pv = r.querySelector('.preview');
+    pv.style.opacity = ntpDur === 'inf' ? '1' : '.7';
+  });
+  if (focusAdd) showAdd();
+}
+$('#rows').addEventListener('click', e => {
+  const s = e.target.closest('.site');
+  if (s) {
+    const d = s.dataset.d, b = isBlocked(d);
+    if (b && b.until === Infinity) return;
+    sel.has(d) ? sel.delete(d) : sel.add(d); renderNTP(); return;
+  }
+  const ct = e.target.closest('[data-cat-t]');
+  if (ct) {
+    const c = CATS.find(x => x.id === ct.dataset.catT), {selectable, nsel} = catInfo(c);
+    if (nsel === selectable.length) selectable.forEach(d => sel.delete(d)); else selectable.forEach(d => sel.add(d));
+    renderNTP(); return;
+  }
+  if (e.target.closest('#addSite')) showAdd();
+});
+function showAdd() {
+  const a = $('#addSite'); if (!a) return;
+  const i = document.createElement('input'); i.className = 'addin'; i.placeholder = 'site.com'; i.spellcheck = false;
+  a.replaceWith(i); i.focus();
+  i.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const v = norm(i.value.trim().replace(/^https?:\/\//,'').split('/')[0]);
+      if (/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(v) && !catOf(v)) { CATS[5].sites.push(v); sel.add(v); }
+      i.blur(); renderNTP();
+    } else if (e.key === 'Escape') { i.blur(); renderNTP(); }
+    e.stopPropagation();
+  });
+  i.addEventListener('blur', () => setTimeout(() => { if (document.contains(i)) renderNTP(); }, 120));
+}
+function renderRuler() {
+  const n = DURS.length, ix = DURS.findIndex(d => d.k === ntpDur);
+  const r = $('#ruler'); r.classList.toggle('inf', ntpDur === 'inf');
+  r.innerHTML = `<div class="rtrack"><i class="rfill" style="width:${ix / (n - 1) * 100}%"></i></div>` +
+    DURS.map((d, i) => `<button class="stop ${d.k === ntpDur ? 'on' : ''} ${d.k === 'inf' ? 'inf' : ''}" data-k="${d.k}" style="left:${i / (n - 1) * 100}%"><span class="slab">${d.label}</span><i class="tick"></i></button>`).join('');
+}
+$('#ruler').addEventListener('click', e => { const s = e.target.closest('.stop'); if (s) { ntpDur = s.dataset.k; renderNTP(); } });
+function describe(domains) {
+  const parts = [], set = new Set(domains);
+  CATS.forEach(c => {
+    const inC = c.sites.filter(d => set.has(d));
+    if (!inC.length) return;
+    const sel_ = c.sites.filter(d => !(isBlocked(d) && isBlocked(d).until === Infinity));
+    if (inC.length === sel_.length && inC.length > 1) parts.push(c.name); else inC.forEach(d => parts.push(d));
+  });
+  return parts;
+}
+function renderSummary() {
+  const s = $('#summary'), btn = $('#ntpBlock'), d = dur(ntpDur);
+  if (!sel.size) { s.innerHTML = 'Pick categories or single sites above.'; btn.disabled = true; btn.textContent = 'Block ' + d.phr; return; }
+  const parts = describe([...sel]);
+  const name = parts.length > 2 ? parts.slice(0, 2).join(', ') + ` +${parts.length - 2}` : parts.join(' and ');
+  const end = d.end(now());
+  const kept = [...sel].filter(x => { const b = isBlocked(x); return b && b.until >= end; }).length;
+  s.innerHTML = `<b>${esc(name)}</b> · ${sel.size} ${sel.size === 1 ? 'site' : 'sites'}${kept ? ` · ${kept} already longer, kept` : ''}`;
+  btn.disabled = false; btn.textContent = 'Block ' + d.phr;
+}
+function renderNTP() {
+  renderRows(); renderRuler(); renderSummary();
+  const n = Object.keys(blocks).filter(isBlocked).length;
+  $('#tSites').textContent = n; $('#tStop').textContent = stopped;
+  $('#tSites').nextElementSibling.textContent = n === 1 ? 'site blocked' : 'sites blocked';
+}
+$('#ntpBlock').addEventListener('click', () => { if (sel.size) { applyBlock([...sel], ntpDur); sel.clear(); render(); } });
+
+/* ── block / undo ── */
+let undoSnap = null, undoTimer = null, tick = null;
+function snapshot() { return {blocks: Object.fromEntries(Object.entries(blocks).map(([k, v]) => [k, {...v}])), mine: CATS[5].sites.slice(), stopped}; }
+function applyBlock(domains, k) {
+  const snap = snapshot(), d = dur(k), t = now(), end = d.end(t);
+  const changed = [], pre = describe(domains.filter(x => { const b = isBlocked(x); return !(b && b.until >= end); }));
+  domains.forEach(x => {
+    const b = isBlocked(x);
+    if (b && b.until >= end) return;
+    blocks[x] = {since: b ? b.since : t, start: t, until: end};
+    changed.push(x);
+    if (!catOf(x)) CATS[5].sites.push(x);
+  });
+  if (!changed.length) { toast(`Already blocked longer. Blocks only lengthen.`, false); return; }
+  const parts = pre.length ? pre : describe(changed);
+  const subj = parts.length > 2 ? `${changed.length} sites` : parts.join(' and ');
+  const phr = k === 'inf' ? '<em class="inf">forever</em>' : `<em>${esc(d.phr)}</em>`;
+  undoSnap = snap;
+  toast(`<b style="font-weight:500">${esc(subj)}</b> blocked ${phr}`, true);
+}
+function toast(html, undo) {
+  const t = $('#toast');
+  clearTimeout(undoTimer); clearInterval(tick);
+  $('#tMsg').innerHTML = html; t.classList.toggle('noundo', !undo);
+  const f = $('#tFuse'); f.style.transition = 'none'; f.style.width = '100%';
+  t.classList.add('open');
+  if (!undo) { undoSnap = null; undoTimer = setTimeout(() => t.classList.remove('open'), 2600); return; }
+  let n = 10; $('#tN').textContent = n;
+  requestAnimationFrame(() => requestAnimationFrame(() => { f.style.transition = 'width 10s linear'; f.style.width = '0%'; }));
+  tick = setInterval(() => { n--; $('#tN').textContent = Math.max(n, 0); }, 1000);
+  undoTimer = setTimeout(() => { clearInterval(tick); undoSnap = null; t.classList.remove('open'); }, 10000);
+}
+$('#tUndo').addEventListener('click', () => {
+  if (!undoSnap) return;
+  blocks = undoSnap.blocks; CATS[5].sites = undoSnap.mine; stopped = undoSnap.stopped; undoSnap = null;
+  render(); toast('Undone. Nothing was blocked.', false);
+});
+
+/* ── blocked page ── */
+function renderBlocked(u) {
+  const b = blockOf(hostOf(u)), forever = b.until === Infinity;
+  const v = $('#v-blocked'); v.classList.toggle('forever', forever); v.classList.toggle('timed', !forever);
+  $('#bDomain').textContent = b.d;
+  lineState($('#bLine'), b);
+  if (forever) {
+    $('#bPhrase').innerHTML = 'is blocked <em>forever</em>.';
+    $('#bMeta').textContent = `Since ${fmtDateL(b.since)}. A forever block can't be shortened or lifted.`;
+    $('#bTicks').innerHTML = '';
+    $('#bLonger').hidden = true;
+  } else {
+    $('#bPhrase').innerHTML = `is blocked <em>${esc(untilPhrase(b.until))}</em>.`;
+    $('#bMeta').textContent = `${leftLong(b.until)}. Blocks can be made longer, never shorter.`;
+    const endL = b.until === nextMidnight() ? 'midnight' : (b.until - now() < D ? fmtTime(b.until) : fmtDate(b.until));
+    $('#bTicks').innerHTML = `<span class="t-r"><span style="color:var(--ink2)">${left(b.until)} left</span>&nbsp;&nbsp;·&nbsp;&nbsp;ends ${esc(endL)}</span>`;
+    $('#bLonger').hidden = false;
+  }
+  $('#bKick').textContent = forever ? 'Blocked by Mast · forever' : 'Blocked by Mast';
+}
+$('#bBack').addEventListener('click', goBack);
+$('#bLonger').addEventListener('click', () => openPop());
+
+/* ── generic page ── */
+function renderGeneric(u) {
+  const h = norm(hostOf(u));
+  if (h.startsWith('google.')) { $('#genK').textContent = 'google.com · search'; $('#genH').textContent = decodeURIComponent((u.split('q=')[1] || '').replace(/\+/g, ' ')); }
+  else { $('#genK').textContent = h; $('#genH').textContent = u; }
+}
+
+/* ── chrome: waterline, address, nav ── */
+function renderChrome() {
+  const t = cur(), u = urlOf(t), v = viewOf(u), b = v === 'blocked' ? blockOf(hostOf(u)) : null;
+  const wl = $('#wl');
+  if (b && b.until !== Infinity) {
+    const p = (elapsed(b) * 100).toFixed(2) + '%';
+    wl.className = 'line fuse';
+    wl.querySelector('.ash').style.width = p; wl.querySelector('.emb').style.left = p; wl.querySelector('.spk').style.left = p;
+  } else {
+    wl.className = 'line' + (b ? ' forever' : '');
+    wl.querySelector('.ash').style.width = '0%'; wl.querySelector('.emb').style.left = '0%'; wl.querySelector('.spk').style.left = '0%';
+  }
+  $('#band').className = b ? (b.until === Infinity ? 'lit-forever' : 'lit-timed') : '';
+  // address
+  const ad = $('#adisp'), tag = $('#atag');
+  if (v === 'ntp') ad.innerHTML = '<span class="ph">Search or type a URL</span>';
+  else { const h = hostOf(u), p = u.slice(h.length); ad.innerHTML = `<span class="h">${esc(norm(h) === h ? h : h)}</span><span class="p">${esc(p)}</span>`; }
+  if (b) { tag.hidden = false; tag.querySelector('span').textContent = b.until === Infinity ? 'forever' : left(b.until); }
+  else tag.hidden = true;
+  if (document.activeElement !== $('#ain')) $('#ain').value = v === 'ntp' ? '' : u;
+  $('#navBack').disabled = t.i === 0 && v !== 'blocked';
+  $('#navFwd').disabled = t.i >= t.hist.length - 1;
+  const bb = $('#blockBtn'); bb.classList.toggle('dim', v === 'ntp' || (b && b.until === Infinity));
+  document.title = titleOf(u) + ' · Mast';
+}
+function goBack() {
+  const t = cur();
+  if (t.i > 0) t.i--; else { t.hist.splice(1); t.hist[0] = 'mast://newtab'; t.i = 0; }
+  closeAll(); render();
+}
+$('#navBack').addEventListener('click', goBack);
+$('#navFwd').addEventListener('click', () => { const t = cur(); if (t.i < t.hist.length - 1) { t.i++; render(); } });
+$('#navRe').addEventListener('click', () => { const vp = $('#viewport'); vp.style.opacity = .6; setTimeout(() => vp.style.opacity = '', 140); });
+
+/* ── views ── */
+function renderView() {
+  const u = urlOf(cur()), v = viewOf(u);
+  document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'v-' + v));
+  if (v === 'ntp') renderNTP();
+  if (v === 'blocked') renderBlocked(u);
+  if (v === 'generic') renderGeneric(u);
+}
+function render() { renderTabs(); renderChrome(); renderView(); }
+
+/* ── command line (address) ── */
+const HIST = [
+  {u:'github.com/0xmiki/mast', t:'0xmiki/mast: a browser that blocks distractions'},
+  {u:'en.wikipedia.org/wiki/Ulysses', t:'Ulysses — Wikipedia'},
+  {u:'en.wikipedia.org/wiki/Siren_(mythology)', t:'Siren (mythology) — Wikipedia'},
+  {u:'chromium.googlesource.com/chromium/src', t:'chromium/src — Git at Google'},
+  {u:'developer.chrome.com/docs/chromium', t:'Chromium docs · Chrome for Developers'},
+  {u:'docs.google.com/document/d/mast-roadmap', t:'Mast roadmap — Google Docs'},
+];
+let cItems = [], cIx = 0;
+const hl = (s, q) => { if (!q) return esc(s); const i = s.toLowerCase().indexOf(q.toLowerCase()); return i < 0 ? esc(s) : esc(s.slice(0, i)) + '<mark>' + esc(s.slice(i, i + q.length)) + '</mark>' + esc(s.slice(i + q.length)); };
+function buildItems(q) {
+  q = q.trim(); const items = [];
+  const ql = q.toLowerCase();
+  if (q) {
+    const isUrl = /^[^\s]+\.[a-z]{2,}(\/.*)?$/i.test(q.replace(/^https?:\/\//, ''));
+    if (isUrl) items.push({kind:'go', u:q.replace(/^https?:\/\//,''), t:q.replace(/^https?:\/\//,'')});
+    items.push({kind:'search', t:q, u:'google.com/search?q=' + encodeURIComponent(q).replace(/%20/g,'+')});
+    tabs.filter(t => t.id !== active).forEach(t => { const u = urlOf(t); if ((titleOf(u) + u).toLowerCase().includes(ql)) items.push({kind:'tab', id:t.id, t:titleOf(u), u}); });
+    HIST.forEach(h => { if ((h.t + h.u).toLowerCase().includes(ql)) items.push({kind:'hist', ...h}); });
+    CATS.flatMap(c => c.sites).forEach(d => { if (d.includes(ql) && !items.some(i => norm(hostOf(i.u || '')) === d)) items.push({kind:'site', u:d, t:d}); });
+  } else {
+    tabs.filter(t => t.id !== active).slice(0, 3).forEach(t => { const u = urlOf(t); items.push({kind:'tab', id:t.id, t:titleOf(u), u}); });
+    HIST.slice(2, 5).forEach(h => items.push({kind:'hist', ...h}));
+    const u = urlOf(cur()), v = viewOf(u);
+    if (v !== 'ntp' && v !== 'blocked') items.unshift({kind:'act', t:'Block ' + norm(hostOf(u)), u:'opens the Block panel'});
+  }
+  return items.slice(0, 7);
+}
+function renderCmd() {
+  const q = $('#ain').value;
+  const qq = q.trim();
+  cItems = buildItems(cmdTyped ? q : ''); if (cIx >= cItems.length) cIx = 0;
+  $('#clist').innerHTML = cItems.map((it, i) => {
+    const host = it.kind === 'search' ? 'google.com' : hostOf(it.u || '');
+    const b = it.kind !== 'search' && it.kind !== 'act' ? blockOf(host) : null;
+    let ic = fav(host), tag = '';
+    if (it.kind === 'search') { tag = 'Search'; }
+    else if (it.kind === 'tab') tag = 'Switch to tab';
+    else if (it.kind === 'hist') tag = 'History';
+    else if (it.kind === 'go') tag = 'Go';
+    else if (it.kind === 'site') tag = 'Blocklist';
+    if (it.kind === 'act') { ic = '<svg viewBox="0 0 16 16"><rect x="2" y="7.2" width="12" height="1.6" rx=".8" fill="#ff6a3d"/></svg>'; tag = 'Action'; }
+    if (b) tag = `<i class="${b.until === Infinity ? '' : 'f'}"></i>Blocked ${b.until === Infinity ? 'forever' : '· ' + left(b.until)}`;
+    const title = it.kind === 'search' ? `${hl(it.t, '')} <span style="color:var(--ink3)">— Google</span>` : hl(it.t, cmdTyped ? qq : '');
+    const sub = it.kind === 'search' ? '' : `<span class="c-u">${hl(it.u, cmdTyped ? qq : '')}</span>`;
+    return `<button class="c-item ${i === cIx ? 'on' : ''} ${b ? 'blocked' : ''}" data-i="${i}" role="option"><span class="c-ic">${ic}</span><span class="c-main"><span class="c-t">${title}</span>${sub}</span><span class="c-tag ${b ? 'blk' : ''}">${tag}</span></button>`;
+  }).join('');
+}
+let cmdTyped = false;
+function openCmd() {
+  closeAll('cmd');
+  const r = $('#addr').getBoundingClientRect(), W = Math.max(r.width, Math.min(680, innerWidth - 40));
+  const c = $('#cmd'); c.style.width = W + 'px'; c.style.left = Math.min(r.left, innerWidth - W - 12) + 'px';
+  $('#addr').classList.add('focus'); cmdTyped = false; cIx = 0; renderCmd(); c.classList.add('open');
+}
+function closeCmd() { $('#cmd').classList.remove('open'); $('#addr').classList.remove('focus'); }
+function runItem(it) {
+  if (!it) return;
+  $('#ain').blur(); closeCmd();
+  if (it.kind === 'tab') { active = it.id; render(); return; }
+  if (it.kind === 'act') { openPop(); return; }
+  navigate(it.u);
+}
+$('#addr').addEventListener('mousedown', e => { if (e.target !== $('#ain')) { e.preventDefault(); $('#ain').focus(); } });
+$('#ain').addEventListener('focus', () => { openCmd(); requestAnimationFrame(() => $('#ain').select()); });
+$('#ain').addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== $('#ain')) { closeCmd(); renderChrome(); } }, 80));
+$('#ain').addEventListener('input', () => { cmdTyped = true; cIx = 0; renderCmd(); });
+$('#ain').addEventListener('keydown', e => {
+  if (e.key === 'ArrowUp') { cIx = Math.min(cItems.length - 1, cIx + 1); renderCmd(); e.preventDefault(); }
+  else if (e.key === 'ArrowDown') { cIx = Math.max(0, cIx - 1); renderCmd(); e.preventDefault(); }
+  else if (e.key === 'Enter') { runItem(cItems[cIx]); e.preventDefault(); }
+  else if (e.key === 'Escape') { $('#ain').blur(); }
+});
+$('#cmd').addEventListener('mousedown', e => e.preventDefault());
+$('#clist').addEventListener('click', e => { const b = e.target.closest('.c-item'); if (b) runItem(cItems[+b.dataset.i]); });
+$('#clist').addEventListener('mousemove', e => { const b = e.target.closest('.c-item'); if (b && +b.dataset.i !== cIx) { cIx = +b.dataset.i; renderCmd(); } });
+
+/* ── toolbar Block popover ── */
+function renderPop() {
+  const u = urlOf(cur()), v = viewOf(u), p = $('#bpop');
+  if (v === 'ntp') {
+    p.innerHTML = `<div class="p-k">Block this site</div><div class="p-d" style="color:var(--ink3)">New Tab</div><p class="p-s">There's no site on this tab. Pick categories or single sites from the blocklist above, then press Block.</p>`;
+    return;
+  }
+  const h = norm(hostOf(u)), b = blockOf(h), d0 = b ? b.d : h;
+  if (b && b.until === Infinity) {
+    p.innerHTML = `<div class="p-k">Block this site</div><div class="p-d">${esc(d0)}</div><div class="p-line">${lineHTML('forever')}</div><p class="p-s">Blocked <em>forever</em> since ${fmtDate(b.since)}. Nothing is longer than this.</p>`;
+    return;
+  }
+  const t = now();
+  const ok = DURS.filter(d => !b || d.end(t) > b.until);
+  if (!ok.some(d => d.k === popDur)) popDur = ok[0].k;
+  p.innerHTML = `<div class="p-k">${b ? 'Make it longer' : 'Block this site'}</div><div class="p-d">${esc(d0)}</div>
+    ${b ? `<div class="p-line">${lineHTML()}</div><p class="p-s">Blocked <em>${esc(untilPhrase(b.until))}</em>, ${left(b.until)} left. Blocks only lengthen.</p>` : `<p class="p-s">You can make it longer later, never shorter. Undo lasts 10 seconds.</p>`}
+    <div class="p-grid">${DURS.map(d => `<button class="chip ${d.k === popDur ? 'on' : ''} ${d.k === 'inf' ? 'inf' : ''}" data-k="${d.k}" ${ok.includes(d) ? '' : 'disabled'}>${d.k === 'mid' ? 'Today' : d.label}</button>`).join('')}</div>
+    <button class="bbtn" id="popGo">Block ${esc(dur(popDur).phr)}</button>`;
+  if (b) lineState(p.querySelector('.p-line .line'), b);
+}
+function openPop() {
+  closeAll('pop'); renderPop();
+  const r = $('#blockBtn').getBoundingClientRect(), p = $('#bpop');
+  p.style.left = Math.min(r.right - 360 + 40, innerWidth - 372) + 'px';
+  p.classList.add('open'); $('#blockBtn').classList.add('open');
+}
+function closePop() { $('#bpop').classList.remove('open'); $('#blockBtn').classList.remove('open'); }
+$('#blockBtn').addEventListener('click', e => { e.stopPropagation(); $('#bpop').classList.contains('open') ? closePop() : openPop(); });
+$('#bpop').addEventListener('click', e => {
+  e.stopPropagation();
+  const c = e.target.closest('.chip'); if (c && !c.disabled) { popDur = c.dataset.k; renderPop(); return; }
+  if (e.target.closest('#popGo')) {
+    const u = urlOf(cur()), h = norm(hostOf(u)), b = blockOf(h);
+    applyBlock([b ? b.d : h], popDur); closePop(); render();
+  }
+});
+
+/* ── menu ── */
+function openMenu() {
+  closeAll('menu');
+  const r = $('#menuBtn').getBoundingClientRect(), m = $('#menu');
+  m.style.left = Math.min(r.left - 120, innerWidth - 260) + 'px';
+  m.classList.add('open'); $('#menuBtn').classList.add('open');
+}
+function closeMenu() { $('#menu').classList.remove('open'); $('#menuBtn').classList.remove('open'); }
+$('#menuBtn').addEventListener('click', e => { e.stopPropagation(); $('#menu').classList.contains('open') ? closeMenu() : openMenu(); });
+$('#menu').addEventListener('click', e => {
+  e.stopPropagation(); const it = e.target.closest('.m-it'); if (!it) return;
+  if (it.dataset.m === 'newtab') newTab();
+  else if (it.dataset.m === 'list') { const t = tabs.find(x => viewOf(urlOf(x)) === 'ntp'); t ? (active = t.id, render()) : newTab(); }
+  closeMenu();
+});
+
+function closeAll(except) {
+  if (except !== 'pop') closePop();
+  if (except !== 'menu') closeMenu();
+  if (except !== 'cmd' && $('#cmd').classList.contains('open')) { $('#ain').blur(); closeCmd(); }
+}
+document.addEventListener('click', e => { if (!e.target.closest('.rise') && !e.target.closest('#blockBtn') && !e.target.closest('#menuBtn')) { closePop(); closeMenu(); } });
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'l') { e.preventDefault(); $('#ain').focus(); }
+  else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 't') { e.preventDefault(); newTab(); }
+  else if (e.key === 'Escape') { closePop(); closeMenu(); }
+});
+
+/* caption */
+if (innerWidth < 1400 || innerHeight < 860) { $('#cap').classList.add('min'); $('#capT').textContent = '+'; $('#capT').title = 'Expand'; }
+$('#capT').addEventListener('click', () => { const c = $('#cap'); c.classList.toggle('min'); $('#capT').textContent = c.classList.contains('min') ? '+' : '–'; $('#capT').title = c.classList.contains('min') ? 'Expand' : 'Collapse'; });
+
+/* github file rows */
+$('#ghRows').innerHTML = [['.github',40],['chrome/browser/mast',58],['components/blocklist',62],['docs',30],['patches',44],['ui/views/mast',48],['BUILD.gn',36],['README.md',40]].map(([n, w], i) =>
+  `<div class="fr"><svg width="16" height="16" viewBox="0 0 16 16" fill="${i < 6 ? '#54aeff' : 'none'}" stroke="${i < 6 ? 'none' : '#9198a1'}"><path d="${i < 6 ? 'M1.75 2.5h4l1.5 1.5h7v9.5h-12.5z' : 'M3.5 1.5h6l3 3v10h-9z'}"/></svg><span style="font-size:14px;color:#e6edf3;width:220px">${n}</span><div class="g" style="width:${w}%;height:9px;background:#1d232b"></div><div style="flex:1"></div><div class="g" style="width:70px;height:9px;background:#1d232b"></div></div>`).join('');
+
+window.addEventListener('resize', () => closeAll());
+setInterval(() => { if (!document.querySelector('.rise.open') && !document.querySelector('.addin')) render(); }, 30000);
+
+render();
+})();
+</script>
+</body>
+</html>

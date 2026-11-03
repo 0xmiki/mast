@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<!--
+  Proposal 07 · Terminal: the riskiest pieces to port to the Chromium fork (Views; Linux first):
+  1. An exact 8 x 20 px cell in native chrome. JetBrains Mono at 13.33px has an 8.000px advance, but at
+     125% / 150% / 175% device scale the cell goes fractional and the 1px centre-lines blur. Views needs
+     its own grid metric (cell = round(8 * scale)) that the font size is fitted to, rather than CSS px.
+  2. Grid-snapped TabStrip. Fixed-width tabs measured in cells, the active tab drawn as an open box
+     whose sides join the strip rule (the "┘ └" junction), and tab drag, open/close and shrink-under-
+     pressure animations that step a cell at a time instead of interpolating pixels.
+  3. Omnibox as a cell field. OmniboxViewViews needs a block cursor that inverts the glyph under it
+     (custom caret painting), the in-field status chip ("forever" / "□ until midnight") and the key-hint
+     chip, plus an autocomplete popup re-laid out as a framed list on the same grid.
+  4. The key-hint status line. A new always-on bottom row in BrowserView that has to merge with
+     Chromium's StatusBubble (link-hover URL, loading text) and react to focus and context per tab.
+  5. Native caption controls stay native. The macOS traffic lights (re-positioned to the tab row via
+     NSWindow button offsets), GNOME/GTK CSD buttons and Windows 11 caption buttons (with real
+     HTMAXBUTTON hit-testing so Snap Layouts appear) do not sit on the grid; we reserve whole cells for them.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mast · Proposal 07 · Terminal</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&text=%E2%86%90%E2%86%92%E2%86%BB%E2%96%A0%E2%96%A1%E2%8F%8E%E2%94%81%E2%89%A1%E2%8C%98%E2%87%A7%E2%8C%A5%E2%94%80%E2%94%82%E2%96%88%E2%8B%AE&display=swap" rel="stylesheet">
+<style>
+/* =====================================================================
+   TOKENS. One cell = 8 x 20 px. Everything is a whole number of cells.
+   ===================================================================== */
+:root{
+  --cw:8px;            /* cell width  = advance of JetBrains Mono at 13.33px */
+  --rh:20px;           /* cell height = one text row */
+  --bg:#0c0c0e;   --bg-1:#141417; --bg-2:#1c1c20; --bg-3:#27272c;
+  --line:#2f2f35; --line-2:#5a5a63;
+  --fg:#ece8e1;   --fg-2:#a9a59d; --fg-3:#6d6a64; --fg-4:#403f3c;
+  --em:#ff6a3d;   --em-hi:#ff8c66; --em-lo:#d9461a; --em-dim:#6e2c18; --em-ink:#160704;
+  --mono:'JetBrains Mono',ui-monospace,'DejaVu Sans Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#000}
+body{font:400 calc(40px / 3)/20px var(--mono);color:var(--fg);-webkit-font-smoothing:antialiased;font-variant-ligatures:none;font-kerning:none}
+button,input{font:inherit;color:inherit;background:none;border:0;outline:0;letter-spacing:0}
+button{cursor:pointer;text-align:left;white-space:pre}
+button:disabled{cursor:default}
+::selection{background:var(--fg);color:var(--bg)}
+.f2{color:var(--fg-2)} .f3{color:var(--fg-3)} .f4{color:var(--fg-4)} .em{color:var(--em)} .b{font-weight:700} .m{font-weight:500}
+.w{flex:none;width:calc(var(--w) * var(--cw))}
+.sp{flex:1}
+.ell{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.inv{background:var(--fg);color:var(--bg)}
+:focus-visible{outline:1px solid var(--fg-2);outline-offset:0}
+
+/* ---------- Frame (box drawing): lines through cell centres, 1 cell padding ---------- */
+.box{position:relative;--bb:var(--bg);background:var(--bb);padding:var(--rh) calc(2 * var(--cw))}
+.box::before{content:"";position:absolute;inset:10px 3px 9px 4px;border:1px solid var(--line);border-radius:4px;pointer-events:none}
+.box.act::before{border-color:var(--line-2)}
+.box.emb::before{border-color:var(--em-dim)}
+.box.emf::before{border-color:var(--em)}
+.box.float{--bb:var(--bg-1);background:none;isolation:isolate}
+.box.float::before{background:var(--bb);z-index:-1}
+.box.float>.bt{background:linear-gradient(transparent 10px,var(--bb) 10px)}
+.box.float::before{border-color:var(--line-2)}
+.box.float.emf::before{border-color:var(--em)}
+.bt{position:absolute;top:0;left:calc(2 * var(--cw));height:20px;padding:0 var(--cw);background:var(--bb);color:var(--fg-2);white-space:pre;z-index:1}
+.bt.r{left:auto;right:calc(2 * var(--cw))}
+.box.act>.bt:not(.r){color:var(--fg)}
+.sep{height:20px;margin:0 calc(-2 * var(--cw));position:relative}
+.sep::before{content:"";position:absolute;left:4px;right:3px;top:10px;height:1px;background:var(--line-2)}
+.rows{display:flex;flex-direction:column}
+
+/* ---------- Buttons: brackets = available; fill = armed; inverse = pressed ---------- */
+.btn{display:inline-flex;align-items:center;height:20px;color:var(--fg);position:relative;white-space:pre}
+.btn::before{content:"[";color:var(--fg-3)} .btn::after{content:"]";color:var(--fg-3)}
+.btn>span{padding:0 var(--cw)}
+.btn .kh{color:var(--fg-3)}
+.btn:hover,.btn.is-h{background:var(--bg-2)}
+.btn:hover::before,.btn:hover::after,.btn.is-h::before,.btn.is-h::after{color:var(--fg)}
+.btn:active,.btn.is-p{background:var(--fg);color:var(--bg)}
+.btn:active::before,.btn:active::after,.btn.is-p::before,.btn.is-p::after,.btn:active .kh,.btn.is-p .kh{color:var(--bg)}
+.btn:disabled,.btn.is-d{background:none;color:var(--fg-4)}
+.btn:disabled::before,.btn:disabled::after,.btn.is-d::before,.btn.is-d::after,.btn:disabled .kh,.btn.is-d .kh{color:var(--fg-4)}
+.btn.pri{background:var(--em);color:var(--em-ink);font-weight:700}
+.btn.pri::before,.btn.pri::after{content:" ";color:inherit}
+.btn.pri .kh{color:var(--em-ink);font-weight:400}
+.btn.pri:hover,.btn.pri.is-h{background:var(--em-hi)}
+.btn.pri:active,.btn.pri.is-p{background:var(--em-lo);color:var(--em-ink)}
+.btn.pri:disabled,.btn.pri.is-d{background:none;color:var(--fg-4);font-weight:400}
+.btn.pri:disabled::before,.btn.pri.is-d::before{content:"["} .btn.pri:disabled::after,.btn.pri.is-d::after{content:"]"}
+.btn.pri:disabled .kh,.btn.pri.is-d .kh{color:var(--fg-4)}
+
+/* icon key: 3 cells, glyph centred */
+.ik{width:calc(3 * var(--cw));height:20px;text-align:center;color:var(--fg-2);position:relative;flex:none}
+.ik::after{content:"";position:absolute;inset:-10px 0}
+.ik svg{display:inline-block;vertical-align:-1px}
+.ik:hover{background:var(--bg-2);color:var(--fg)}
+.ik:active,.ik.open{background:var(--fg);color:var(--bg)}
+.ik:disabled{color:var(--fg-4);background:none}
+
+/* keyed option */
+.opt{height:20px;padding:0 var(--cw);color:var(--fg-2)}
+.opt .k{color:var(--fg-3)}
+.opt:hover,.opt.is-h{background:var(--bg-2);color:var(--fg)}
+.opt.on{background:var(--fg);color:var(--bg);font-weight:500}
+.opt.on .k{color:var(--fg-3);font-weight:400}
+.opt.ff{color:var(--em)}
+.opt.ff.on{background:var(--em);color:var(--em-ink);font-weight:700}
+.opt.ff.on .k{color:var(--em-ink);font-weight:400}
+
+/* checkbox: [ ] [x] [–] [■] */
+.chk{white-space:pre;color:var(--fg)}
+.chk i{font-style:normal;color:var(--fg-3)}
+.chk:hover i,.chk.is-h i{color:var(--fg)}
+.chk.lk{color:var(--em);cursor:default} .chk.lk i{color:var(--em-dim)}
+.chk.dis{color:var(--fg-4)} .chk.dis i{color:var(--fg-4)}
+
+/* status */
+.chipf{background:var(--em);color:var(--em-ink);font-weight:700;padding:0 var(--cw);white-space:pre}
+.st-t{color:var(--em)}
+.st-o{color:var(--fg-3)}
+
+/* field: a filled row (or a framed row, never both) */
+.field{display:flex;align-items:center;height:20px;background:var(--bg-2);position:relative;min-width:0}
+.field.bare{background:none}
+.field .pr{flex:none;width:calc(2 * var(--cw));color:var(--fg-3)}
+.field input{flex:1;min-width:0;height:20px;caret-color:var(--fg)}
+.field input::placeholder{color:var(--fg-3);opacity:1}
+.field:focus-within,.field.is-f{background:var(--bg-3)}
+.field.bare:focus-within{background:var(--bg-2)}
+.field:focus-within .pr,.field.is-f .pr{color:var(--fg)}
+.cur{position:absolute;top:0;left:calc(2 * var(--cw));width:var(--cw);height:20px;background:var(--fg);mix-blend-mode:difference;display:none;pointer-events:none;animation:blink 1.06s steps(1) infinite}
+.field:focus-within:has(input:placeholder-shown) .cur,.field.is-f .cur{display:block}
+.field:focus-within:has(input:placeholder-shown) input{caret-color:transparent}
+@keyframes blink{50%{opacity:0}}
+.field.dis{color:var(--fg-4)} .field.dis input::placeholder{color:var(--fg-4)}
+
+kbd{font:inherit;color:var(--fg-2)}
+
+/* =====================================================================
+   WINDOW
+   ===================================================================== */
+.win{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
+body[data-os=mac] .win{border-radius:10px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.chrome{position:relative;height:100px;flex:none}
+.strip{position:relative;z-index:3;height:40px;display:flex}
+.rule{position:absolute;left:0;right:0;height:20px;z-index:1;pointer-events:none}
+.rule::before{content:"";position:absolute;left:0;right:0;top:10px;height:1px;background:var(--line)}
+.rule.a{top:40px} .rule.b{top:80px}
+
+/* platform reserve, in whole cells */
+.osl,.osr{flex:none;display:flex;height:40px}
+.osl{width:var(--cw)} .osr{width:var(--cw)}
+.drag{flex:1;min-width:calc(2 * var(--cw))}
+body[data-os=mac] .osl{width:calc(10 * var(--cw))}
+body[data-os=linux] .osr{width:calc(14 * var(--cw))}
+body[data-os=win] .osr{width:calc(18 * var(--cw))}
+body[data-os=win] .drag{min-width:calc(6 * var(--cw))}
+.lights,.gnome,.wbtn{display:none}
+body[data-os=mac] .lights{display:flex}
+body[data-os=linux] .gnome{display:flex}
+body[data-os=win] .wbtn{display:flex}
+.lights{gap:8px;padding:24px 0 0 12px}
+.lights i{width:12px;height:12px;border-radius:50%;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.35)}
+.lights i:nth-child(1){background:#ff5f57}.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#28c840}
+.gnome{width:100%;justify-content:flex-end;align-items:flex-start;gap:12px;padding:18px 12px 0 0}
+.gnome button{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.09);display:grid;place-items:center;color:var(--fg)}
+.gnome button:hover{background:rgba(255,255,255,.16)}
+.gnome svg{width:16px;height:16px}
+.wbtn{width:100%}
+.wbtn button{width:calc(6 * var(--cw));height:40px;display:grid;place-items:center;color:var(--fg)}
+.wbtn button:hover{background:rgba(255,255,255,.08)}
+.wbtn button.x:hover{background:#c42b1c;color:#fff}
+.wbtn svg{width:10px;height:10px}
+
+/* tabs: 22 cells. Active tab = open box joined to the strip rule */
+.tabs{display:flex;min-width:0}
+.tab{position:relative;flex:none;width:calc(22 * var(--cw));height:40px;padding-top:20px;cursor:default}
+.tab .tr{display:flex;align-items:center;height:20px;margin:0 var(--cw);padding:0 var(--cw);color:var(--fg-2)}
+.tab:not(.on):hover .tr,.tab.is-h .tr{background:var(--bg-2);color:var(--fg)}
+.tab .ti{width:var(--cw);flex:none;color:var(--fg-3);margin-right:var(--cw)}
+.tab .fav{width:calc(2 * var(--cw));height:20px;flex:none;display:grid;place-items:center;margin-right:var(--cw)}
+.tab .fav svg{width:14px;height:14px;display:block}
+.tab .tt{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.tab .tx{width:var(--cw);flex:none;color:var(--fg-3);visibility:hidden;text-align:center}
+.tab .tx:hover{color:var(--bg);background:var(--fg)}
+.tab.on .tx,.tab:hover .tx{visibility:visible}
+.tab.on .tr{color:var(--fg);font-weight:500}
+.tab.on::before{content:"";position:absolute;left:4px;right:3px;top:10px;height:41px;border:1px solid var(--line);border-bottom:0;border-radius:4px 4px 0 0;pointer-events:none}
+.tab.on::after{content:"";position:absolute;left:5px;right:4px;top:50px;height:1px;background:var(--bg)}
+.tab.blk .tt{color:var(--fg-3)}
+.tab.blk.on .tt{color:var(--fg-2)}
+.fav.mk{color:var(--em);font-size:inherit}
+.newt{margin-top:20px}
+
+/* toolbar */
+.toolbar{position:absolute;z-index:2;top:60px;left:0;right:0;height:20px;display:flex;padding:0 var(--cw)}
+.toolbar .field{flex:1;margin:0 var(--cw)}
+.addr .disp{position:absolute;left:calc(2 * var(--cw));right:0;top:0;height:20px;display:flex;pointer-events:none;white-space:pre;overflow:hidden}
+.addr:focus-within .disp{display:none}
+.addr input.hide{color:transparent}
+.addr .tail{flex:none;display:flex;padding-right:var(--cw);gap:var(--cw);white-space:pre;background:inherit;position:relative}
+.addr:focus-within .tail .kk{display:none}
+.blockbtn{margin-right:var(--cw)}
+.blockbtn .g{color:var(--em)}
+.blockbtn:disabled .g{color:var(--fg-4)}
+.blockbtn.open{background:var(--fg);color:var(--bg)}
+.blockbtn.open::before,.blockbtn.open::after{color:var(--bg)}
+
+/* content + status line */
+.view{position:relative;flex:1;min-height:0}
+.pg{position:absolute;inset:0;overflow:auto;display:none}
+.pg.show{display:block}
+.status{flex:none;height:20px;background:var(--bg-1);display:flex;padding:0 var(--cw);white-space:pre;color:var(--fg-3);overflow:hidden}
+.status kbd{color:var(--fg-2)}
+.hint{margin-right:calc(2 * var(--cw))}
+
+/* centred column, snapped to the cell grid */
+.col{width:calc(var(--n) * var(--cw));margin-left:max(calc(2 * var(--cw)),round(down,calc((100% - var(--n) * var(--cw)) / 2),var(--cw)))}
+
+/* =====================================================================
+   NEW TAB PAGE
+   ===================================================================== */
+.ntp{--n:116;padding:calc(2 * var(--rh)) 0 var(--rh)}
+@media (max-height:860px){.ntp{padding-top:var(--rh)}}
+.nh{display:flex;height:20px;white-space:pre}
+.nh .lg{width:calc(3 * var(--cw));display:flex;align-items:center}
+.nh .lg svg{width:16px;height:16px}
+.gap1{height:20px}
+.panes{display:flex;gap:var(--cw)}
+.pane{height:calc(15 * var(--rh));cursor:default}
+.pane.l{width:calc(48 * var(--cw))} .pane.r{width:calc(67 * var(--cw))}
+.pane .rows{height:calc(13 * var(--rh))}
+.row{display:grid;column-gap:var(--cw);height:20px;margin:0 calc(-1 * var(--cw));padding:0 var(--cw);white-space:pre;align-items:center}
+.row>*{overflow:hidden;text-overflow:ellipsis;white-space:pre}
+.row>:first-child{overflow:visible;text-overflow:clip}
+.cg{grid-template-columns:calc(3 * var(--cw)) calc(18 * var(--cw)) calc(3 * var(--cw)) calc(17 * var(--cw))}
+.sg{grid-template-columns:calc(3 * var(--cw)) calc(25 * var(--cw)) calc(16 * var(--cw)) calc(16 * var(--cw))}
+.row.hd{color:var(--fg-3)}
+.rt{text-align:right}
+.row.it:hover{background:var(--bg-1)}
+.row.it .nm{color:var(--fg-2)}
+.row.it.sel .nm{color:var(--fg);font-weight:500}
+.pane .row.cu{background:var(--bg-2)}
+.pane.act .row.cu{background:var(--bg-3)}
+.row.cu .nm{color:var(--fg)}
+.row.lkd .nm{color:var(--fg-3)}
+.row.it.lkd{cursor:default}
+.row.it{cursor:pointer}
+.leg{margin-top:auto;display:grid;grid-template-columns:calc(5 * var(--cw)) calc(15 * var(--cw)) calc(6 * var(--cw)) calc(15 * var(--cw));column-gap:var(--cw);color:var(--fg-3);white-space:pre}
+.leg kbd{color:var(--fg-2)}
+.addrow .field{grid-column:2 / span 3}
+.act-row{display:flex;align-items:center;height:20px;white-space:pre}
+.act-row .sum{margin-right:calc(2 * var(--cw))}
+.note{padding-left:calc(2 * var(--cw));color:var(--fg-3);white-space:pre;height:20px}
+
+/* =====================================================================
+   BLOCKED PAGE: outline = for a while, solid = forever
+   ===================================================================== */
+.bp{--n:76;padding-top:calc(5 * var(--rh))}
+.bp .box{--bb:var(--bg)}
+.big{font-size:calc(80px / 3);line-height:40px;height:40px;font-weight:700;white-space:pre}
+.bpline{height:20px;white-space:pre;display:flex}
+.bpf{background:var(--em);color:var(--em-ink);padding:var(--rh) calc(2 * var(--cw))}
+.bpf .f3{color:#5a1d0a}
+.bpt .big{color:var(--fg)}
+
+/* =====================================================================
+   FLOATING: popover, menu, toast
+   ===================================================================== */
+.float{position:absolute;z-index:20;display:none}
+.float.show{display:block}
+.mi{display:flex;width:calc(100% + 2 * var(--cw));height:20px;margin:0 calc(-1 * var(--cw));padding:0 var(--cw);white-space:pre;color:var(--fg)}
+.mi .k{color:var(--fg-3);width:calc(3 * var(--cw));flex:none}
+.mi .r{margin-left:auto;color:var(--fg-3)}
+.mi:hover,.mi:focus-visible,.mi.is-h{background:var(--fg);color:var(--bg);outline:0}
+.mi:hover .k,.mi:hover .r,.mi:focus-visible .k,.mi:focus-visible .r,.mi.is-h .r,.mi.is-h .k{color:var(--fg-3)}
+.mi.ff{color:var(--em)}
+.mi.ff:hover,.mi.ff:focus-visible{background:var(--em);color:var(--em-ink)}
+.mi.ff:hover .k,.mi.ff:hover .r,.mi.ff:focus-visible .r,.mi.ff:focus-visible .k{color:var(--em-ink)}
+.mi:disabled{color:var(--fg-4);background:none} .mi:disabled .k,.mi:disabled .r{color:var(--fg-4)}
+.mrow{display:flex;height:20px;white-space:pre;align-items:center}
+.toast{right:calc(2 * var(--cw));bottom:calc(2 * var(--rh));width:calc(56 * var(--cw))}
+.toast .mrow .msg,.mrow .msg{margin-right:var(--cw);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.tcell{display:inline-block;width:calc(2 * var(--cw));color:var(--fg-2)}
+.tcell.x{color:var(--fg-4)}
+.toast.ff .tcell:not(.x){color:var(--em)}
+
+/* =====================================================================
+   SYSTEM SHEET
+   ===================================================================== */
+.sheet{position:absolute;inset:0;z-index:15;background:var(--bg);overflow:auto;display:none}
+.sheet.show{display:block}
+.sys{--n:116;padding:var(--rh) 0 calc(3 * var(--rh))}
+.two{display:flex;gap:calc(2 * var(--cw))}
+.two>*{width:calc(57 * var(--cw))}
+.stack{display:flex;flex-direction:column;gap:var(--rh)}
+.line{display:flex;height:20px;white-space:pre;align-items:center}
+.sw{width:calc(4 * var(--cw));height:20px;flex:none;margin-right:var(--cw)}
+.spec-grid{width:calc(20 * var(--cw));height:calc(6 * var(--rh));position:relative;flex:none;margin-right:calc(2 * var(--cw));
+  background-image:linear-gradient(to right,rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,.07) 1px,transparent 1px);background-size:8px 20px}
+.comp{display:grid;grid-template-columns:calc(14 * var(--cw)) repeat(4,calc(24 * var(--cw)));column-gap:calc(1 * var(--cw))}
+.comp>div{height:20px;white-space:pre;display:flex;align-items:center}
+.comp .lab{color:var(--fg-3)}
+.specstrip{position:relative;height:60px;display:flex;width:max-content}
+.specstrip::before{content:"";position:absolute;left:0;right:0;top:50px;height:1px;background:var(--line)}
+
+/* =====================================================================
+   CAPTION (not part of the browser)
+   ===================================================================== */
+.cap{position:fixed;z-index:40;left:calc(2 * var(--cw));bottom:var(--rh);background:var(--bg-1) !important;width:calc(46 * var(--cw))}
+.cap.min{width:calc(30 * var(--cw));height:calc(2 * var(--rh));padding-bottom:0}
+.cap.min .cb{display:none}
+.cap .bt.r{padding:0}
+.cap .bt.r button{padding:0 var(--cw)}
+.cap .bt.r button:hover{background:var(--fg);color:var(--bg)}
+.osopt .opt{padding:0 var(--cw)}
+
+.gridov{position:fixed;inset:0;z-index:60;pointer-events:none;display:none;
+  background-image:linear-gradient(to right,rgba(255,106,61,.16) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,106,61,.16) 1px,transparent 1px);background-size:8px 20px}
+.gridov.show{display:block}
+
+/* =====================================================================
+   ORDINARY SITES (their own CSS, not ours)
+   ===================================================================== */
+.site{font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif;font-variant-ligatures:normal}
+.gh{background:#0d1117;color:#e6edf3;min-height:100%}
+.gh a{color:#4493f8;text-decoration:none}
+.gh-top{display:flex;align-items:center;gap:16px;padding:12px 24px;background:#010409;border-bottom:1px solid #30363d}
+.gh-top .s{margin-left:auto;width:280px;height:32px;border:1px solid #30363d;border-radius:6px;color:#9198a1;font-size:13px;display:flex;align-items:center;padding:0 10px}
+.gh-crumb{font-size:14px} .gh-crumb b{font-weight:600}
+.gh-nav{display:flex;gap:20px;padding:0 24px;border-bottom:1px solid #30363d;background:#010409}
+.gh-nav span{padding:10px 2px;font-size:14px;color:#e6edf3;border-bottom:2px solid transparent}
+.gh-nav span.on{border-color:#f78166;font-weight:600}
+.gh-nav em{font-style:normal;background:#2f353d;border-radius:10px;padding:0 6px;font-size:12px;margin-left:6px}
+.gh-main{max-width:1012px;margin:24px auto;padding:0 24px;display:grid;grid-template-columns:1fr 280px;gap:24px}
+.gh-files{border:1px solid #30363d;border-radius:6px;overflow:hidden}
+.gh-files .hd{background:#151b23;padding:12px 16px;font-size:13px;display:flex;gap:8px;color:#9198a1}
+.gh-files .hd b{color:#e6edf3;font-weight:600}
+.gh-files .f{display:grid;grid-template-columns:24px 220px 1fr 90px;padding:7px 16px;border-top:1px solid #30363d;font-size:14px;color:#9198a1}
+.gh-files .f span:nth-child(2){color:#e6edf3}
+.gh-readme{margin-top:16px;border:1px solid #30363d;border-radius:6px;padding:24px 32px}
+.gh-readme h1{font-size:28px;font-weight:600;border-bottom:1px solid #30363d;padding-bottom:8px;margin-bottom:16px}
+.gh-readme p{margin-bottom:12px;color:#d1d7e0}
+.gh-readme code{font:12px ui-monospace,monospace;background:#262c36;padding:2px 6px;border-radius:6px}
+.gh-side h3{font-size:16px;font-weight:600;margin-bottom:8px}
+.gh-side p{color:#d1d7e0;margin-bottom:16px}
+.gh-side .tag{display:inline-block;background:#121d2f;color:#4493f8;border-radius:12px;padding:0 10px;font-size:12px;line-height:22px;margin:0 4px 6px 0}
+.wk{background:#fff;color:#202122;min-height:100%}
+.wk-top{display:flex;align-items:center;gap:16px;padding:10px 28px;border-bottom:1px solid #eaecf0}
+.wk-logo{font:22px/1 "Linux Libertine","Georgia","Times",serif;letter-spacing:.04em}
+.wk-logo small{display:block;font:11px/1.2 sans-serif;letter-spacing:0;color:#54595d;margin-top:2px}
+.wk-top .s{margin-left:24px;width:420px;height:32px;border:1px solid #a2a9b1;border-radius:2px;display:flex;align-items:center;padding:0 10px;color:#72777d;font-size:14px}
+.wk-body{display:grid;grid-template-columns:200px minmax(0,780px);gap:32px;padding:20px 28px}
+.wk-toc{font-size:14px;color:#202122} .wk-toc b{display:block;font-size:13px;margin-bottom:8px;border-bottom:1px solid #eaecf0;padding-bottom:6px}
+.wk-toc div{color:#3366cc;padding:3px 0}
+.wk h1{font:28px/1.3 "Linux Libertine","Georgia","Times",serif;border-bottom:1px solid #a2a9b1;padding-bottom:4px;margin-bottom:6px}
+.wk .from{font-size:13px;color:#54595d;margin-bottom:14px}
+.wk p{font-size:15px;line-height:1.6;margin-bottom:12px}
+.wk a{color:#3366cc}
+.wk h2{font:22px/1.3 "Linux Libertine","Georgia","Times",serif;border-bottom:1px solid #a2a9b1;margin:20px 0 10px;padding-bottom:3px}
+.wk-box{float:right;width:240px;margin:0 0 12px 20px;border:1px solid #a2a9b1;background:#f8f9fa;padding:10px;font-size:13px}
+.wk-box .img{height:120px;background:linear-gradient(135deg,#dfe3e8,#c8ced6);margin:6px 0 8px;display:grid;place-items:center;color:#72777d;font-size:12px}
+.gs{background:#fff;color:#202124;min-height:100%;padding:24px 0 0 160px}
+.gs .q{width:620px;height:44px;border:1px solid #dfe1e5;border-radius:22px;display:flex;align-items:center;padding:0 20px;font-size:16px;margin-bottom:24px}
+.gs .r{max-width:620px;margin-bottom:24px} .gs .r small{color:#4d5156;font-size:12px} .gs .r h3{color:#1a0dab;font-weight:400;font-size:20px;margin:2px 0} .gs .r p{color:#4d5156;font-size:14px}
+</style>
+</head>
+<body data-os="linux">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="mg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6a3d"/><stop offset="1" stop-color="#c2300f"/></linearGradient></defs></svg>
+
+<div class="win" id="win">
+  <!-- ============ CHROME: 5 rows ============ -->
+  <header class="chrome">
+    <div class="strip" id="strip">
+      <div class="osl"><div class="lights" aria-hidden="true"><i></i><i></i><i></i></div></div>
+      <div class="tabs" id="tabs" role="tablist"></div>
+      <button class="ik newt" id="newtab" title="New tab" aria-label="New tab">+</button>
+      <div class="drag"></div>
+      <div class="osr">
+        <div class="gnome">
+          <button aria-label="Minimise"><svg viewBox="0 0 16 16"><path d="M4.5 11.5h7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+          <button aria-label="Maximise"><svg viewBox="0 0 16 16"><rect x="4.5" y="4.5" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
+          <button aria-label="Close"><svg viewBox="0 0 16 16"><path d="M5 5l6 6M11 5l-6 6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+        </div>
+        <div class="wbtn">
+          <button aria-label="Minimise"><svg viewBox="0 0 10 10"><path d="M0 5.5h10" stroke="currentColor" stroke-width="1"/></svg></button>
+          <button aria-label="Maximise"><svg viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9" rx="1" fill="none" stroke="currentColor" stroke-width="1"/></svg></button>
+          <button class="x" aria-label="Close"><svg viewBox="0 0 10 10"><path d="M.5.5l9 9M9.5.5l-9 9" stroke="currentColor" stroke-width="1"/></svg></button>
+        </div>
+      </div>
+    </div>
+    <div class="rule a"></div>
+    <div class="toolbar">
+      <button class="ik" id="back" aria-label="Back">←</button>
+      <button class="ik" id="fwd" aria-label="Forward">→</button>
+      <button class="ik" id="reload" aria-label="Reload"><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M10 6a4 4 0 1 1-1.2-2.85"/><path d="M9.2 1v2.4H6.8"/></svg></button>
+      <label class="field addr" id="addr">
+        <span class="pr">›</span>
+        <input id="addrIn" spellcheck="false" autocomplete="off" placeholder="Search Google or type a URL" aria-label="Address and search bar">
+        <span class="cur"></span>
+        <span class="disp" id="addrDisp"></span>
+        <span class="tail" id="addrTail"></span>
+      </label>
+      <button class="btn blockbtn" id="blockBtn" aria-haspopup="true"><span><b class="g">■</b> Block</span></button>
+      <button class="ik" id="menuBtn" aria-label="Menu" aria-haspopup="true">≡</button>
+    </div>
+    <div class="rule b"></div>
+  </header>
+
+  <!-- ============ CONTENT ============ -->
+  <main class="view" id="view">
+    <!-- New tab page -->
+    <section class="pg" id="v-ntp">
+      <div class="col ntp">
+        <div class="nh">
+          <span class="lg"><svg viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="url(#mg)"/><path d="M14 10.5V24.5H6.6Q7.4 16 14 10.5Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/><path d="M17 6V24.5H25.4Q24.7 13 17 6Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg></span><b>Mast</b><span class="sp"></span><b id="stStop">4</b><span class="f3"> stopped today</span><span class="f4">  ·  </span><b id="stBlk">21</b><span class="f3"> sites blocked</span>
+        </div>
+        <div class="gap1"></div>
+        <div class="box" id="sbox">
+          <span class="bt">Google</span><span class="bt r f3"><kbd>/</kbd></span>
+          <label class="field bare"><span class="pr">›</span><input id="ntpQ" spellcheck="false" autocomplete="off" placeholder="Search Google or type a URL" aria-label="Search Google or type a URL"><span class="cur"></span></label>
+        </div>
+        <div class="gap1"></div>
+        <div class="panes">
+          <div class="box pane l act" id="paneL">
+            <span class="bt"><span class="f3">1</span> Categories</span><span class="bt r f3" id="catCount"></span>
+            <div class="rows" id="cats"></div>
+          </div>
+          <div class="box pane r" id="paneR">
+            <span class="bt" id="sitesTitle"></span><span class="bt r f3" id="sitesCount"></span>
+            <div class="rows" id="sites"></div>
+          </div>
+        </div>
+        <div class="gap1"></div>
+        <div class="box" id="abox">
+          <span class="bt">Block for</span>
+          <div class="act-row">
+            <div id="durs" style="display:flex" role="radiogroup" aria-label="Duration"></div>
+            <span class="sp"></span>
+            <span class="sum" id="sum"></span>
+            <button class="btn pri" id="goBlock"><span>Block <span class="kh" data-key="enter"></span></span></button>
+          </div>
+        </div>
+        <div class="note">Blocks can be lengthened, never shortened. Undo lasts 10 s after Block.</div>
+      </div>
+    </section>
+
+    <!-- Blocked page -->
+    <section class="pg" id="v-blocked"><div class="col bp" id="bpBody"></div></section>
+
+    <!-- GitHub -->
+    <section class="pg site" id="v-gh">
+      <div class="gh">
+        <div class="gh-top">
+          <svg width="32" height="32" viewBox="0 0 16 16" fill="#e6edf3"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          <span class="gh-crumb">0xmiki / <b>mast</b></span>
+          <span class="s">Type / to search</span>
+        </div>
+        <div class="gh-nav"><span class="on">Code</span><span>Issues<em>3</em></span><span>Pull requests<em>1</em></span><span>Actions</span><span>Projects</span><span>Settings</span></div>
+        <div class="gh-main">
+          <div>
+            <div class="gh-files">
+              <div class="hd"><b>0xmiki</b> feat(brand): white sails on deeper ember <span style="margin-left:auto">56a8b69 · 2 hours ago</span></div>
+              <div class="f"><span>▸</span><span>chrome/browser/blocklist</span><span>BlocklistService: lengthen-only invariant</span><span>yesterday</span></div>
+              <div class="f"><span>▸</span><span>chrome/browser/ui/webui</span><span>newtab + blocked page WebUI</span><span>3 days ago</span></div>
+              <div class="f"><span>▸</span><span>demo</span><span>round 2 design proposals</span><span>2 hours ago</span></div>
+              <div class="f"><span>▸</span><span>docs</span><span>Chromium fork wiring plan</span><span>4 days ago</span></div>
+              <div class="f"><span>·</span><span>.gn</span><span>build: pin chromium 149</span><span>last week</span></div>
+              <div class="f"><span>·</span><span>LICENSE</span><span>BSD-3-Clause</span><span>last month</span></div>
+              <div class="f"><span>·</span><span>README.md</span><span>docs: drop pact wording</span><span>5 days ago</span></div>
+            </div>
+            <div class="gh-readme">
+              <h1>Mast</h1>
+              <p>A Chromium-based browser whose one job is blocking distractions. The blocklist lives in the browser itself, so there is no extension to disable.</p>
+              <p>Pick categories or sites, choose how long, press Block. Blocks can be made longer but never shorter, and <code>forever</code> means forever. The only way back is the 10-second Undo.</p>
+              <p>Build: <code>gn gen out/Release</code> then <code>autoninja -C out/Release mast</code>.</p>
+            </div>
+          </div>
+          <div class="gh-side">
+            <h3>About</h3>
+            <p>Distraction blocking, built into the browser.</p>
+            <span class="tag">chromium</span><span class="tag">browser</span><span class="tag">focus</span><span class="tag">blocklist</span>
+            <p style="margin-top:12px;color:#9198a1;font-size:13px">★ 1.2k · 31 watching · 48 forks</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Wikipedia -->
+    <section class="pg site" id="v-wiki">
+      <div class="wk">
+        <div class="wk-top"><div class="wk-logo">WIKIPEDIA<small>The Free Encyclopedia</small></div><span class="s">Search Wikipedia</span></div>
+        <div class="wk-body">
+          <div class="wk-toc"><b>Contents</b><div>(Top)</div><div>Selective attention</div><div>Divided attention</div><div>Attention and technology</div><div>See also</div><div>References</div></div>
+          <div>
+            <h1>Attention</h1>
+            <div class="from">From Wikipedia, the free encyclopedia</div>
+            <div class="wk-box"><b>Attention</b><div class="img">illustration</div>The concentration of awareness on some phenomenon to the exclusion of other stimuli.</div>
+            <p><b>Attention</b> is the cognitive process of selectively concentrating on one aspect of the environment while ignoring others. It has been described as the allocation of limited processing resources, and as a bottleneck that decides which information reaches <a>working memory</a>.</p>
+            <p>Researchers commonly distinguish <a>selective attention</a>, the ability to focus on a single source of information, from <a>divided attention</a>, the attempt to follow several at once. Performance on divided-attention tasks typically drops as the number of tasks rises.</p>
+            <h2>Attention and technology</h2>
+            <p>Notifications, infinite feeds and autoplay are designed to capture attention. Studies of <a>task switching</a> report that resuming a task after an interruption carries a measurable cost, which has led to tools that limit access to distracting websites for chosen periods.</p>
+            <p>Such tools differ in how easily a block can be undone. Some allow a block to be lifted at any time; others make blocks binding for their full duration, on the reasoning that a block which can be turned off in a weak moment offers little protection.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Search / generic page -->
+    <section class="pg site" id="v-gen"><div class="gs" id="genBody"></div></section>
+
+    <!-- floating -->
+    <div class="box float pop" id="pop" role="menu"></div>
+    <div class="box float menu" id="menu" role="menu"></div>
+    <div class="box float toast" id="toast" role="status" aria-live="polite"></div>
+
+    <!-- System sheet -->
+    <section class="sheet" id="sheet" aria-label="System">
+      <div class="col sys">
+        <div class="line"><b>System</b><span class="f3">  ·  the Terminal language, written down</span><span class="sp"></span><button class="btn" id="sysClose"><span>Close <span class="kh">Esc</span></span></button></div>
+        <div class="gap1"></div>
+        <div class="box"><span class="bt">Principles</span>
+          <div class="line"><span class="f3">1  </span>One cell, 8 × 20 px. Every size, gap and offset is a whole number of cells.</div>
+          <div class="line"><span class="f3">2  </span>Lines run through cell centres, like box-drawing glyphs. Free corners round by half a cell.</div>
+          <div class="line"><span class="f3">3  </span>Inverse video means "this one": the chosen option, the pressed key, the current row.</div>
+          <div class="line"><span class="f3">4  </span>Ember is the only colour and it means blocked. Outline is for a while; solid is forever.</div>
+          <div class="line"><span class="f3">5  </span>Every action shows its key, in the platform's own notation.</div>
+        </div>
+        <div class="gap1"></div>
+        <div class="two">
+          <div class="box"><span class="bt">Colour</span><span class="bt r f3">15 tokens</span>
+            <div class="line f3"><span class="w" style="--w:5"></span><span class="w" style="--w:11">TOKEN</span><span class="w" style="--w:9">HEX</span>ROLE</div>
+            <div id="tokens"></div>
+          </div>
+          <div class="stack">
+            <div class="box"><span class="bt">Type</span><span class="bt r f3">JetBrains Mono</span>
+              <div class="line" style="height:40px"><span class="big w" style="--w:32">Blocked forever</span><span class="f3">2× 26.7/40 700</span></div>
+              <div class="line"><span class="b w" style="--w:32">Video &amp; streaming</span><span class="f3">1× 13.3/20 700</span></div>
+              <div class="line"><span class="m w" style="--w:32">New tab</span><span class="f3">1× 13.3/20 500</span></div>
+              <div class="line"><span class="f2 w" style="--w:32">x.com is blocked forever.</span><span class="f3">1× 13.3/20 400</span></div>
+              <div class="line"><span class="f3 w" style="--w:32">CATEGORY  SITES  STATUS</span><span class="f3">1× caps, fg-3</span></div>
+              <div class="line f3">One family, one size; 2× is for one headline.</div>
+            </div>
+            <div class="box"><span class="bt">Grid &amp; stroke</span>
+              <div style="display:flex">
+                <div class="spec-grid"><div class="box act" style="position:absolute;left:16px;top:20px;width:128px;height:80px;--bb:transparent;padding:0"><span class="bt" style="background:var(--bg);left:16px">pane</span></div></div>
+                <div class="rows">
+                  <div class="line"><span class="f3 w" style="--w:8">cell</span>8 × 20 px</div>
+                  <div class="line"><span class="f3 w" style="--w:8">gap</span>1 cell · 1 row · 2 rows</div>
+                  <div class="line"><span class="f3 w" style="--w:8">stroke</span>1 px at the cell centre</div>
+                  <div class="line"><span class="f3 w" style="--w:8">radius</span>4 px, free corners only</div>
+                  <div class="line"><span class="f3 w" style="--w:8">depth</span>no shadow; bg-1 + frame</div>
+                  <div class="line"><span class="f3 w" style="--w:8">motion</span>steps only; 1 cell / s</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="gap1"></div>
+        <div class="box"><span class="bt">Components</span>
+          <div class="comp">
+            <div class="lab"></div><div class="f3">DEFAULT</div><div class="f3">HOVER</div><div class="f3">PRESSED · ON</div><div class="f3">DISABLED · LOCKED</div>
+            <div class="lab">button</div>
+            <div><span class="btn"><span>← Back <span class="kh" data-key="back"></span></span></span></div>
+            <div><span class="btn is-h"><span>← Back <span class="kh" data-key="back"></span></span></span></div>
+            <div><span class="btn is-p"><span>← Back <span class="kh" data-key="back"></span></span></span></div>
+            <div><span class="btn is-d"><span>← Back <span class="kh" data-key="back"></span></span></span></div>
+            <div class="lab">primary</div>
+            <div><span class="btn pri"><span>Block <span class="kh" data-key="enter"></span></span></span></div>
+            <div><span class="btn pri is-h"><span>Block <span class="kh" data-key="enter"></span></span></span></div>
+            <div><span class="btn pri is-p"><span>Block <span class="kh" data-key="enter"></span></span></span></div>
+            <div><span class="btn pri is-d"><span>Block <span class="kh" data-key="enter"></span></span></span></div>
+            <div class="lab">option</div>
+            <div><span class="opt"><span class="k">1 </span>1 hour</span></div>
+            <div><span class="opt is-h"><span class="k">1 </span>1 hour</span></div>
+            <div><span class="opt on"><span class="k">3 </span>until midnight</span></div>
+            <div><span class="opt ff on"><span class="k">6 </span>forever</span></div>
+            <div class="lab">checkbox</div>
+            <div><span class="chk"><i>[</i> <i>]</i></span><span class="f3">  open</span></div>
+            <div><span class="chk is-h"><i>[</i>x<i>]</i></span><span class="f3">  picked</span></div>
+            <div><span class="chk"><i>[</i>–<i>]</i></span><span class="f3">  some picked</span></div>
+            <div><span class="chk lk"><i>[</i>■<i>]</i></span><span class="f3">  locked forever</span></div>
+            <div class="lab">input</div>
+            <div><span class="field" style="width:calc(22 * var(--cw))"><span class="pr">›</span><span class="f3">Search Google</span></span></div>
+            <div><span class="field is-f" style="width:calc(22 * var(--cw))"><span class="pr">›</span><span class="f3">Search Google</span><span class="cur"></span></span></div>
+            <div><span class="field" style="width:calc(22 * var(--cw))"><span class="pr">›</span>espn.com</span></div>
+            <div><span class="field dis" style="width:calc(22 * var(--cw))"><span class="pr f4">›</span><span class="f4">Search Google</span></span></div>
+            <div class="lab">status</div>
+            <div><span class="st-o">· open</span></div>
+            <div><span class="st-t">□ until midnight</span></div>
+            <div><span class="st-t">□ </span><span class="f2">1 of 7 blocked</span></div>
+            <div><span class="chipf">forever</span></div>
+            <div class="lab">keys</div>
+            <div><kbd data-key="c+L"></kbd><span class="f3"> address</span></div>
+            <div><kbd data-key="c+B"></kbd><span class="f3"> block site</span></div>
+            <div><kbd data-key="c+Z"></kbd><span class="f3"> undo block</span></div>
+            <div><kbd>1–6</kbd><span class="f3"> duration</span></div>
+          </div>
+          <div class="gap1"></div>
+          <div class="line f3">tabs: active · inactive · hover · blocked for a while · blocked forever</div>
+          <div class="specstrip" id="specTabs"></div>
+          <div class="gap1"></div>
+          <div style="display:flex;gap:calc(2 * var(--cw));align-items:flex-start">
+            <div style="width:calc(56 * var(--cw))">
+              <div class="line f3">toast: 10 cells, one per second</div>
+              <div class="box float" style="position:relative;display:block;width:100%">
+                <div class="mrow"><span class="msg"><span class="em">■ </span>Shopping blocked forever</span><span class="btn"><span>Undo <span class="kh" data-key="c+Z"></span></span></span></div>
+                <div class="mrow"><span class="tcell" style="color:var(--em)">━━</span><span class="tcell" style="color:var(--em)">━━</span><span class="tcell" style="color:var(--em)">━━</span><span class="tcell" style="color:var(--em)">━━</span><span class="tcell" style="color:var(--em)">━━</span><span class="tcell" style="color:var(--em)">━━</span><span class="tcell" style="color:var(--em)">━━</span><span class="tcell x">━━</span><span class="tcell x">━━</span><span class="tcell x">━━</span><span class="sp"></span><span class="f3">7 s</span></div>
+              </div>
+            </div>
+            <div style="width:calc(30 * var(--cw))">
+              <div class="line f3">menu</div>
+              <div class="box float" style="position:relative;display:block;width:100%">
+                <div class="mi"><span>New tab</span><span class="r" data-key="c+T"></span></div>
+                <div class="mi is-h"><span>New window</span><span class="r" data-key="c+N"></span></div>
+                <div class="sep"></div>
+                <div class="mi"><span>Settings</span><span class="r" data-key="c+,"></span></div>
+              </div>
+            </div>
+            <div style="width:calc(26 * var(--cw))">
+              <div class="line f3">platform notation</div>
+              <div class="line"><span class="f3 w" style="--w:9">macOS</span><kbd>⌘⇧N</kbd></div>
+              <div class="line"><span class="f3 w" style="--w:9">Windows</span><kbd>Ctrl+Shift+N</kbd></div>
+              <div class="line"><span class="f3 w" style="--w:9">Linux</span><kbd>Ctrl+Shift+N</kbd></div>
+              <div class="line f3">caption controls stay</div>
+              <div class="line f3">native; we reserve</div>
+              <div class="line f3">whole cells for them.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="status" id="status"></footer>
+</div>
+
+<!-- caption: not part of the browser -->
+<aside class="box float cap" id="cap" style="display:block">
+  <span class="bt" style="color:var(--fg)">Proposal 07 · Terminal</span>
+  <span class="bt r"><button id="capMin" aria-label="Collapse caption">–</button></span>
+  <div class="cb">
+    <div class="line f2">Chrome on a strict 8×20 character grid:</div>
+    <div class="line f2">box lines, inverse video, keys shown.</div>
+    <div class="line"><span class="f3 w" style="--w:4">OS</span><span class="osopt" id="osSw" style="display:flex" role="radiogroup" aria-label="Platform"></span></div>
+    <div class="line"><button class="btn" id="sysBtn"><span>System <span class="kh">S</span></span></button><span class="w" style="--w:1"></span><button class="btn" id="gridBtn"><span>Grid <span class="kh">G</span></span></button></div>
+  </div>
+</aside>
+<div class="gridov" id="gridov"></div>
+
+<script>
+(() => {
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+let OS = 'linux';
+
+/* ---------------- data ---------------- */
+const CATS = [
+  {id:'social', name:'Social', sites:['x.com','twitter.com','facebook.com','instagram.com','tiktok.com','reddit.com','snapchat.com','threads.net','bsky.app','pinterest.com','tumblr.com','discord.com']},
+  {id:'video', name:'Video & streaming', sites:['youtube.com','netflix.com','twitch.tv','kick.com','primevideo.com','disneyplus.com','hulu.com','max.com']},
+  {id:'news', name:'News & forums', sites:['news.ycombinator.com','cnn.com','foxnews.com','bbc.com','nytimes.com','buzzfeed.com','9gag.com']},
+  {id:'shop', name:'Shopping', sites:['amazon.com','ebay.com','aliexpress.com','temu.com','etsy.com','shein.com']},
+  {id:'games', name:'Games', sites:['chess.com','lichess.org','roblox.com','store.steampowered.com','poki.com']},
+  {id:'mine', name:'Your sites', sites:['espn.com']},
+];
+const H = 36e5, D = 864e5;
+const midnight = () => { const d = new Date(); d.setHours(24,0,0,0); return +d; };
+const DURS = [
+  {k:'1', label:'1 hour',         phrase:'for 1 hour',     until:() => Date.now()+H},
+  {k:'2', label:'4 hours',        phrase:'for 4 hours',    until:() => Date.now()+4*H},
+  {k:'3', label:'until midnight', phrase:'until midnight', until:midnight},
+  {k:'4', label:'1 week',         phrase:'for 1 week',     until:() => Date.now()+7*D},
+  {k:'5', label:'1 month',        phrase:'for 1 month',    until:() => { const d = new Date(); d.setMonth(d.getMonth()+1); return +d; }},
+  {k:'6', label:'forever',        phrase:'forever',        until:() => Infinity},
+];
+const B = {};
+const yr = new Date().getFullYear();
+CATS[0].sites.forEach(s => B[s] = {until:Infinity, since:+new Date(yr,9,18,21,40)});
+const t912 = new Date(); t912.setHours(9,12,0,0);
+CATS[1].sites.forEach(s => B[s] = {until:midnight(), since:Math.min(+t912, Date.now()-H)});
+B['news.ycombinator.com'] = {until:Date.now()+5*D+3*H, since:Date.now()-2*D};
+let stopped = 4;
+let sel = new Set();
+let dur = 2;
+let cur = 0, scur = 0, pane = 'cats';
+
+let tabs = [
+  {id:1, hist:['mast://newtab'], i:0},
+  {id:2, hist:['github.com/0xmiki/mast'], i:0},
+  {id:3, hist:['en.wikipedia.org/wiki/Attention'], i:0},
+  {id:4, hist:['mast://newtab','youtube.com/watch?v=jNQXAC9IVRw'], i:1},
+  {id:5, hist:['mast://newtab','x.com/home'], i:1},
+];
+let active = 1, nextId = 6;
+
+/* ---------------- helpers ---------------- */
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const pad = n => String(n).padStart(2,'0');
+const fDate = ms => { const d = new Date(ms); return MON[d.getMonth()]+' '+d.getDate(); };
+const fTime = ms => { const d = new Date(ms); return pad(d.getHours())+':'+pad(d.getMinutes()); };
+const sameDay = (a,b) => new Date(a).toDateString() === new Date(b).toDateString();
+const host = url => url.startsWith('mast://') ? '' : url.split('/')[0].replace(/^www\./,'');
+const siteOf = h => h.replace(/^(www|m|en|mobile)\./,'');
+function blockOf(h){
+  if (!h) return null;
+  const parts = h.split('.');
+  for (let i = 0; i < parts.length-1; i++){
+    const b = B[parts.slice(i).join('.')];
+    if (b && b.until > Date.now()) return b;
+  }
+  return null;
+}
+const isForever = d => B[d] && B[d].until === Infinity;
+const isBlocked = d => B[d] && B[d].until > Date.now();
+const catOf = d => CATS.find(c => c.sites.includes(d));
+function untilShort(b){
+  if (b.until === Infinity) return 'forever';
+  if (b.until === midnight()) return 'until midnight';
+  const left = b.until - Date.now();
+  if (left < D) return 'until ' + fTime(b.until);
+  const d = Math.floor(left / D);
+  return d <= 7 ? d + (d === 1 ? ' day left' : ' days left') : 'until ' + fDate(b.until);
+}
+function detail(b){
+  if (b.until === Infinity) return 'since ' + fDate(b.since);
+  const left = b.until - Date.now();
+  if (left < D) return 'since ' + (sameDay(b.since, Date.now()) ? fTime(b.since) : fDate(b.since));
+  return 'until ' + fDate(b.until);
+}
+function keyStr(spec){
+  const mac = OS === 'mac';
+  if (spec === 'back') return mac ? '⌘[' : 'Alt+←';
+  if (spec === 'enter') return mac ? 'Return' : 'Enter';
+  if (spec === 'fwd') return mac ? '⌘]' : 'Alt+→';
+  const m = {c: mac ? '⌘' : 'Ctrl', s: mac ? '⇧' : 'Shift', a: mac ? '⌥' : 'Alt'};
+  const parts = spec.split('+').map(p => m[p] || p);
+  return mac ? parts.join('') : parts.join('+');
+}
+const K = spec => `<kbd>${keyStr(spec)}</kbd>`;
+const LOGO = '<svg viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="url(#mg)"/><path d="M14 10.5V24.5H6.6Q7.4 16 14 10.5Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/><path d="M17 6V24.5H25.4Q24.7 13 17 6Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+function favicon(url){
+  const h = host(url);
+  if (!h) return LOGO;
+  if (h.includes('github')) return '<svg viewBox="0 0 16 16" fill="#ece8e1"><circle cx="8" cy="8" r="7.5"/><path fill="#0c0c0e" d="M5.2 13.2v-1.6c-1.7.4-2-.7-2-.7-.3-.7-.7-.9-.7-.9-.6-.4 0-.4 0-.4.6 0 1 .6 1 .6.5.9 1.4.7 1.7.5.1-.4.2-.7.4-.8-1.4-.2-2.8-.7-2.8-3 0-.7.2-1.2.6-1.6 0-.2-.3-.8.1-1.6 0 0 .5-.2 1.7.6a5.6 5.6 0 0 1 3 0c1.2-.8 1.7-.6 1.7-.6.3.8.1 1.4.1 1.6.4.4.6 1 .6 1.6 0 2.3-1.4 2.8-2.8 3 .2.2.4.6.4 1.1v2.2"/></svg>';
+  if (h.includes('wikipedia')) return '<svg viewBox="0 0 16 16"><text x="8" y="12.5" text-anchor="middle" font-family="Georgia,serif" font-size="13" fill="#ece8e1">W</text></svg>';
+  if (h.includes('youtube')) return '<svg viewBox="0 0 16 16"><rect x="0.5" y="3" width="15" height="10.5" rx="3" fill="#ff0033"/><path d="M6.5 5.8v4.9l4.1-2.45z" fill="#fff"/></svg>';
+  if (h === 'x.com') return '<svg viewBox="0 0 16 16"><path d="M2.5 2.5h3l8 11h-3z" fill="#ece8e1"/><path d="M13 2.5L3 13.5" stroke="#ece8e1" stroke-width="1.4"/></svg>';
+  if (h.includes('google')) return '<svg viewBox="0 0 16 16"><text x="8" y="12.5" text-anchor="middle" font-family="Arial,sans-serif" font-weight="700" font-size="13" fill="#ece8e1">G</text></svg>';
+  return `<span class="f2">${esc(h[0].toUpperCase())}</span>`;
+}
+function title(url){
+  const h = host(url);
+  if (!h) return 'New tab';
+  if (h.includes('github')) return 'GitHub';
+  if (h.includes('wikipedia')) return 'Wikipedia';
+  if (h.includes('youtube')) return 'YouTube';
+  if (h === 'x.com') return 'X';
+  if (h.includes('google')) return decodeURIComponent((url.split('q=')[1]||'').replace(/\+/g,' ')) + ' · Google';
+  return h;
+}
+const curTab = () => tabs.find(t => t.id === active);
+const curUrl = () => { const t = curTab(); return t.hist[t.i]; };
+
+/* ---------------- tabs ---------------- */
+function tabHTML(t, i, extra=''){
+  const url = t.hist[t.i], b = blockOf(host(url)), on = t.id === active;
+  const fav = b ? `<span class="fav mk">${b.until === Infinity ? '■' : '□'}</span>` : `<span class="fav">${favicon(url)}</span>`;
+  return `<div class="tab${on?' on':''}${b?' blk':''}${extra}" data-tab="${t.id}" role="tab" aria-selected="${on}" title="${esc(title(url))}${b ? ' · blocked ' + untilShort(b) : ''}">
+    <div class="tr"><span class="ti">${i < 9 ? i+1 : ''}</span>${fav}<span class="tt">${esc(title(url))}</span><button class="tx" data-close="${t.id}" aria-label="Close tab">×</button></div></div>`;
+}
+function renderTabs(){ $('#tabs').innerHTML = tabs.map((t,i) => tabHTML(t,i)).join(''); }
+
+/* ---------------- toolbar ---------------- */
+function renderToolbar(){
+  const t = curTab(), url = curUrl(), h = host(url), b = blockOf(h);
+  $('#back').disabled = t.i === 0;
+  $('#fwd').disabled = t.i >= t.hist.length-1;
+  const inp = $('#addrIn');
+  if (document.activeElement !== inp) inp.value = h ? url : '';
+  inp.classList.toggle('hide', !!h);
+  const path = url.slice(h.length + (url.startsWith('www.') ? 4 : 0));
+  $('#addrDisp').innerHTML = h ? `<span>${esc(h)}</span><span class="f3">${esc(path)}</span>` : '';
+  let tail = '';
+  if (b) tail += b.until === Infinity ? '<span class="chipf">forever</span>' : `<span class="st-t">□ ${untilShort(b)}</span>`;
+  tail += `<span class="kk f3">${keyStr('c+L')}</span>`;
+  $('#addrTail').innerHTML = tail;
+  const bb = $('#blockBtn');
+  bb.disabled = !h || (b && b.until === Infinity);
+  bb.title = !h ? 'Nothing to block on the new tab page' : (b && b.until === Infinity) ? h + ' is blocked forever' : `Block ${siteOf(h)} (${keyStr('c+B')})`;
+}
+
+/* ---------------- status line ---------------- */
+function renderStatus(){
+  const url = curUrl(), h = host(url), b = blockOf(h);
+  let L;
+  if (!h) L = [['↑ ↓','move'],['space','pick'],['1–6','duration'],[keyStr('enter'),'block'],[keyStr('c+L'),'address']];
+  else if (b) L = [[keyStr('back'),'back'],[keyStr('c+L'),'address'],[keyStr('c+T'),'new tab']];
+  else L = [[keyStr('c+L'),'address'],[keyStr('c+B'),'block this site'],[keyStr('c+T'),'new tab'],[keyStr('back'),'back']];
+  const left = L.map(([k,l]) => `<span class="hint"><kbd>${k}</kbd> ${l}</span>`).join('');
+  let right;
+  if (b) right = `<span><span>${esc(siteOf(h))}</span>  ${b.until === Infinity ? '<span class="em">■ blocked forever</span>' : `<span class="em">□ blocked ${untilShort(b)}</span>`}</span>`;
+  else right = `<span><span class="em">■</span> <span class="f2">${countBlocked()}</span> blocked  <span class="f4">·</span>  <span class="f2">${stopped}</span> stopped today</span>`;
+  $('#status').innerHTML = left + '<span class="sp"></span>' + right;
+}
+const allSites = () => CATS.flatMap(c => c.sites);
+const countBlocked = () => allSites().filter(isBlocked).length;
+
+/* ---------------- NTP ---------------- */
+const chk = (mark, cls='') => `<span class="chk ${cls}"><i>[</i>${mark}<i>]</i></span>`;
+function siteStatus(d){
+  const b = isBlocked(d) ? B[d] : null;
+  if (!b) return ['<span class="st-o">· open</span>', ''];
+  if (b.until === Infinity) return ['<span class="chipf">forever</span>', `<span class="f3">${detail(b)}</span>`];
+  return [`<span class="st-t">□ ${untilShort(b)}</span>`, `<span class="f3">${detail(b)}</span>`];
+}
+function catState(c){
+  const blk = c.sites.filter(isBlocked), sel_ = c.sites.filter(s => !isForever(s));
+  const nSel = sel_.filter(s => sel.has(s)).length;
+  let box;
+  if (!sel_.length) box = chk('■','lk');
+  else box = chk(nSel === 0 ? ' ' : nSel === sel_.length ? 'x' : '–');
+  let st;
+  if (!blk.length) st = '<span class="st-o">· open</span>';
+  else if (blk.length === c.sites.length && blk.every(isForever)) st = '<span class="chipf">forever</span>';
+  else if (blk.length === c.sites.length){
+    const soon = blk.reduce((a,s) => B[s].until < a.until ? B[s] : a, B[blk[0]]);
+    st = `<span class="st-t">□ ${untilShort(soon)}</span>`;
+  } else st = `<span class="st-t">${blk.some(isForever) ? '■' : '□'} </span><span class="f2">${blk.length} of ${c.sites.length} blocked</span>`;
+  return {box, st, locked: !sel_.length, picked: nSel > 0};
+}
+function renderNTP(){
+  $('#stStop').textContent = stopped;
+  $('#stBlk').textContent = countBlocked();
+  $('#catCount').textContent = `${CATS.length} · ${allSites().length} sites`;
+  let h = '<div class="row hd cg"><span></span><span>CATEGORY</span><span class="rt">N</span><span>STATUS</span></div>';
+  CATS.forEach((c,i) => {
+    const s = catState(c);
+    h += `<div class="row it cg${i===cur?' cu':''}${s.picked?' sel':''}${s.locked?' lkd':''}" data-cat="${i}" role="option" aria-selected="${s.picked}">
+      <span data-tog="${i}">${s.box}</span><span class="nm">${esc(c.name)}</span><span class="rt f3">${c.sites.length}</span><span>${s.st}</span></div>`;
+  });
+  h += `<div class="leg"><kbd>↑ ↓</kbd><span>move</span><kbd>space</kbd><span>pick</span><kbd>← →</kbd><span>switch pane</span><kbd>a</kbd><span>pick all open</span><kbd>1–6</kbd><span>duration</span>${K('enter')}<span>block</span></div>`;
+  $('#cats').innerHTML = h;
+
+  const c = CATS[cur];
+  const nb = c.sites.filter(isBlocked).length;
+  $('#sitesTitle').innerHTML = `<span class="f3">2</span> Sites · ${esc(c.name)}`;
+  $('#sitesCount').innerHTML = nb ? `<span class="em">${nb}</span>/${c.sites.length} blocked` : `${c.sites.length} open`;
+  let r = '<div class="row hd sg"><span></span><span>SITE</span><span>STATUS</span><span>WHEN</span></div>';
+  if (scur >= c.sites.length) scur = Math.max(0, c.sites.length-1);
+  c.sites.forEach((d,i) => {
+    const f = isForever(d), [st, dt] = siteStatus(d), on = sel.has(d);
+    r += `<div class="row it sg${pane==='sites'&&i===scur?' cu':''}${on?' sel':''}${f?' lkd':''}" data-site="${esc(d)}" role="option" aria-selected="${on}">
+      ${f ? chk('■','lk') : chk(on ? 'x' : ' ')}<span class="nm">${esc(d)}</span><span>${st}</span><span>${dt}</span></div>`;
+  });
+  if (c.id === 'mine') r += `<div class="row sg addrow"><span class="chk"><i>[</i>+<i>]</i></span><label class="field bare"><input id="addSite" spellcheck="false" autocomplete="off" placeholder="add a site, e.g. espn.com" aria-label="Add a site"></label></div>`;
+  $('#sites').innerHTML = r;
+  $('#paneL').classList.toggle('act', pane === 'cats');
+  $('#paneR').classList.toggle('act', pane === 'sites');
+
+  $('#durs').innerHTML = DURS.map((d,i) => `<button class="opt${i===dur?' on':''}${i===5?' ff':''}" data-dur="${i}" role="radio" aria-checked="${i===dur}"><span class="k">${d.k} </span>${d.label}</button>`).join('');
+  const n = sel.size;
+  const ph = DURS[dur].phrase;
+  $('#sum').innerHTML = n ? `<span class="${dur===5?'em':'f2'}">${n} site${n>1?'s':''} · ${ph}</span>` : '<span class="f3">nothing picked</span>';
+  $('#goBlock').disabled = !n;
+}
+
+/* ---------------- blocked page ---------------- */
+function blockedHeadline(b){
+  if (b.until === midnight()) return 'Blocked until midnight';
+  const left = b.until - Date.now();
+  if (left < D) return 'Blocked until ' + fTime(b.until);
+  const d = Math.floor(left / D);
+  return d <= 7 ? `Blocked for ${d} more day${d>1?'s':''}` : 'Blocked until ' + fDate(b.until);
+}
+function blockedSentence(site, b){
+  if (b.until === midnight()) return `${site} is blocked until 00:00 tonight.`;
+  if (b.until - Date.now() < D) return `${site} is blocked until ${fTime(b.until)}${sameDay(b.until, Date.now()) ? ' today' : ' tomorrow'}.`;
+  const dd = new Date(b.until);
+  return `${site} is blocked until ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dd.getDay()]}, ${fDate(b.until)} at ${fTime(b.until)}.`;
+}
+function renderBlocked(h, b){
+  const site = siteOf(h), c = catOf(site);
+  const cat = c ? c.name : 'Your sites';
+  const since = sameDay(b.since, Date.now()) ? 'today at ' + fTime(b.since) : fDate(b.since);
+  if (b.until === Infinity){
+    $('#bpBody').innerHTML = `
+      <div class="bpf">
+        <div class="bpline"><b>■ ${esc(site)}</b><span class="sp"></span><b>forever</b></div>
+        <div class="gap1"></div>
+        <div class="big">Blocked forever</div>
+        <div class="gap1"></div>
+        <div class="bpline">${esc(site)} is blocked forever. It can't be lifted or shortened.</div>
+        <div class="bpline f3">${esc(cat)} · since ${since}</div>
+      </div>
+      <div class="gap1"></div>
+      <div class="bpline" style="padding-left:calc(2 * var(--cw))"><button class="btn" data-back><span>← Back <span class="kh">${keyStr('back')}</span></span></button></div>`;
+  } else {
+    $('#bpBody').innerHTML = `
+      <div class="box emb bpt">
+        <span class="bt">${esc(site)}</span><span class="bt r em">□ ${untilShort(b)}</span>
+        <div class="gap1"></div>
+        <div class="big">${blockedHeadline(b)}</div>
+        <div class="gap1"></div>
+        <div class="bpline f2">${esc(blockedSentence(site, b))}</div>
+        <div class="bpline f3">${esc(cat)} · blocked since ${since}</div>
+        <div class="gap1"></div>
+        <div class="bpline"><button class="btn" data-back><span>← Back <span class="kh">${keyStr('back')}</span></span></button></div>
+      </div>
+      <div class="note">It can be made longer from the new tab page, never shorter.</div>`;
+  }
+}
+
+/* ---------------- view switch ---------------- */
+function renderView(){
+  const url = curUrl(), h = host(url), b = blockOf(h);
+  let v;
+  if (!h){ v = 'ntp'; renderNTP(); }
+  else if (b){ v = 'blocked'; renderBlocked(h, b); }
+  else if (h.includes('github')) v = 'gh';
+  else if (h.includes('wikipedia')) v = 'wiki';
+  else {
+    v = 'gen';
+    const q = h.includes('google') ? decodeURIComponent((url.split('q=')[1]||'').replace(/\+/g,' ')) : '';
+    $('#genBody').innerHTML = q
+      ? `<div class="q">${esc(q)}</div>` + [1,2,3].map(i => `<div class="r"><small>example${i}.org › ${esc(q.split(' ')[0])}</small><h3>${esc(q)}: result ${i}</h3><p>An ordinary search result page, rendered by the site, untouched by the browser's grid.</p></div>`).join('')
+      : `<div class="r"><small>${esc(h)}</small><h3>${esc(h)}</h3><p>An ordinary page. Sites render with their own fonts and layout; only the chrome is on the grid.</p></div>`;
+  }
+  $$('.pg').forEach(p => p.classList.toggle('show', p.id === 'v-' + v));
+}
+function render(){ renderTabs(); renderToolbar(); renderView(); renderStatus(); }
+
+/* ---------------- navigation ---------------- */
+function navigate(text){
+  text = text.trim(); if (!text) return;
+  let url;
+  if (/^[^\s]+\.[a-z]{2,}(\/.*)?$/i.test(text)) url = text.replace(/^https?:\/\//,'');
+  else url = 'google.com/search?q=' + encodeURIComponent(text).replace(/%20/g,'+');
+  const t = curTab();
+  t.hist = t.hist.slice(0, t.i+1); t.hist.push(url); t.i++;
+  if (blockOf(host(url))) stopped++;
+  closeFloats(); render();
+}
+function go(delta){
+  const t = curTab(); const n = t.i + delta;
+  if (n < 0 || n >= t.hist.length) return;
+  t.i = n; if (delta < 0 === false && blockOf(host(t.hist[n]))) stopped++;
+  closeFloats(); render();
+}
+function goBack(){
+  const t = curTab();
+  if (t.i > 0) return go(-1);
+  t.hist = ['mast://newtab']; t.i = 0; render();
+}
+function newTab(){ const t = {id:nextId++, hist:['mast://newtab'], i:0}; tabs.push(t); active = t.id; closeFloats(); render(); setTimeout(() => $('#ntpQ') && $('#ntpQ').focus(), 0); }
+function closeTab(id){
+  const i = tabs.findIndex(t => t.id === id); if (i < 0) return;
+  tabs.splice(i,1);
+  if (!tabs.length){ newTab(); return; }
+  if (active === id) active = tabs[Math.min(i, tabs.length-1)].id;
+  render();
+}
+
+/* ---------------- block + undo ---------------- */
+let toastTimer = null, undoFn = null;
+function doBlock(domains, di){
+  const d = DURS[di], until = d.until();
+  const snap = domains.map(x => [x, B[x] ? {...B[x]} : null]);
+  const prevSel = new Set(sel);
+  let longer = 0;
+  domains.forEach(x => {
+    const b = B[x] && B[x].until > Date.now() ? B[x] : null;
+    if (!b || b.until < until) B[x] = {until, since: b ? b.since : Date.now()};
+    else longer++;
+  });
+  const full = CATS.filter(c => { const s = c.sites.filter(x => domains.includes(x)); return s.length && s.length === domains.length && c.sites.filter(y => !snap.find(z => z[0]===y && z[1] && z[1].until===Infinity)).every(y => domains.includes(y)); });
+  let msg = domains.length === 1 ? `${domains[0]} blocked ${d.phrase}` : full.length === 1 ? `${full[0].name} blocked ${d.phrase} · ${domains.length} sites` : `${domains.length} sites blocked ${d.phrase}`;
+  if (longer) msg += ` · ${longer} already longer`;
+  sel.clear(); render();
+  showToast(msg, until === Infinity, () => {
+    snap.forEach(([x,p]) => { if (p) B[x] = p; else delete B[x]; });
+    sel = prevSel; render();
+  });
+}
+function showToast(msg, forever, undo){
+  clearInterval(toastTimer);
+  const el = $('#toast'); undoFn = undo;
+  let n = 10;
+  const draw = () => {
+    el.className = 'box float toast show' + (forever ? ' ff emf' : '');
+    el.innerHTML = `<div class="mrow"><span class="msg">${!undo ? '' : forever ? '<span class="em">■ </span>' : '<span class="em">□ </span>'}${esc(msg)}</span>${undo ? `<button class="btn" id="undoBtn"><span>Undo <span class="kh">${keyStr('c+Z')}</span></span></button>` : ''}</div>`
+      + (undo ? `<div class="mrow">${Array.from({length:10}, (_,i) => `<span class="tcell${i >= n ? ' x' : ''}">━━</span>`).join('')}<span class="sp"></span><span class="f3">${String(n).padStart(2)} s</span></div>` : '');
+    const u = $('#undoBtn'); if (u) u.onclick = runUndo;
+  };
+  draw();
+  toastTimer = setInterval(() => {
+    n--;
+    if (n <= 0){ clearInterval(toastTimer); undoFn = null; el.classList.remove('show'); return; }
+    if (undo) draw();
+  }, 1000);
+}
+function runUndo(){
+  if (!undoFn) return;
+  const f = undoFn; undoFn = null; clearInterval(toastTimer); f();
+  showToast('Undone. Nothing was blocked.', false, null);
+  clearInterval(toastTimer);
+  toastTimer = setTimeout(() => $('#toast').classList.remove('show'), 2500);
+}
+
+/* ---------------- floats: popover + menu ---------------- */
+function closeFloats(){ ['#pop','#menu'].forEach(s => $(s).classList.remove('show')); $('#blockBtn').classList.remove('open'); $('#menuBtn').classList.remove('open'); }
+function placeUnder(el, btn, wCells, alignRight){
+  const vr = $('#view').getBoundingClientRect(), br = btn.getBoundingClientRect();
+  el.style.width = wCells * 8 + 'px';
+  let left = alignRight ? br.right - wCells*8 + 8 : br.left - 8;
+  left = Math.round((left - vr.left) / 8) * 8;
+  left = Math.max(8, Math.min(left, Math.floor(vr.width/8)*8 - wCells*8 - 8));
+  el.style.left = left + 'px';
+  el.style.top = '-20px';   // top frame line lands on the chrome rule (y = 90)
+}
+function openPop(){
+  const url = curUrl(), h = host(url); if (!h) return;
+  const site = siteOf(h), b = blockOf(h);
+  if (b && b.until === Infinity) return;
+  const el = $('#pop');
+  if (el.classList.contains('show')){ closeFloats(); return; }
+  closeFloats();
+  let rows = DURS.map((d,i) => {
+    const u = d.until();
+    const dis = b && u <= b.until;
+    const r = u === Infinity ? '' : (u - Date.now() < D ? fTime(u) : fDate(u));
+    return `<button class="mi${i===5?' ff':''}" data-pdur="${i}" ${dis?'disabled':''} role="menuitem"><span class="k">${d.k}</span><span>${d.label[0].toUpperCase()+d.label.slice(1)}</span><span class="r">${dis ? 'shorter' : r}</span></button>`;
+  }).join('');
+  el.innerHTML = `<span class="bt" style="color:var(--fg)">${b ? 'Lengthen' : 'Block'} ${esc(site)}</span>${rows}<div class="sep"></div><div class="mrow f3">${b ? 'Now ' + untilShort(b) + '. Longer only.' : 'One click blocks. Undo lasts 10 s.'}</div>`;
+  el.classList.add('show');
+  placeUnder(el, $('#blockBtn'), 40, true);
+  $('#blockBtn').classList.add('open');
+  const first = el.querySelector('.mi:not(:disabled)'); if (first) first.focus();
+}
+function openMenu(){
+  const el = $('#menu');
+  if (el.classList.contains('show')){ closeFloats(); return; }
+  closeFloats();
+  const mac = OS === 'mac';
+  const item = (label, key, act='') => `<button class="mi" data-mact="${act}" role="menuitem"><span>${label}</span><span class="r">${key ? keyStr(key) : ''}</span></button>`;
+  el.innerHTML = item('New tab','c+T','newtab') + item('New window','c+N') + item('New private window','c+s+N')
+    + '<div class="sep"></div>'
+    + item('Blocklist','', 'blocklist') + item('History', mac ? 'c+Y' : 'c+H') + item('Downloads', mac ? 'c+s+J' : 'c+J') + item('Bookmarks', '').replace('<span class="r"></span>','<span class="r">›</span>')
+    + '<div class="sep"></div>'
+    + `<div class="mrow"><span>Zoom</span><span class="sp"></span><button class="ik" aria-label="Zoom out">−</button><span class="f2"> 100% </span><button class="ik" aria-label="Zoom in">+</button></div>`
+    + '<div class="sep"></div>'
+    + item('Print…','c+P') + item('Find…','c+F') + item('Settings', mac ? 'c+,' : '', 'settings')
+    + '<div class="sep"></div>'
+    + (OS === 'win' ? item('Exit','') : item('Quit Mast','c+Q'));
+  el.classList.add('show');
+  placeUnder(el, $('#menuBtn'), 40, true);
+  $('#menuBtn').classList.add('open');
+}
+
+/* ---------------- platform ---------------- */
+const OSES = [['linux','Linux'],['mac','macOS'],['win','Windows']];
+function setOS(o){
+  OS = o; document.body.dataset.os = o;
+  $('#osSw').innerHTML = OSES.map(([id,l]) => `<button class="opt${id===OS?' on':''}" data-os="${id}" role="radio" aria-checked="${id===OS}">${l}</button>`).join('');
+  $$('[data-key]').forEach(e => e.textContent = keyStr(e.dataset.key));
+  closeFloats(); render(); renderSpecTabs();
+}
+function renderSpecTabs(){
+  const mk = (url, on, extra) => { const save = active; const t = {id: on ? -1 : -2, hist:[url], i:0}; active = -1; const s = tabHTML(t, 0, extra); active = save; return s; };
+  $('#specTabs').innerHTML = [
+    mk('mast://newtab', true, ''),
+    mk('github.com/0xmiki/mast', false, ''),
+    mk('en.wikipedia.org/wiki/Attention', false, ' is-h'),
+    mk('youtube.com', false, ''),
+    mk('x.com/home', false, ''),
+  ].join('').replace(/<span class="ti">1<\/span>/g, (m, i) => m);
+  $$('#specTabs .ti').forEach((e,i) => e.textContent = i+1);
+}
+
+/* ---------------- tokens table ---------------- */
+const TOK = [
+  ['bg','#0c0c0e','window, pages'],['bg-1','#141417','menus, toast, status line'],['bg-2','#1c1c20','hover, fields'],['bg-3','#27272c','cursor row, focused field'],
+  ['line','#2f2f35','frames, rules'],['line-2','#5a5a63','focused frame, floats'],
+  ['fg','#ece8e1','text, inverse fill'],['fg-2','#a9a59d','secondary text'],['fg-3','#6d6a64','labels, key hints'],['fg-4','#403f3c','disabled'],
+  ['ember','#ff6a3d','blocked, Block, forever'],['ember-hi','#ff8c66','hover on ember'],['ember-lo','#d9461a','pressed on ember'],['ember-dim','#6e2c18','frame of a timed block'],['ember-ink','#160704','text on ember'],
+];
+$('#tokens').innerHTML = TOK.map(([n,h,r]) => `<div class="line"><span class="sw" style="background:${h};${['bg','bg-1'].includes(n)?'box-shadow:inset 0 0 0 1px #2f2f35':''}"></span><span class="w" style="--w:11">${n}</span><span class="w f3" style="--w:9">${h}</span><span class="f2">${r}</span></div>`).join('');
+
+/* ---------------- events ---------------- */
+document.addEventListener('click', e => {
+  const t = e.target;
+  const os = t.closest('[data-os]'); if (os && os.closest('#osSw')){ setOS(os.dataset.os); return; }
+  const cl = t.closest('[data-close]'); if (cl){ e.stopPropagation(); closeTab(+cl.dataset.close); return; }
+  const tab = t.closest('#tabs [data-tab]'); if (tab){ active = +tab.dataset.tab; closeFloats(); render(); return; }
+  if (t.closest('#newtab')){ newTab(); return; }
+  if (t.closest('#back')){ go(-1); return; }
+  if (t.closest('#fwd')){ go(1); return; }
+  if (t.closest('#reload')){ render(); return; }
+  if (t.closest('#blockBtn')){ openPop(); return; }
+  if (t.closest('#menuBtn')){ openMenu(); return; }
+  const pd = t.closest('[data-pdur]');
+  if (pd){ const h = siteOf(host(curUrl())); closeFloats(); if (!catOf(h)) CATS[5].sites.push(h); doBlock([h], +pd.dataset.pdur); return; }
+  const ma = t.closest('[data-mact]');
+  if (ma){ const a = ma.dataset.mact; closeFloats(); if (a === 'newtab') newTab(); else if (a === 'blocklist'){ const nt = tabs.find(x => !host(x.hist[x.i])); if (nt){ active = nt.id; render(); } else newTab(); } return; }
+  if (t.closest('[data-back]')){ goBack(); return; }
+  if (!t.closest('.float')) closeFloats();
+  const tog = t.closest('[data-tog]');
+  if (tog){ const i = +tog.dataset.tog; cur = i; pane = 'cats'; togCat(CATS[i]); return; }
+  const cr = t.closest('[data-cat]'); if (cr){ cur = +cr.dataset.cat; pane = 'cats'; scur = 0; renderNTP(); return; }
+  const sr = t.closest('[data-site]');
+  if (sr){ const d = sr.dataset.site; pane = 'sites'; scur = CATS[cur].sites.indexOf(d); togSite(d); return; }
+  const du = t.closest('[data-dur]'); if (du){ dur = +du.dataset.dur; renderNTP(); return; }
+  if (t.closest('#goBlock')){ blockSel(); return; }
+  if (t.closest('#paneR') && !t.closest('input')){ pane = 'sites'; renderNTP(); return; }
+  if (t.closest('#paneL')){ pane = 'cats'; renderNTP(); return; }
+  if (t.closest('#sysBtn')){ toggleSheet(); return; }
+  if (t.closest('#sysClose')){ toggleSheet(false); return; }
+  if (t.closest('#gridBtn')){ $('#gridov').classList.toggle('show'); return; }
+  if (t.closest('#capMin')){ const c = $('#cap'); c.classList.toggle('min'); $('#capMin').textContent = c.classList.contains('min') ? '+' : '–'; return; }
+});
+function togCat(c){
+  const s = c.sites.filter(x => !isForever(x)); if (!s.length) return;
+  const all = s.every(x => sel.has(x));
+  s.forEach(x => all ? sel.delete(x) : sel.add(x));
+  renderNTP();
+}
+function togSite(d){ if (isForever(d)) return; sel.has(d) ? sel.delete(d) : sel.add(d); renderNTP(); }
+function blockSel(){ if (!sel.size) return; doBlock([...sel], dur); }
+function toggleSheet(force){
+  const s = $('#sheet'); const on = force === undefined ? !s.classList.contains('show') : force;
+  s.classList.toggle('show', on); closeFloats();
+  $('#sysBtn').classList.toggle('is-p', on);
+}
+
+$('#addrIn').addEventListener('focus', e => { e.target.classList.remove('hide'); e.target.value = host(curUrl()) ? curUrl() : ''; setTimeout(() => e.target.select(), 0); });
+$('#addrIn').addEventListener('blur', () => renderToolbar());
+$('#addrIn').addEventListener('keydown', e => { if (e.key === 'Enter'){ const v = e.target.value; e.target.blur(); navigate(v); } if (e.key === 'Escape') e.target.blur(); });
+$('#ntpQ').addEventListener('keydown', e => { if (e.key === 'Enter'){ const v = e.target.value; e.target.value = ''; e.target.blur(); navigate(v); } if (e.key === 'Escape') e.target.blur(); });
+document.addEventListener('keydown', e => {
+  if (e.target.id === 'addSite' && e.key === 'Enter'){
+    const v = e.target.value.trim().toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0];
+    if (/^[a-z0-9.-]+\.[a-z]{2,}$/.test(v) && !allSites().includes(v)){ CATS[5].sites.push(v); sel.add(v); renderNTP(); setTimeout(() => $('#addSite') && $('#addSite').focus(), 0); }
+    return;
+  }
+});
+document.addEventListener('keydown', e => {
+  const mod = OS === 'mac' ? e.metaKey : e.ctrlKey;
+  const typing = /INPUT|TEXTAREA/.test(document.activeElement.tagName);
+  const k = e.key;
+  if (mod && (k === 'l' || k === 'L')){ e.preventDefault(); $('#addrIn').focus(); return; }
+  if (mod && (k === 't' || k === 'T')){ e.preventDefault(); newTab(); return; }
+  if (mod && (k === 'b' || k === 'B')){ e.preventDefault(); openPop(); return; }
+  if (mod && (k === 'z' || k === 'Z') && undoFn && !typing){ e.preventDefault(); runUndo(); return; }
+  if (mod && /^[1-9]$/.test(k)){ const t = tabs[+k-1]; if (t){ e.preventDefault(); active = t.id; render(); } return; }
+  if (k === 'Escape'){ if ($('#sheet').classList.contains('show')) toggleSheet(false); closeFloats(); return; }
+  if ((OS === 'mac' && e.metaKey && k === '[') || (OS !== 'mac' && e.altKey && k === 'ArrowLeft')){ e.preventDefault(); goBack(); return; }
+  if (typing || mod || e.altKey) return;
+  if ($('#pop').classList.contains('show') && /^[1-6]$/.test(k)){ const b = $(`[data-pdur="${+k-1}"]`); if (b && !b.disabled) b.click(); return; }
+  if ($('#menu').classList.contains('show') || $('#pop').classList.contains('show')){
+    if (k === 'ArrowDown' || k === 'ArrowUp'){
+      e.preventDefault();
+      const items = $$('.float.show .mi:not(:disabled)'); const i = items.indexOf(document.activeElement);
+      const n = k === 'ArrowDown' ? (i+1) % items.length : (i-1+items.length) % items.length; items[n] && items[n].focus();
+    }
+    return;
+  }
+  if (k === 's' || k === 'S'){ toggleSheet(); return; }
+  if (k === 'g' || k === 'G'){ $('#gridov').classList.toggle('show'); return; }
+  if (host(curUrl()) || $('#sheet').classList.contains('show')) return;
+  if (k === '/'){ e.preventDefault(); $('#ntpQ').focus(); return; }
+  const c = CATS[cur];
+  if (k === 'ArrowDown' || k === 'j'){ e.preventDefault(); if (pane === 'cats'){ cur = Math.min(CATS.length-1, cur+1); scur = 0; } else scur = Math.min(c.sites.length-1, scur+1); renderNTP(); }
+  else if (k === 'ArrowUp' || k === 'k'){ e.preventDefault(); if (pane === 'cats'){ cur = Math.max(0, cur-1); scur = 0; } else scur = Math.max(0, scur-1); renderNTP(); }
+  else if (k === 'ArrowRight' || k === 'l'){ pane = 'sites'; renderNTP(); }
+  else if (k === 'ArrowLeft' || k === 'h'){ pane = 'cats'; renderNTP(); }
+  else if (k === ' '){ e.preventDefault(); if (pane === 'cats') togCat(c); else togSite(c.sites[scur]); }
+  else if (/^[1-6]$/.test(k)){ dur = +k-1; renderNTP(); }
+  else if (k === 'a'){ CATS.forEach(cc => cc.sites.forEach(x => { if (!isBlocked(x)) sel.add(x); })); renderNTP(); }
+  else if (k === 'Enter'){ blockSel(); }
+});
+
+setOS('linux');
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<!--
+  Proposal 08 · Brutal — riskiest pieces to port to the Chromium fork (Views first on Linux, then macOS/Windows):
+  1. Tab strip: Chrome's overlapping curved tabs become separate square slabs with 8px gaps. Needs a new
+     TabStyle/TabStyleViews painter (stroke, flat fill, ember fill/stroke per block state) and new tab-drag and
+     tab-width maths. The blocked state has to reach the Tab from the blocking service through TabRendererData.
+  2. Hard 4px offset shadow that collapses on press: buttons, the active tab and menus paint 4px outside their
+     bounds. Views needs custom Background/Border painters plus parent insets so the shadow isn't clipped. On press
+     the control's contents move 4px down-right (not an ink drop), so InkDrop has to be turned off everywhere.
+  3. Omnibox and menus: a square 2px-stroked LocationBarView with a BLOCKED chip (a new PageActionIconView or
+     LocationIconView state), and the app menu re-skinned (SubmenuView/MenuItemView: 36px rows, inverted
+     highlight, mono accelerators). The omnibox dropdown also needs this language and isn't shown here.
+  4. Native frame per platform: the near-black strip must be fed to the frame as the active/inactive frame colour
+     (turn off Mica on Windows 11), the macOS traffic lights and Windows caption buttons stay native, and GNOME CSD
+     buttons are drawn by Chrome's GTK path. The active tab's shadow must not run into the caption-button area.
+  5. Bundled fonts in native chrome: Archivo (variable wdth+wght, using the semi-expanded instance) and JetBrains
+     Mono via gfx::FontList on Linux. Platform fallback on macOS/Windows still needs checking. NTP and blocked pages
+     are WebUI, so they're just CSS.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mast · Proposal 08 · Brutal</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=JetBrains+Mono:wght@400..800&display=swap" rel="stylesheet">
+<style>
+/* =====================================================================
+   TOKENS — the whole language. Nothing below uses a value not listed here
+   (site mocks excepted: they are other people's pages).
+   ===================================================================== */
+:root{
+  /* surfaces, darkest → lightest; each is one flat step */
+  --k0:#0a0a0a;   /* frame, inputs, web-ui page */
+  --k1:#131313;   /* toolbar, cards, layers */
+  --k2:#1c1c1c;   /* resting control fill */
+  --k3:#282828;   /* hover fill */
+  --rule:#353533; /* structural stroke (dividers, idle cards, idle inputs) */
+  /* ink */
+  --ink:#f2efe8;  /* type, interactive stroke, shadow on dark */
+  --ink2:#b4b0a7;
+  --ink3:#7a766e; /* also: disabled */
+  /* ember — only ever means "blocked" or "this will block" */
+  --em:#ff6a3d;
+  --em-hi:#ff8459; /* ember hover */
+  --em-ink:#160703;/* type, stroke and shadow on ember */
+  /* the one secondary colour: keyboard focus. Never decorative, never a state. */
+  --focus:#8ea7ff;
+
+  --s:2px;        /* THE stroke */
+  --off:4px;      /* THE shadow offset */
+  --sh:var(--off) var(--off) 0 0 var(--ink);
+  --sh-em:var(--off) var(--off) 0 0 var(--em);
+  --sh-dk:var(--off) var(--off) 0 0 var(--em-ink);
+  --press:60ms linear;
+
+  /* 4px grid */
+  --sp1:4px; --sp2:8px; --sp3:12px; --sp4:16px; --sp5:24px; --sp6:32px; --sp7:48px; --sp8:64px;
+  /* control heights */
+  --h-sm:28px; --h-md:36px; --h-lg:44px; --h-xl:72px;
+
+  --sans:'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  --mono:'JetBrains Mono', ui-monospace, 'DejaVu Sans Mono', monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+html,body{height:100%;overflow:hidden;background:#000}
+body{font:500 13px/16px var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+button,input{font:inherit;color:inherit;background:none;border:0;border-radius:0;outline:0}
+button{cursor:pointer;text-align:inherit}
+:focus-visible{outline:var(--s) solid var(--focus);outline-offset:2px}
+::selection{background:var(--focus);color:var(--k0)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation-duration:0s!important}}
+
+/* ---------- type scale (9 steps incl. small 13/20, no others) ---------- */
+.t-display{font:800 semi-expanded 96px/88px var(--sans);letter-spacing:-.035em}
+.t-h1{font:800 semi-expanded 44px/48px var(--sans);letter-spacing:-.025em}
+.t-h2{font:800 semi-expanded 28px/32px var(--sans);letter-spacing:-.015em}
+.t-h3{font:700 20px/24px var(--sans);letter-spacing:-.01em}
+.t-body{font:400 15px/24px var(--sans)}
+.t-ui{font:600 13px/16px var(--sans)}
+.t-mono{font:500 12px/16px var(--mono);letter-spacing:0}
+.t-micro{font:700 11px/16px var(--mono);letter-spacing:.08em;text-transform:uppercase}
+.dim{color:var(--ink3)}
+.ink2{color:var(--ink2)}
+
+/* ---------- icons: 20 grid, 2px stroke, square caps, miter joins ---------- */
+.i{width:20px;height:20px;flex:none;display:block;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:square;stroke-linejoin:miter}
+.i.s16{width:16px;height:16px}
+.i .f{fill:currentColor;stroke:none}
+
+/* =====================================================================
+   COMPONENTS
+   ===================================================================== */
+/* Slab button: stroke + hard shadow. Press = slab travels into its shadow. */
+.btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:var(--sp2);height:var(--h-md);padding:0 var(--sp4);
+  background:var(--k2);color:var(--ink);border:var(--s) solid var(--ink);box-shadow:var(--sh);
+  font:700 13px/16px var(--sans);white-space:nowrap;transition:transform var(--press),box-shadow var(--press)}
+.btn:hover,.btn.is-hover{background:var(--k3)}
+.btn:active:not(:disabled),.btn.is-pressed{transform:translate(var(--off),var(--off));box-shadow:0 0 0 0 transparent}
+.btn:disabled,.btn.is-disabled{background:var(--k1);color:var(--ink3);border-color:var(--rule);box-shadow:none;cursor:default;transform:none}
+.btn.sm{height:var(--h-sm);padding:0 var(--sp3)}
+.btn.lg{height:var(--h-lg)}
+.btn.em{background:var(--em);color:var(--em-ink)}
+.btn.em:hover,.btn.em.is-hover{background:var(--em-hi)}
+.btn.em:disabled,.btn.em.is-disabled{background:var(--k1);color:var(--ink3);border-color:var(--rule)}
+.btn.hero{height:var(--h-xl);width:100%;flex-direction:column;align-items:flex-start;justify-content:center;gap:var(--sp1);padding:0 var(--sp5);text-align:left}
+.btn.hero .hl{font:800 semi-expanded 28px/32px var(--sans);letter-spacing:-.015em}
+.btn.hero .sub{font:700 11px/16px var(--mono);letter-spacing:.08em;text-transform:uppercase}
+.btn.hero .arr{position:absolute;right:var(--sp5);top:50%;margin-top:-10px}
+/* on an ember surface the ink flips: stroke and shadow become em-ink */
+.btn.on-em{background:var(--em-ink);color:var(--em);border-color:var(--em-ink);box-shadow:var(--sh-dk)}
+.btn.on-em:hover{background:#2a0f07}
+/* timed-blocked button: ember stroke + ember shadow */
+.btn.b-timed{color:var(--em);border-color:var(--em);box-shadow:var(--sh-em);background:var(--k1)}
+.btn.b-forever{background:var(--em);color:var(--em-ink);border-color:var(--em)}
+.btn.b-forever:hover{background:var(--em-hi)}
+
+/* Ghost icon button: elevation 0. Hover = one surface step. Pressed/open = inverted. */
+.ib{width:var(--h-md);height:var(--h-md);display:inline-flex;align-items:center;justify-content:center;flex:none;color:var(--ink)}
+.ib:hover,.ib.is-hover{background:var(--k3)}
+.ib:active:not(:disabled),.ib.is-pressed,.ib[aria-expanded=true]{background:var(--ink);color:var(--k0)}
+.ib:disabled,.ib.is-disabled{color:var(--rule);background:none;cursor:default}
+.ib.sm{width:var(--h-sm);height:var(--h-sm)}
+
+/* Input: flat, rule stroke, ink stroke when focused */
+.inp{height:var(--h-md);padding:0 var(--sp3);background:var(--k0);border:var(--s) solid var(--rule);font:500 12px/16px var(--mono);color:var(--ink);width:100%}
+.inp::placeholder{color:var(--ink3)}
+.inp:hover{border-color:var(--ink3)}
+.inp:focus,.inp.is-focus{border-color:var(--ink);outline:none}
+.inp:disabled{color:var(--ink3);border-color:var(--rule);background:var(--k1)}
+.inp.sm{height:var(--h-sm)}
+
+/* Checkbox: 24 square; checked = inverted */
+.cb{position:relative;width:24px;height:24px;flex:none;display:inline-flex;align-items:center;justify-content:center;border:var(--s) solid var(--ink);background:var(--k0);color:var(--k0)}
+.cb .i{position:absolute;left:2px;top:2px;width:16px;height:16px;stroke-width:2.5;opacity:0}
+.cb.on,.cb.mixed{background:var(--ink)}
+.cb.on .ck,.cb.mixed .mx{opacity:1}
+.cb.locked{border-color:var(--em-ink);background:var(--em-ink);color:var(--em);font:700 15px/1 var(--mono)}
+.cb.dis{border-color:var(--rule);background:var(--k1)}
+
+/* Segmented: the gaps ARE the strokes (ink shows through a 2px grid gap) */
+.seg{display:grid;grid-template-columns:repeat(var(--cols,3),minmax(0,1fr));gap:var(--s);background:var(--ink);border:var(--s) solid var(--ink)}
+.seg>button{height:var(--h-lg);padding:0 var(--sp3);background:var(--k1);color:var(--ink2);font:600 13px/16px var(--sans);display:flex;align-items:center;justify-content:center;gap:var(--sp2);white-space:nowrap}
+.seg>button:hover,.seg>button.is-hover{background:var(--k3);color:var(--ink)}
+.seg>button[aria-checked=true]{background:var(--ink);color:var(--k0)}
+.seg>button.inf[aria-checked=true]{background:var(--em);color:var(--em-ink)}
+.seg>button:disabled{background:var(--k1);color:var(--ink3);text-decoration:line-through;text-decoration-thickness:2px;cursor:default}
+.seg>button:focus-visible{outline-offset:-4px}
+.seg>button.inf[aria-checked=true]:disabled{background:var(--em);color:var(--em-ink);text-decoration:none}
+.seg.sm>button{height:var(--h-sm);font-size:12px}
+
+/* Tag: non-interactive state stamp, 24 tall, mono caps */
+.tag{display:inline-flex;align-items:center;gap:var(--sp1);height:24px;padding:0 var(--sp2);border:var(--s) solid var(--rule);color:var(--ink3);font:700 11px/16px var(--mono);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;flex:none}
+.tag.timed{border-color:var(--em);color:var(--em)}
+.tag.forever{border-color:var(--em);background:var(--em);color:var(--em-ink)}
+.tag.inv{border-color:var(--em-ink);background:var(--em-ink);color:var(--em)}
+
+/* Chip: a single site; toggles like a checkbox */
+.chip{height:var(--h-sm);padding:0 var(--sp2);display:inline-flex;align-items:center;gap:var(--sp1);background:var(--k2);border:var(--s) solid transparent;color:var(--ink2);font:500 12px/16px var(--mono);white-space:nowrap}
+.chip:hover{background:var(--k3);color:var(--ink)}
+.chip.on{background:var(--ink);color:var(--k0)}
+.chip.timed{background:transparent;border-color:var(--em);color:var(--em)}
+.chip.timed.on{background:var(--ink);border-color:var(--ink);color:var(--k0)}
+.chip.plain{background:transparent;color:inherit;padding:0 var(--sp1) 0 0}
+.chip.plain.on{background:var(--ink);color:var(--k0);padding:0 var(--sp2)}
+.chip:disabled{cursor:default}
+.chip i{font-style:normal;font-weight:700;font-size:11px;letter-spacing:.04em;opacity:.85}
+
+/* Layer: menus, popovers, toasts, sheet. Same slab, raised. */
+.layer{background:var(--k1);border:var(--s) solid var(--ink);box-shadow:var(--sh)}
+
+/* =====================================================================
+   WINDOW
+   ===================================================================== */
+.stage{position:fixed;inset:0}
+.win{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--k0);overflow:hidden}
+.plat-mac .win{border-radius:10px}
+.plat-win .win{border-radius:8px}
+.plat-linux .win{border-radius:12px 12px 0 0}
+
+/* ---- tab strip (the frame) ---- */
+.strip{height:48px;flex:none;display:flex;align-items:flex-start;gap:var(--sp2);padding:8px 12px 0;background:var(--k0);position:relative}
+.plat-mac .strip{padding-left:84px}
+.plat-linux .strip{padding-right:128px}
+.plat-win .strip{padding-right:calc(138px + 40px)} /* caption buttons + drag/snap zone */
+.tabs{display:flex;gap:var(--sp2);min-width:0;flex:1 1 0}
+.tabs .newtab{flex:none}
+.drag{flex:none;width:var(--sp7);align-self:stretch}
+
+.tab{position:relative;height:var(--h-md);flex:0 1 224px;min-width:72px;display:flex;align-items:center;gap:var(--sp2);padding:0 var(--sp1) 0 var(--sp3);
+  border:var(--s) solid transparent;color:var(--ink2);cursor:default;user-select:none;transition:transform var(--press),box-shadow var(--press)}
+.tab .fav{width:16px;height:16px;flex:none;display:block}
+.tab .fav svg{display:block;width:16px;height:16px}
+.tab .tt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:600 13px/16px var(--sans)}
+.tab .suf{font:700 11px/16px var(--mono);letter-spacing:.06em;flex:none}
+.tab .tx{width:24px;height:24px;display:flex;align-items:center;justify-content:center;flex:none;opacity:0;color:inherit}
+.tab .tx .i{width:16px;height:16px}
+.tab:hover .tx,.tab.active .tx{opacity:1}
+.tab .tx:hover{background:var(--ink);color:var(--k0)}
+.tab:hover,.tab.is-hover{background:var(--k2);color:var(--ink)}
+.tab.active{background:var(--k1);border-color:var(--ink);color:var(--ink);box-shadow:var(--sh)}
+.tab:active:not(.active){transform:translate(var(--off),var(--off))}
+.tab.b-timed{border-color:var(--em);color:var(--em);background:transparent}
+.tab.b-timed:hover{background:var(--k2)}
+.tab.b-timed.active{background:var(--k1);box-shadow:var(--sh-em)}
+.tab.b-forever{background:var(--em);border-color:var(--em);color:var(--em-ink)}
+.tab.b-forever:hover{background:var(--em-hi)}
+.tab.b-forever.active{border-color:var(--ink);box-shadow:var(--sh)}
+.tab.b-forever .tx:hover{background:var(--em-ink);color:var(--em)}
+.tab.b-timed .tx:hover{background:var(--em);color:var(--em-ink)}
+.newtab{margin-left:0}
+
+/* platform controls (native — drawn as the OS would) */
+.lights{position:absolute;left:14px;top:20px;display:none;gap:8px}
+.lights i{width:12px;height:12px;border-radius:50%;display:block;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.25)}
+.lights i:nth-child(1){background:#ff5f57}.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#28c840}
+.plat-mac .lights{display:flex}
+.gnome{position:absolute;right:12px;top:14px;display:none;gap:12px}
+.gnome button{width:24px;height:24px;border-radius:50%;background:#2e2e2e;display:flex;align-items:center;justify-content:center;color:#e8e8e8}
+.gnome button:hover{background:#3a3a3a}
+.gnome svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5}
+.plat-linux .gnome{display:flex}
+.wincap{position:absolute;right:0;top:0;display:none}
+.wincap button{width:46px;height:32px;display:flex;align-items:center;justify-content:center;color:#e8e8e8}
+.wincap button:hover{background:#2d2d2d}
+.wincap button.x:hover{background:#c42b1c;color:#fff}
+.wincap svg{width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:1}
+.plat-win .wincap{display:flex}
+
+/* ---- toolbar ---- */
+.bar{height:52px;flex:none;display:flex;align-items:center;gap:var(--sp2);padding:0 var(--sp3);background:var(--k1);border-bottom:var(--s) solid var(--rule);position:relative}
+.nav{display:flex;gap:var(--sp1)}
+.omni{flex:1;min-width:0;height:var(--h-md);display:flex;align-items:center;gap:var(--sp2);padding:0 var(--sp1) 0 var(--sp2);background:var(--k0);border:var(--s) solid var(--rule);cursor:text;margin:0 var(--sp2)}
+.omni:hover{border-color:var(--ink3)}
+.omni:focus-within{border-color:var(--ink)}
+.omni .lead{display:flex;align-items:center;gap:var(--sp2);color:var(--ink2);flex:none}
+.omni .lead .tag{height:20px;padding:0 var(--sp1)}
+.omni .field{position:relative;flex:1;min-width:0;height:100%}
+.omni input{position:absolute;inset:0;width:100%;font:500 13px/16px var(--mono);color:var(--ink)}
+.omni input::placeholder{color:var(--ink3);font:500 13px/16px var(--sans)}
+.omni .url{position:absolute;inset:0;display:flex;align-items:center;font:500 13px/16px var(--mono);color:var(--ink3);white-space:nowrap;overflow:hidden;pointer-events:none}
+.omni .url b{font-weight:600;color:var(--ink)}
+.omni:not(:focus-within) .field.has-url input{color:transparent}
+.omni:focus-within .url{display:none}
+.omni .star{width:28px;height:28px}
+.tb-block{min-width:104px}
+
+/* ---- content ---- */
+.content{flex:1;min-height:0;position:relative;overflow:hidden}
+.view{position:absolute;inset:0;overflow:auto}
+
+/* ---- layers in the window ---- */
+.pop{position:absolute;z-index:30;width:344px;padding:var(--sp4);display:flex;flex-direction:column;gap:var(--sp3)}
+.pop .row{display:flex;align-items:center;justify-content:space-between;gap:var(--sp3)}
+.pop .host{font:700 20px/24px var(--sans);letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pop .note{color:var(--ink3)}
+.pop .btn.lg{width:100%;margin-top:var(--sp1)}
+.menu{position:absolute;z-index:30;width:288px;padding:var(--sp1) 0}
+.mi{width:100%;height:var(--h-md);display:flex;align-items:center;gap:var(--sp3);padding:0 var(--sp4);font:600 13px/16px var(--sans);color:var(--ink)}
+.mi kbd{margin-left:auto;font:500 12px/16px var(--mono);color:var(--ink3)}
+.mi:hover,.mi.is-hover,.mi:focus-visible{background:var(--ink);color:var(--k0);outline:none}
+.mi:hover kbd,.mi.is-hover kbd{color:var(--k0)}
+.mi .tag{height:20px;padding:0 var(--sp1)}
+.msep{height:var(--s);background:var(--rule);margin:var(--sp1) 0}
+.mzoom{display:flex;align-items:center;gap:var(--sp3);padding:var(--sp1) var(--sp4);height:var(--h-md)}
+.mzoom .seg{--cols:3;width:132px;margin-left:auto}
+
+/* toast */
+.toasts{position:absolute;left:0;right:0;bottom:var(--sp5);display:flex;justify-content:center;pointer-events:none;z-index:20}
+.toast{pointer-events:auto;position:relative;display:flex;align-items:center;gap:var(--sp3);min-width:440px;height:60px;padding:0 var(--sp3) 0 var(--sp4);animation:rise 120ms steps(3,end)}
+@keyframes rise{from{transform:translateY(var(--sp2))}to{transform:none}}
+.toast .msg{flex:1;min-width:0;font:600 13px/16px var(--sans)}
+.toast .msg b{font-weight:800}
+.toast .n{color:var(--ink3);width:28px;text-align:right}
+.toast .bar10{position:absolute;left:0;right:0;bottom:0;height:var(--s);background:var(--ink);transform-origin:left;animation:drain 10s linear forwards}
+@keyframes drain{to{transform:scaleX(0)}}
+.toast .sq{width:16px;height:16px;flex:none;border:var(--s) solid var(--em)}
+.toast .sq.f{background:var(--em)}
+
+/* =====================================================================
+   NEW TAB PAGE (WebUI)
+   ===================================================================== */
+.v-ntp{background:var(--k0);color-scheme:dark}
+.ntp{display:grid;grid-template-columns:minmax(0,1fr) 344px;gap:var(--sp6);padding:var(--sp6) var(--sp7) var(--sp7);max-width:1440px;margin:0 auto;align-items:start}
+.ntp-head{display:flex;align-items:center;gap:var(--sp4);margin-bottom:var(--sp5)}
+.ntp-head svg{width:40px;height:40px;flex:none}
+.ntp-head p{margin-top:var(--sp1);color:var(--ink2)}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp4)}
+.card{background:var(--k1);border:var(--s) solid var(--rule);padding:var(--sp4);display:flex;flex-direction:column;gap:var(--sp3);transition:transform var(--press),box-shadow var(--press);min-width:0}
+.card-head{display:flex;align-items:center;gap:var(--sp3);width:100%;min-width:0}
+.card-head .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+button.card-head:hover .cb:not(.on):not(.mixed){background:var(--k3)}
+.card .meta{color:var(--ink2);margin-top:calc(-1 * var(--sp1));padding-left:36px}
+.chips{display:flex;flex-wrap:wrap;gap:var(--sp1)}
+.card.sel:hover{border-color:var(--ink3)}
+.card.s-timed{border-color:var(--em)}
+.card.s-timed .meta{color:var(--em)}
+.card.s-timed .chip.plain{color:var(--em)}
+.card.s-timed .chip.plain.on{color:var(--k0)}
+.card.s-forever{background:var(--em);border-color:var(--em);color:var(--em-ink)}
+.card.s-forever .meta{color:var(--em-ink)}
+.card.on{border-color:var(--ink);box-shadow:var(--sh)}
+.card .add{width:160px}
+@media (max-width:1360px){.ntp{grid-template-columns:minmax(0,1fr) 304px;gap:var(--sp5);padding:var(--sp5) var(--sp6) var(--sp6)}.dock{padding:var(--sp4)}}
+@media (max-height:820px){.ntp-head{margin-bottom:var(--sp4)}.ntp-head svg{width:32px;height:32px}}
+
+.dock{position:sticky;top:0;background:var(--k1);border:var(--s) solid var(--rule);padding:var(--sp5);display:flex;flex-direction:column;gap:var(--sp3)}
+.dock .sum{min-height:48px;display:flex;flex-direction:column;justify-content:flex-start;gap:var(--sp1)}
+.dock .sum .t-h3{overflow-wrap:anywhere}
+.dock .seg{--cols:2}
+.dock .hr{height:var(--s);background:var(--rule);margin:var(--sp1) 0}
+.dock .note{color:var(--ink3)}
+.dock .btn.hero{margin-top:var(--sp2)}
+.dock .stat{display:grid;grid-template-columns:1fr 1fr;gap:var(--s);background:var(--rule);border:var(--s) solid var(--rule)}
+.dock .stat div{background:var(--k1);padding:var(--sp3)}
+.dock .stat b{display:block;font:800 semi-expanded 28px/32px var(--sans)}
+
+/* =====================================================================
+   BLOCKED PAGE (WebUI)
+   ===================================================================== */
+.blk{min-height:100%;display:flex;align-items:center;padding:var(--sp7) var(--sp8);background:var(--k0);color-scheme:dark}
+.blk-in{display:flex;flex-direction:column;align-items:flex-start;gap:var(--sp5);max-width:960px;width:100%}
+.blk.timed .blk-in{border:var(--s) solid var(--em);padding:var(--sp7)}
+.blk .host{overflow-wrap:anywhere}
+.blk.timed .host{color:var(--ink)}
+.blk.timed .what{color:var(--em)}
+.blk.forever{background:var(--em);color:var(--em-ink)}
+.blk-meta{display:flex;gap:var(--s);background:var(--rule);border:var(--s) solid var(--rule)}
+.blk-meta div{background:var(--k0);padding:var(--sp2) var(--sp3);min-width:160px}
+.blk-meta dt{color:var(--ink3)}
+.blk-meta dd{margin-top:var(--sp1)}
+.blk.forever .blk-meta{background:var(--em-ink);border-color:var(--em-ink)}
+.blk.forever .blk-meta div{background:var(--em)}
+.blk.forever .blk-meta dt{color:var(--em-ink)}
+.blk .row{display:flex;align-items:center;gap:var(--sp4)}
+.blk.timed .row .t-mono{color:var(--ink3)}
+.blk.forever .row .t-mono{color:var(--em-ink)}
+
+/* =====================================================================
+   CAPTION + SYSTEM SHEET
+   ===================================================================== */
+.cap{position:fixed;right:var(--sp4);bottom:var(--sp4);z-index:50;width:336px;padding:var(--sp3) var(--sp4) var(--sp4);display:flex;flex-direction:column;gap:var(--sp3)}
+.cap .top{display:flex;align-items:center;gap:var(--sp2)}
+.cap .top svg{width:20px;height:20px}
+.cap .top .t-micro{flex:1}
+.cap p{color:var(--ink2);font:400 13px/20px var(--sans)}
+.cap .ctl{display:flex;gap:var(--sp3);align-items:center}
+.cap .ctl .seg{--cols:3;flex:1}
+.cap.min{width:auto;padding:var(--sp1) var(--sp1) var(--sp1) var(--sp3)}
+.cap.min p,.cap.min .ctl{display:none}
+
+.scrim{position:fixed;inset:0;z-index:60;background:var(--k0);display:flex;align-items:center;justify-content:center;padding:var(--sp6)}
+.sheet{width:100%;max-width:1280px;height:100%;display:flex;flex-direction:column;min-height:0}
+.sheet-h{height:64px;flex:none;display:flex;align-items:center;gap:var(--sp4);padding:0 var(--sp3) 0 var(--sp5);border-bottom:var(--s) solid var(--rule)}
+.sheet-h .t-h2{flex:1}
+.sheet-b{flex:1;min-height:0;overflow:auto;padding:var(--sp5);display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:var(--sp5);align-content:start;color-scheme:dark}
+.sec{display:flex;flex-direction:column;gap:var(--sp3);min-width:0}
+.sec>.t-micro{color:var(--ink3);padding-bottom:var(--sp2);border-bottom:var(--s) solid var(--rule)}
+.c12{grid-column:span 12}.c7{grid-column:span 7}.c5{grid-column:span 5}.c6{grid-column:span 6}.c4{grid-column:span 4}.c8{grid-column:span 8}
+.prin{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--s);background:var(--rule);border:var(--s) solid var(--rule)}
+.prin div{background:var(--k1);padding:var(--sp4);display:flex;flex-direction:column;gap:var(--sp2)}
+.prin b{font:700 15px/24px var(--sans)}
+.prin span{color:var(--ink2);font:400 13px/20px var(--sans)}
+.sw{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--sp3)}
+.sw div{display:flex;flex-direction:column;gap:var(--sp1)}
+.sw i{display:block;height:48px;border:var(--s) solid var(--rule)}
+.sw b{font:700 11px/16px var(--mono);letter-spacing:.06em}
+.sw span{color:var(--ink3);font:500 12px/16px var(--mono)}
+.ts{display:flex;flex-direction:column}
+.ts div{display:flex;align-items:baseline;gap:var(--sp4);padding:var(--sp2) 0;border-bottom:var(--s) solid var(--k2);min-width:0}
+.ts div>span:first-child{width:144px;flex:none;color:var(--ink3)}
+.ts div>:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rules{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--sp5)}
+.rules .r{display:flex;flex-direction:column;gap:var(--sp2)}
+.rules .r .t-mono{color:var(--ink2)}
+.spc{display:flex;align-items:flex-end;gap:var(--sp2);height:72px}
+.spc i{display:block;background:var(--ink);width:var(--w);height:var(--w)}
+.sp-l{display:flex;gap:var(--sp2)}
+.sp-l span{color:var(--ink3);font:500 11px/16px var(--mono)}
+.demo{display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp4) var(--sp5)}
+.demo .lab{display:flex;flex-direction:column;align-items:flex-start;gap:var(--sp2)}
+.demo .lab>.t-micro{color:var(--ink3)}
+.box-sw{width:56px;height:56px;border:var(--s) solid var(--ink)}
+
+/* =====================================================================
+   SITE MOCKS — other people's pages. Rendered as they are; Mast doesn't touch them.
+   ===================================================================== */
+.gh{min-height:100%;background:#0d1117;color:#e6edf3;font:14px/1.5 -apple-system,'Segoe UI','Noto Sans',Helvetica,Arial,sans-serif;color-scheme:dark}
+.gh a{color:inherit;text-decoration:none}
+.gh-top{background:#010409;display:flex;align-items:center;gap:16px;padding:16px 32px 8px}
+.gh-top .crumb{font-size:14px;color:#e6edf3}
+.gh-top .crumb b{font-weight:600}
+.gh-top .pill{border:1px solid #3d444d;border-radius:2em;padding:0 7px;font-size:12px;color:#9198a1;line-height:20px}
+.gh-top .search{margin-left:auto;width:300px;border:1px solid #3d444d;border-radius:6px;height:32px;display:flex;align-items:center;padding:0 10px;color:#9198a1;font-size:14px}
+.gh-top .av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#2f81f7,#a371f7)}
+.gh-nav{background:#010409;display:flex;gap:4px;padding:0 24px;border-bottom:1px solid #3d444d}
+.gh-nav a{padding:8px 10px 10px;font-size:14px;color:#e6edf3;border-bottom:2px solid transparent;display:flex;gap:6px;align-items:center}
+.gh-nav a.on{border-bottom-color:#f78166;font-weight:600}
+.gh-nav a i{font-style:normal;background:#2f353d;border-radius:2em;padding:0 6px;font-size:12px}
+.gh-main{display:grid;grid-template-columns:minmax(0,1fr) 296px;gap:24px;padding:24px 32px;max-width:1280px;margin:0 auto}
+.gh-row{display:flex;gap:8px;align-items:center;margin-bottom:16px}
+.gh-btn{border:1px solid #3d444d;background:#212830;border-radius:6px;height:32px;padding:0 12px;display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:500}
+.gh-btn.g{background:#238636;border-color:#2ea043;color:#fff;margin-left:auto}
+.gh-files{border:1px solid #3d444d;border-radius:6px;overflow:hidden}
+.gh-files .hd{background:#151b23;padding:12px 16px;display:flex;gap:8px;align-items:center;font-size:14px}
+.gh-files .hd .av{width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,#f78166,#c2300f)}
+.gh-files .hd span:last-child{margin-left:auto;color:#9198a1;font-size:12px}
+.gh-files .fr{display:grid;grid-template-columns:24px 220px 1fr 100px;align-items:center;padding:8px 16px;border-top:1px solid #3d444d;font-size:14px}
+.gh-files .fr span:nth-child(3),.gh-files .fr span:nth-child(4){color:#9198a1}
+.gh-files .fr span:nth-child(4){text-align:right}
+.gh-files svg{width:16px;height:16px;fill:#9198a1}
+.gh-files .dir svg{fill:#54aeff}
+.gh-readme{border:1px solid #3d444d;border-radius:6px;margin-top:16px;padding:24px 32px}
+.gh-readme h2{font-size:24px;font-weight:600;padding-bottom:8px;border-bottom:1px solid #3d444d;margin-bottom:16px}
+.gh-readme p{margin-bottom:12px;color:#d1d7e0}
+.gh-readme code{background:#2f353d;border-radius:6px;padding:2px 6px;font-size:85%}
+.gh-side h3{font-size:16px;font-weight:600;margin-bottom:12px}
+.gh-side p{color:#d1d7e0;margin-bottom:16px}
+.gh-side .tp{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.gh-side .tp span{background:#121d2f;color:#4493f8;border-radius:2em;padding:0 10px;font-size:12px;line-height:22px;font-weight:500}
+.gh-side .ln{color:#9198a1;font-size:14px;margin-bottom:8px}
+
+.wk{min-height:100%;background:#fff;color:#202122;font:16px/1.6 'Helvetica Neue',Arial,'Liberation Sans',sans-serif;color-scheme:light}
+.wk-top{display:flex;align-items:center;gap:16px;padding:12px 24px;border-bottom:1px solid #eaecf0}
+.wk-logo{display:flex;align-items:center;gap:10px}
+.wk-logo i{width:44px;height:44px;border-radius:50%;background:#f8f9fa;border:1px solid #c8ccd1;display:flex;align-items:center;justify-content:center;font:28px/1 Georgia,'Linux Libertine',serif;font-style:normal;color:#202122}
+.wk-logo b{font:24px/1 Georgia,'Linux Libertine',serif;font-weight:400;letter-spacing:.02em}
+.wk-logo small{display:block;font-size:12px;color:#54595d;margin-top:2px}
+.wk-search{display:flex;margin-left:16px;width:420px}
+.wk-search span{flex:1;border:1px solid #a2a9b1;border-radius:2px 0 0 2px;height:32px;padding:0 8px;display:flex;align-items:center;color:#72777d;font-size:14px}
+.wk-search b{border:1px solid #a2a9b1;border-left:0;background:#f8f9fa;padding:0 12px;display:flex;align-items:center;font-size:14px;font-weight:700;border-radius:0 2px 2px 0}
+.wk-body{display:grid;grid-template-columns:200px minmax(0,1fr);gap:32px;padding:24px 32px 48px;max-width:1240px;margin:0 auto}
+.wk-toc{font-size:14px}
+.wk-toc b{display:block;font-size:14px;padding-bottom:6px;border-bottom:1px solid #c8ccd1;margin-bottom:8px}
+.wk-toc a{display:block;color:#3366cc;padding:3px 0;text-decoration:none}
+.wk h1{font:28.8px/1.3 Georgia,'Linux Libertine',serif;border-bottom:1px solid #a2a9b1;padding-bottom:4px;margin-bottom:6px}
+.wk-tabs{display:flex;gap:16px;font-size:14px;color:#3366cc;border-bottom:1px solid #eaecf0;padding-bottom:6px;margin-bottom:12px}
+.wk-tabs span:first-child{color:#202122;border-bottom:2px solid #202122}
+.wk-tabs .sp{margin-left:auto}
+.wk .from{font-size:14px;color:#54595d;margin-bottom:12px}
+.wk p{margin-bottom:12px;font-size:15px;line-height:1.65}
+.wk a.l{color:#3366cc;text-decoration:none}
+.wk h2{font:24px/1.3 Georgia,'Linux Libertine',serif;border-bottom:1px solid #a2a9b1;margin:20px 0 10px;padding-bottom:3px}
+.wk-box{float:right;width:280px;margin:0 0 16px 24px;border:1px solid #a2a9b1;background:#f8f9fa;font-size:13px;padding:8px}
+.wk-box .ph{height:150px;background:repeating-linear-gradient(135deg,#e5e7eb 0 8px,#eef0f2 8px 16px);margin-bottom:6px}
+.wk-box th{text-align:left;padding:3px 8px 3px 0;vertical-align:top}
+.wk-box td{padding:3px 0}
+
+.gg{min-height:100%;background:#fff;color:#202124;font:14px/1.58 Arial,sans-serif;color-scheme:light}
+.gg-top{display:flex;align-items:center;gap:32px;padding:20px 32px;border-bottom:1px solid #ebebeb}
+.gg-logo{font:600 26px/1 'Product Sans',Arial,sans-serif;letter-spacing:-.02em}
+.gg-q{width:640px;height:44px;border-radius:24px;box-shadow:0 1px 6px rgba(32,33,36,.28);display:flex;align-items:center;padding:0 20px;font-size:16px}
+.gg-r{padding:24px 0 48px 180px;max-width:820px}
+.gg-r div{margin-bottom:28px}
+.gg-r small{color:#4d5156;display:block}
+.gg-r a{color:#1a0dab;font-size:20px;line-height:1.3;text-decoration:none}
+.gg-r p{color:#4d5156}
+.gen{min-height:100%;background:#fafafa;color:#222;font:15px/1.6 Arial,sans-serif;color-scheme:light}
+.gen-top{height:64px;display:flex;align-items:center;padding:0 40px;background:#fff;border-bottom:1px solid #e5e5e5;font-weight:700;font-size:18px}
+.gen-b{max-width:960px;margin:40px auto;display:grid;grid-template-columns:2fr 1fr;gap:24px}
+.gen-b i{display:block;background:#ececec;border-radius:6px}
+</style>
+</head>
+<body class="plat-linux">
+<div class="stage">
+  <div class="win" id="win">
+    <!-- ======== TAB STRIP ======== -->
+    <div class="strip" id="strip">
+      <div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="tabs" id="tabs" role="tablist"></div>
+      <div class="drag"></div>
+      <div class="gnome" aria-label="Window controls">
+        <button aria-label="Minimise"><svg viewBox="0 0 16 16"><path d="M4.5 11.5h7"/></svg></button>
+        <button aria-label="Maximise"><svg viewBox="0 0 16 16"><rect x="4.5" y="4.5" width="7" height="7"/></svg></button>
+        <button aria-label="Close"><svg viewBox="0 0 16 16"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></svg></button>
+      </div>
+      <div class="wincap" aria-label="Window controls">
+        <button aria-label="Minimise"><svg viewBox="0 0 10 10"><path d="M0 5.5h10"/></svg></button>
+        <button aria-label="Maximise"><svg viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9"/></svg></button>
+        <button class="x" aria-label="Close"><svg viewBox="0 0 10 10"><path d="M0 0l10 10M10 0L0 10"/></svg></button>
+      </div>
+    </div>
+
+    <!-- ======== TOOLBAR ======== -->
+    <div class="bar" id="bar">
+      <div class="nav">
+        <button class="ib" id="back" aria-label="Back"><svg class="i" viewBox="0 0 20 20"><path d="M16 10H4M9 5l-5 5 5 5"/></svg></button>
+        <button class="ib" id="fwd" aria-label="Forward"><svg class="i" viewBox="0 0 20 20"><path d="M4 10h12M11 5l5 5-5 5"/></svg></button>
+        <button class="ib" id="reload" aria-label="Reload"><svg class="i" viewBox="0 0 20 20"><path d="M16 10a6 6 0 1 1-1.76-4.24M16 3v4h-4"/></svg></button>
+      </div>
+      <label class="omni" id="omni">
+        <span class="lead" id="omniLead"></span>
+        <span class="field" id="omniField"><input id="omniIn" spellcheck="false" autocomplete="off" aria-label="Address and search bar"><span class="url" id="omniUrl"></span></span>
+        <button class="ib sm star" aria-label="Bookmark this tab"><svg class="i s16" viewBox="0 0 20 20"><path d="M10 3l2.2 4.6 5 .6-3.7 3.4 1 5L10 14.1l-4.5 2.5 1-5L2.8 8.2l5-.6z"/></svg></button>
+      </label>
+      <button class="btn tb-block" id="tbBlock" aria-haspopup="dialog" aria-expanded="false"></button>
+      <button class="ib" id="menuBtn" aria-label="Menu" aria-haspopup="menu" aria-expanded="false"><svg class="i" viewBox="0 0 20 20"><rect class="f" x="8.5" y="3" width="3" height="3"/><rect class="f" x="8.5" y="8.5" width="3" height="3"/><rect class="f" x="8.5" y="14" width="3" height="3"/></svg></button>
+    </div>
+
+    <!-- ======== CONTENT ======== -->
+    <div class="content" id="content">
+      <div class="view" id="view"></div>
+      <div class="toasts" id="toasts" aria-live="polite"></div>
+    </div>
+
+    <div class="layer pop" id="pop" role="dialog" aria-label="Block this site" hidden></div>
+    <div class="layer menu" id="menu" role="menu" hidden></div>
+  </div>
+
+  <!-- ======== CAPTION ======== -->
+  <aside class="layer cap" id="cap">
+    <div class="top">
+      <span id="capLogo"></span>
+      <span class="t-micro">Proposal 08 · Brutal</span>
+      <button class="ib sm" id="capMin" aria-label="Collapse caption" aria-expanded="true"><svg class="i s16" viewBox="0 0 20 20"><path d="M5 10h10"/></svg></button>
+    </div>
+    <p>Dark neo-brutalism as a system: one 2px stroke, one 4px hard shadow that collapses when pressed, square corners, flat fills. Ember is a slab that only ever means blocked.</p>
+    <div class="ctl">
+      <div class="seg sm" id="plat" role="radiogroup" aria-label="Platform">
+        <button role="radio" data-plat="linux" aria-checked="true">Linux</button>
+        <button role="radio" data-plat="mac" aria-checked="false">macOS</button>
+        <button role="radio" data-plat="win" aria-checked="false">Windows</button>
+      </div>
+      <button class="btn sm" id="sysBtn">System</button>
+    </div>
+  </aside>
+
+  <!-- ======== SYSTEM SHEET ======== -->
+  <div class="scrim" id="sheet" hidden>
+    <div class="layer sheet" role="dialog" aria-label="System">
+      <div class="sheet-h">
+        <span class="t-micro dim">08 · Brutal</span>
+        <h2 class="t-h2">The system</h2>
+        <button class="ib" id="sheetX" aria-label="Close system sheet"><svg class="i" viewBox="0 0 20 20"><path d="M5 5l10 10M15 5L5 15"/></svg></button>
+      </div>
+      <div class="sheet-b">
+        <section class="sec c12">
+          <span class="t-micro">Principles</span>
+          <div class="prin">
+            <div><b>One stroke, one shadow.</b><span>2px everywhere. A 4px hard shadow, never blurred, never another offset.</span></div>
+            <div><b>Raised means current.</b><span>Only the active tab, the picked card, the primary action and floating layers rise.</span></div>
+            <div><b>Pressing is travel.</b><span>The slab moves 4px into its shadow. The light never changes.</span></div>
+            <div><b>Inverted means this one.</b><span>Checked, selected, highlighted and open all flip to off-white on black.</span></div>
+            <div><b>Ember is a block.</b><span>Filled is forever, outlined is timed. Ember means nothing else.</span></div>
+          </div>
+        </section>
+
+        <section class="sec c7">
+          <span class="t-micro">Colour · flat, no gradients, no alpha</span>
+          <div class="sw">
+            <div><i style="background:var(--k0)"></i><b>k0 #0A0A0A</b><span>frame, page, input</span></div>
+            <div><i style="background:var(--k1)"></i><b>k1 #131313</b><span>toolbar, card, layer</span></div>
+            <div><i style="background:var(--k2)"></i><b>k2 #1C1C1C</b><span>control at rest</span></div>
+            <div><i style="background:var(--k3)"></i><b>k3 #282828</b><span>hover</span></div>
+            <div><i style="background:var(--rule)"></i><b>rule #353533</b><span>structural stroke</span></div>
+            <div><i style="background:var(--ink3)"></i><b>ink3 #7A766E</b><span>tertiary, disabled</span></div>
+            <div><i style="background:var(--ink2)"></i><b>ink2 #B4B0A7</b><span>secondary type</span></div>
+            <div><i style="background:var(--ink)"></i><b>ink #F2EFE8</b><span>type, stroke, shadow</span></div>
+            <div><i style="background:var(--em)"></i><b>em #FF6A3D</b><span>blocked, block action</span></div>
+            <div><i style="background:var(--em-hi)"></i><b>em-hi #FF8459</b><span>ember hover</span></div>
+            <div><i style="background:var(--em-ink)"></i><b>em-ink #160703</b><span>ink on ember</span></div>
+            <div><i style="background:var(--focus)"></i><b>focus #8EA7FF</b><span>keyboard focus only</span></div>
+          </div>
+          <p class="t-mono dim">Why a secondary: every stroke is already off-white and ember is reserved for blocking, so keyboard focus needs a colour that can't be read as either. It never fills anything.</p>
+        </section>
+
+        <section class="sec c5">
+          <span class="t-micro">Type · Archivo + JetBrains Mono</span>
+          <div class="ts">
+            <div><span class="t-mono">Display 96/88</span><span class="t-h2" style="font-size:40px;line-height:40px">x.com</span></div>
+            <div><span class="t-mono">H1 44/48 · 800</span><span class="t-h1" style="font-size:36px;line-height:40px">21 sites blocked</span></div>
+            <div><span class="t-mono">H2 28/32 · 800</span><span class="t-h2">Blocked forever.</span></div>
+            <div><span class="t-mono">H3 20/24 · 700</span><span class="t-h3">Video &amp; streaming</span></div>
+            <div><span class="t-mono">Body 15/24 · 400</span><span class="t-body">Blocks can be lengthened.</span></div>
+            <div><span class="t-mono">UI 13/16 · 600</span><span class="t-ui">New tab · Undo · Block</span></div>
+            <div><span class="t-mono">Small 13/20 · 400</span><span style="font:400 13px/20px var(--sans)">Multi-line small print.</span></div>
+            <div><span class="t-mono">Mono 12/16 · 500</span><span class="t-mono">news.ycombinator.com</span></div>
+            <div><span class="t-mono">Micro 11/16 · 700</span><span class="t-micro">Until 00:00</span></div>
+          </div>
+          <p class="t-mono dim">Display sizes use Archivo semi-expanded. Mono is for anything a machine wrote: hosts, times, counts, shortcuts.</p>
+        </section>
+
+        <section class="sec c12">
+          <span class="t-micro">Space · stroke · shadow · radius · height</span>
+          <div class="rules">
+            <div class="r">
+              <div class="spc"><i style="--w:4px"></i><i style="--w:8px"></i><i style="--w:12px"></i><i style="--w:16px"></i><i style="--w:24px"></i><i style="--w:32px"></i><i style="--w:48px"></i><i style="--w:64px"></i></div>
+              <span class="t-mono">Spacing 4 · 8 · 12 · 16 · 24 · 32 · 48 · 64. Nothing off the 4px grid.</span>
+            </div>
+            <div class="r">
+              <div style="display:flex;gap:var(--sp5);align-items:flex-end;height:72px"><div class="box-sw"></div><div class="box-sw" style="box-shadow:var(--sh)"></div><div class="box-sw" style="transform:translate(4px,4px)"></div></div>
+              <span class="t-mono">Stroke 2px. Shadow 4px/4px, 0 blur, in the stroke's colour. Pressed: translate 4px, shadow 0, 60ms linear.</span>
+            </div>
+            <div class="r">
+              <div style="display:flex;gap:var(--sp3);align-items:flex-end;height:72px"><div class="box-sw" style="border-color:var(--ink)"></div><div class="box-sw" style="border-color:var(--em)"></div><div class="box-sw" style="background:var(--em);border-color:var(--em)"></div></div>
+              <span class="t-mono">Radius 0. The window corner belongs to the OS (mac 10, Win 8, GNOME 12). Ember outline = timed, ember fill = forever.</span>
+            </div>
+            <div class="r">
+              <div style="display:flex;gap:var(--sp2);align-items:flex-end;height:72px"><i style="display:block;width:24px;height:28px;background:var(--ink3)"></i><i style="display:block;width:24px;height:36px;background:var(--ink2)"></i><i style="display:block;width:24px;height:44px;background:var(--ink)"></i><i style="display:block;width:24px;height:72px;background:var(--em)"></i></div>
+              <span class="t-mono">Heights 28 compact · 36 default · 44 choice · 72 commit. Tags are 24 and not interactive.</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="sec c12">
+          <span class="t-micro">Buttons · default / hover / pressed / disabled</span>
+          <div class="demo">
+            <div class="lab"><span class="t-micro">Slab</span><div class="demo" style="gap:var(--sp4)"><button class="btn">Back</button><button class="btn is-hover">Back</button><button class="btn is-pressed">Back</button><button class="btn" disabled>Back</button></div></div>
+            <div class="lab"><span class="t-micro">Block (ember)</span><div class="demo" style="gap:var(--sp4)"><button class="btn em">Block</button><button class="btn em is-hover">Block</button><button class="btn em is-pressed">Block</button><button class="btn em" disabled>Block</button></div></div>
+            <div class="lab"><span class="t-micro">Ghost icon</span><div class="demo" style="gap:var(--sp2)">
+              <button class="ib"><svg class="i" viewBox="0 0 20 20"><path d="M16 10H4M9 5l-5 5 5 5"/></svg></button>
+              <button class="ib is-hover"><svg class="i" viewBox="0 0 20 20"><path d="M16 10H4M9 5l-5 5 5 5"/></svg></button>
+              <button class="ib is-pressed"><svg class="i" viewBox="0 0 20 20"><path d="M16 10H4M9 5l-5 5 5 5"/></svg></button>
+              <button class="ib" disabled><svg class="i" viewBox="0 0 20 20"><path d="M16 10H4M9 5l-5 5 5 5"/></svg></button></div></div>
+            <div class="lab"><span class="t-micro">On ember</span><div class="demo" style="gap:var(--sp4);background:var(--em);padding:var(--sp3) var(--sp4) var(--sp4) var(--sp3)"><button class="btn on-em">Back</button><button class="btn on-em is-pressed">Back</button></div></div>
+            <div class="lab"><span class="t-micro">Focus</span><button class="btn" style="outline:var(--s) solid var(--focus);outline-offset:2px">Undo</button></div>
+          </div>
+        </section>
+
+        <section class="sec c6">
+          <span class="t-micro">Input · checkbox · choice</span>
+          <div class="demo">
+            <div class="lab"><span class="t-micro">Input</span><div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp2);width:340px">
+              <input class="inp" placeholder="Add a site">
+              <input class="inp is-focus" value="espn.com">
+              <input class="inp" style="border-color:var(--ink3)" placeholder="Hover">
+              <input class="inp" disabled placeholder="Disabled"></div></div>
+            <div class="lab"><span class="t-micro">Checkbox</span><div class="demo" style="gap:var(--sp3)">
+              <span class="cb"><svg class="i ck" viewBox="0 0 20 20"><path d="M4 10l4 4 8-8"/></svg></span>
+              <span class="cb on"><svg class="i ck" viewBox="0 0 20 20"><path d="M4 10l4 4 8-8"/></svg></span>
+              <span class="cb mixed"><svg class="i mx" viewBox="0 0 20 20"><path d="M5 10h10"/></svg></span>
+              <span class="cb dis"></span>
+              <span style="background:var(--em);padding:var(--sp2);display:flex"><span class="cb locked">∞</span></span></div>
+              <span class="t-mono dim">off · on · some · disabled · locked forever</span></div>
+            <div class="lab" style="width:100%"><span class="t-micro">Segmented (lengthen only: shorter options strike out)</span>
+              <div class="seg" style="--cols:6;width:100%"><button disabled>1 hour</button><button disabled>4 hours</button><button disabled>Midnight</button><button class="is-hover">1 week</button><button aria-checked="true">1 month</button><button class="inf">Forever</button></div>
+              <div class="seg" style="--cols:6;width:100%"><button>1 hour</button><button>4 hours</button><button>Midnight</button><button>1 week</button><button>1 month</button><button class="inf" aria-checked="true">Forever</button></div></div>
+          </div>
+        </section>
+
+        <section class="sec c6">
+          <span class="t-micro">Tabs · tags · chips</span>
+          <div class="demo" style="background:var(--k0);padding:var(--sp3) var(--sp3) var(--sp4);gap:var(--sp2)" id="sysTabs"></div>
+          <span class="t-mono dim">inactive · hover · active · timed · forever · forever active</span>
+          <div class="demo" style="gap:var(--sp2)"><span class="tag">Open</span><span class="tag timed">Until 00:00</span><span class="tag timed">1 blocked</span><span class="tag forever">Forever</span><span class="tag inv">Blocked forever</span></div>
+          <div class="demo" style="gap:var(--sp1)"><button class="chip">amazon.com</button><button class="chip" style="background:var(--k3);color:var(--ink)">ebay.com</button><button class="chip on">temu.com</button><button class="chip timed">news.ycombinator.com <i>5D</i></button><span style="background:var(--em);color:var(--em-ink);padding:0 var(--sp2);display:flex"><button class="chip plain" disabled>x.com</button></span></div>
+        </section>
+
+        <section class="sec c6">
+          <span class="t-micro">Toast · 10-second undo</span>
+          <div class="layer toast" style="animation:none;min-width:0;width:100%"><span class="sq"></span><span class="msg"><b>Shopping</b> blocked until midnight<span class="dim"> · 6 sites</span></span><span class="t-mono n">7s</span><button class="btn sm">Undo</button><i class="bar10" style="animation:none;transform:scaleX(.7)"></i></div>
+          <span class="t-mono dim">The 2px bar drains over 10s. Undo is the only way back. There are no confirm dialogs.</span>
+        </section>
+
+        <section class="sec c6">
+          <span class="t-micro">Menu · highlight is inverted</span>
+          <div class="layer" style="padding:var(--sp1) 0;width:288px;position:relative">
+            <button class="mi">New tab<kbd>Ctrl+T</kbd></button>
+            <button class="mi is-hover">Blocklist<span class="tag forever" style="margin-left:auto">21</span></button>
+            <div class="msep"></div>
+            <button class="mi">History<kbd>Ctrl+H</kbd></button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(()=>{
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------------- time (fixed "now" so the mock is deterministic) ---------------- */
+const H=36e5, D=24*H;
+const NOW=+new Date(2026,9,30,14,20);
+const MID=+new Date(2026,9,31,0,0);
+const DUR=[
+  {id:'1h', label:'1 hour', u:()=>NOW+H},
+  {id:'4h', label:'4 hours', u:()=>NOW+4*H},
+  {id:'mid',label:'Until midnight', u:()=>MID},
+  {id:'1w', label:'1 week', u:()=>NOW+7*D},
+  {id:'1m', label:'1 month', u:()=>+new Date(2026,10,30,14,20)},
+  {id:'inf',label:'Forever', u:()=>Infinity},
+];
+const durU=id=>DUR.find(d=>d.id===id).u();
+const sameDay=(a,b)=>new Date(a).toDateString()===new Date(b).toDateString();
+const hm=t=>new Date(t).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+const md=t=>new Date(t).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+const wmd=t=>new Date(t).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+const daysLeft=u=>Math.round((u-NOW)/D);
+function untilTxt(u){ if(u===Infinity)return 'forever'; if(u===MID)return 'until midnight'; if(sameDay(u,NOW))return 'until '+hm(u); const d=daysLeft(u); return d<=14?`for ${d} more day${d>1?'s':''}`:'until '+md(u); }
+function untilTag(u){ if(u===Infinity)return 'Forever'; if(u===MID)return 'Until 00:00'; if(sameDay(u,NOW))return 'Until '+hm(u); const d=daysLeft(u); return d<=14?d+' more days':'Until '+md(u); }
+function untilShort(u){ if(u===Infinity)return '∞'; if(u===MID)return '00:00'; if(sameDay(u,NOW))return hm(u); const d=daysLeft(u); return d<=14?d+'D':md(u).toUpperCase(); }
+const sinceTxt=s=>sameDay(s,NOW)?'today '+hm(s):md(s);
+
+/* ---------------- data ---------------- */
+const CATS=[
+  {id:'social',name:'Social',sites:['x.com','twitter.com','facebook.com','instagram.com','tiktok.com','reddit.com','snapchat.com','threads.net','bsky.app','pinterest.com','tumblr.com','discord.com']},
+  {id:'video',name:'Video & streaming',sites:['youtube.com','netflix.com','twitch.tv','kick.com','primevideo.com','disneyplus.com','hulu.com','max.com']},
+  {id:'news',name:'News & forums',sites:['news.ycombinator.com','cnn.com','foxnews.com','bbc.com','nytimes.com','buzzfeed.com','9gag.com']},
+  {id:'shop',name:'Shopping',sites:['amazon.com','ebay.com','aliexpress.com','temu.com','etsy.com','shein.com']},
+  {id:'games',name:'Games',sites:['chess.com','lichess.org','roblox.com','store.steampowered.com','poki.com']},
+  {id:'mine',name:'Your sites',sites:['espn.com']},
+];
+const catOf=h=>CATS.find(c=>c.sites.includes(h));
+let blocks={};
+CATS[0].sites.forEach(h=>blocks[h]={until:Infinity,since:+new Date(2026,9,18,21,4)});
+CATS[1].sites.forEach(h=>blocks[h]={until:MID,since:+new Date(2026,9,30,9,12)});
+blocks['news.ycombinator.com']={until:NOW+5*D,since:NOW-2*D};
+let sel=new Set(), dur='mid', popDur='mid', stopped=4, plat='linux', zoom=100;
+
+function blockedBase(host){ host=(host||'').replace(/^www\./,''); for(const k in blocks){ if(host===k||host.endsWith('.'+k))return k; } return null; }
+const selectable=h=>!(blocks[h]&&blocks[h].until===Infinity);
+
+/* ---------------- tabs ---------------- */
+const SITES={
+  'github.com':{title:'mast-browser/mast',path:'/mast-browser/mast',page:'gh'},
+  'en.wikipedia.org':{title:'Attention span - Wikipedia',path:'/wiki/Attention_span',page:'wk'},
+  'youtube.com':{title:'YouTube',path:'/'},
+  'x.com':{title:'X',path:'/home'},
+};
+const site=host=>({kind:'site',host,path:(SITES[host]||{}).path||'/',title:(SITES[host]||{}).title||host});
+const ntpE=()=>({kind:'ntp'});
+let tid=0;
+const mk=(hist,i)=>({id:++tid,hist,i:i??hist.length-1});
+let tabs=[mk([ntpE()]),mk([site('github.com')]),mk([site('en.wikipedia.org')]),mk([ntpE(),site('youtube.com')]),mk([ntpE(),site('x.com')])];
+let active=tabs[0].id;
+const cur=()=>tabs.find(t=>t.id===active);
+const entry=t=>t.hist[t.i];
+
+/* ---------------- icons ---------------- */
+let lid=0;
+function logo(sz){ const g='lg'+(++lid); return `<svg viewBox="0 0 32 32" width="${sz}" height="${sz}" aria-hidden="true"><defs><linearGradient id="${g}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6a3d"/><stop offset="1" stop-color="#c2300f"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#${g})"/><path d="M14 10.5V24.5H6.6Q7.4 16 14 10.5Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/><path d="M17 6V24.5H25.4Q24.7 13 17 6Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>`; }
+const IC={
+  block:'<svg class="i" viewBox="0 0 20 20"><rect x="3" y="3" width="14" height="14"/><path d="M6 14l8-8"/></svg>',
+  block16:'<svg class="i s16" viewBox="0 0 20 20"><rect x="3" y="3" width="14" height="14"/><path d="M6 14l8-8"/></svg>',
+  search:'<svg class="i s16" viewBox="0 0 20 20"><rect x="3" y="3" width="10" height="10"/><path d="M13 13l4 4"/></svg>',
+  tune:'<svg class="i s16" viewBox="0 0 20 20"><path d="M3 6h7M15 6h2M3 14h2M10 14h7"/><rect x="10" y="4" width="4" height="4"/><rect x="5" y="12" width="4" height="4"/></svg>',
+  x:'<svg class="i" viewBox="0 0 20 20"><path d="M5 5l10 10M15 5L5 15"/></svg>',
+  ck:'<svg class="i ck" viewBox="0 0 20 20"><path d="M4 10l4 4 8-8"/></svg>',
+  mx:'<svg class="i mx" viewBox="0 0 20 20"><path d="M5 10h10"/></svg>',
+  arr:'<svg class="i arr" viewBox="0 0 20 20"><path d="M4 10h12M11 5l5 5-5 5"/></svg>',
+  back:'<svg class="i" viewBox="0 0 20 20"><path d="M16 10H4M9 5l-5 5 5 5"/></svg>',
+};
+function fav(host){
+  if(host==='github.com')return '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="#f0f6fc"/><path fill="#0d1117" d="M5.6 14.4v-2c-1.9.4-2.3-.8-2.3-.8-.3-.8-.8-1-.8-1-.6-.4 0-.4 0-.4.7 0 1 .7 1 .7.6 1 1.6.7 2 .6 0-.4.2-.7.4-.9-1.5-.2-3.1-.8-3.1-3.4 0-.7.3-1.4.7-1.8-.1-.2-.3-.9.1-1.8 0 0 .6-.2 1.8.7a6 6 0 0 1 3.2 0c1.2-.8 1.8-.7 1.8-.7.4.9.1 1.6.1 1.8.4.5.7 1.1.7 1.8 0 2.6-1.6 3.2-3.1 3.4.2.2.5.6.5 1.2v2.6z"/></svg>';
+  if(host==='en.wikipedia.org')return '<svg viewBox="0 0 16 16"><rect width="16" height="16" fill="#fff"/><text x="8" y="12.5" text-anchor="middle" font-family="Georgia,serif" font-size="12" fill="#000">W</text></svg>';
+  if(host==='www.google.com')return '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="#fff"/><text x="8" y="12" text-anchor="middle" font-family="Arial" font-weight="700" font-size="11" fill="#4285f4">G</text></svg>';
+  return '<svg viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" fill="none" stroke="#b4b0a7" stroke-width="2"/><path d="M1 6h14" stroke="#b4b0a7" stroke-width="2"/></svg>';
+}
+
+/* ---------------- render: tabs ---------------- */
+function tabState(t){
+  const e=entry(t);
+  if(e.kind==='ntp')return {title:'New Tab',fav:logo(16)};
+  const b=blockedBase(e.host);
+  if(b){const bl=blocks[b];return {title:e.title,fav:IC.block16,st:bl.until===Infinity?'forever':'timed',suf:untilShort(bl.until)};}
+  return {title:e.title,fav:fav(e.host)};
+}
+function tabHTML(o,cls=''){ return `<div class="tab ${cls} ${o.st?'b-'+o.st:''}" role="tab" ${o.id?`data-tab="${o.id}" aria-selected="${cls.includes('active')}"`:''} title="${esc(o.title)}">
+  <span class="fav">${o.fav}</span><span class="tt">${esc(o.title)}</span>${o.st?`<span class="suf">${o.suf}</span>`:''}
+  <button class="tx" ${o.id?`data-close="${o.id}"`:''} aria-label="Close tab">${IC.x}</button></div>`; }
+const NEWTAB='<button class="ib newtab" id="newTab" aria-label="New tab"><svg class="i" viewBox="0 0 20 20"><path d="M10 4v12M4 10h12"/></svg></button>';
+function renderTabs(){ $('#tabs').innerHTML=tabs.map(t=>tabHTML({...tabState(t),id:t.id},t.id===active?'active':'')).join('')+NEWTAB; }
+
+/* ---------------- render: toolbar ---------------- */
+function renderBar(){
+  const t=cur(), e=entry(t);
+  $('#back').disabled=t.i===0; $('#fwd').disabled=t.i>=t.hist.length-1;
+  const lead=$('#omniLead'), inp=$('#omniIn'), url=$('#omniUrl'), fld=$('#omniField'), b=$('#tbBlock');
+  b.className='btn tb-block';
+  if(e.kind==='ntp'){
+    lead.innerHTML=IC.search; inp.value=''; inp.placeholder='Search Google or type a URL'; url.innerHTML=''; fld.classList.remove('has-url');
+    b.innerHTML=IC.block+'Block'; b.disabled=true; b.title='Nothing to block on the new tab page';
+  } else {
+    const base=blockedBase(e.host), bl=base&&blocks[base];
+    lead.innerHTML=bl?`<span class="tag ${bl.until===Infinity?'forever':'timed'}">Blocked</span>`:IC.tune;
+    inp.value=e.host+(e.path==='/'?'':e.path); inp.placeholder=''; fld.classList.add('has-url');
+    url.innerHTML=`<b>${esc(e.host)}</b>${e.path==='/'?'':esc(e.path)}`;
+    b.disabled=false; b.title='';
+    if(bl){ b.classList.add(bl.until===Infinity?'b-forever':'b-timed'); b.innerHTML=IC.block+'Blocked'; }
+    else b.innerHTML=IC.block+'Block';
+  }
+  b.setAttribute('aria-expanded',String(!$('#pop').hidden));
+  b.classList.toggle('is-pressed',!$('#pop').hidden);
+}
+
+/* ---------------- render: views ---------------- */
+function catState(c){
+  const bl=c.sites.filter(h=>blocks[h]);
+  if(!bl.length)return {k:'open'};
+  if(bl.length===c.sites.length){ const us=new Set(bl.map(h=>blocks[h].until)); if(us.size===1){ const u=bl.map(h=>blocks[h].until)[0]; return {k:u===Infinity?'forever':'timed',u,since:Math.min(...bl.map(h=>blocks[h].since))}; } }
+  return {k:'partial',n:bl.length,bl};
+}
+function catSel(c){ const s=c.sites.filter(selectable); const n=s.filter(h=>sel.has(h)).length; return !s.length?'locked':n===0?'off':n===s.length?'on':'mixed'; }
+
+function cardHTML(c){
+  const st=catState(c), cs=catSel(c), n=c.sites.length;
+  let tag, meta;
+  if(st.k==='forever'){ tag=`<span class="tag inv">Forever</span>`; meta=`${n} sites · since ${sinceTxt(st.since)} · can't be lifted`; }
+  else if(st.k==='timed'){ tag=`<span class="tag timed">${untilTag(st.u)}</span>`; meta=`${n} sites · since ${sinceTxt(st.since)} · ${untilTxt(st.u)}`; }
+  else if(st.k==='partial'){ tag=`<span class="tag timed">${st.n} blocked</span>`; meta=`${n} sites · ${st.n===1?'1 blocked '+untilTxt(blocks[st.bl[0]].until):st.n+' blocked'}`; }
+  else { tag=`<span class="tag">Open</span>`; meta=`${n} site${n>1?'s':''} · nothing blocked`; }
+  const whole=st.k==='forever'||st.k==='timed';
+  const chips=c.sites.map(h=>{
+    const b=blocks[h], on=sel.has(h);
+    if(b&&b.until===Infinity) return `<button class="chip plain" disabled title="${esc(h)} · blocked forever">${esc(h)}</button>`;
+    const cls=whole?'plain':(b?'timed':'');
+    return `<button class="chip ${cls} ${on?'on':''}" data-host="${esc(h)}" aria-pressed="${on}" title="${esc(h)}${b?' · blocked '+untilTxt(b.until):''}">${esc(h)}${b&&!whole?` <i>${untilShort(b.until)}</i>`:''}</button>`;
+  }).join('');
+  const cb= cs==='locked'?`<span class="cb locked" aria-hidden="true">∞</span>`:`<span class="cb ${cs}" role="checkbox" aria-checked="${cs==='on'?'true':cs==='mixed'?'mixed':'false'}">${IC.ck}${IC.mx}</span>`;
+  const head= cs==='locked'?`<div class="card-head">${cb}<h3 class="t-h3 nm">${esc(c.name)}</h3>${tag}</div>`
+    :`<button class="card-head" data-cat="${c.id}" aria-label="Select ${esc(c.name)}">${cb}<h3 class="t-h3 nm">${esc(c.name)}</h3>${tag}</button>`;
+  const add=c.id==='mine'?`<input class="inp sm add" id="addSite" placeholder="Add a site" spellcheck="false" aria-label="Add a site to Your sites">`:'';
+  return `<article class="card s-${st.k} ${cs!=='locked'?'sel':''} ${cs==='on'||cs==='mixed'?'on':''}">${head}<div class="meta t-mono">${meta}</div><div class="chips">${chips}${add}</div></article>`;
+}
+function selSummary(){
+  const hosts=[...sel], names=[], rest=new Set(hosts);
+  CATS.forEach(c=>{ const s=c.sites.filter(selectable); if(s.length&&s.every(h=>sel.has(h))){ names.push(c.name); s.forEach(h=>rest.delete(h)); } });
+  const parts=[...names,...rest];
+  let title= !parts.length?'':parts.length<=3?parts.join(', '):parts.slice(0,3).join(', ')+` + ${parts.length-3} more`;
+  return {title,hosts};
+}
+function ntpHTML(){
+  const s=selSummary(), U=durU(dur);
+  const eff=s.hosts.filter(h=>!blocks[h]||blocks[h].until<U);
+  const nBlocked=Object.keys(blocks).length;
+  let hl,sub,dis=false;
+  if(!s.hosts.length){ hl='Block'; sub='Pick a category or a site'; dis=true; }
+  else if(!eff.length){ hl='Already longer'; sub='Blocks only get longer'; dis=true; }
+  else { hl=`Block ${eff.length} site${eff.length>1?'s':''}`; sub=untilTxt(U); }
+  return `<div class="ntp">
+   <section>
+    <header class="ntp-head">${logo(40)}<div><h1 class="t-h1">${nBlocked} sites blocked</h1><p class="t-mono">${stopped} distractions stopped today · ${wmd(NOW)}</p></div></header>
+    <div class="cards">${CATS.map(cardHTML).join('')}</div>
+   </section>
+   <aside class="dock" aria-label="Block selection">
+    <span class="t-micro dim">Selected</span>
+    <div class="sum">${s.title?`<span class="t-h3">${esc(s.title)}</span><span class="t-mono ink2">${s.hosts.length} site${s.hosts.length>1?'s':''}${eff.length!==s.hosts.length?` · ${s.hosts.length-eff.length} already blocked longer`:''}</span>`
+      :`<span class="t-h3 dim">Nothing yet</span><span class="t-mono dim">Tick a category, or click single sites.</span>`}</div>
+    <div class="hr"></div>
+    <span class="t-micro dim">How long</span>
+    <div class="seg" role="radiogroup" aria-label="Duration">${DUR.map(d=>`<button role="radio" class="${d.id==='inf'?'inf':''}" data-dur="${d.id}" aria-checked="${d.id===dur}">${d.label}</button>`).join('')}</div>
+    <p class="t-mono note">Blocks can be lengthened, never shortened. Undo is open for 10 seconds after you press Block.</p>
+    <button class="btn em hero" id="blockBtn" ${dis?'disabled':''}><span class="hl">${hl}</span><span class="sub">${sub}</span>${dis?'':IC.arr}</button>
+   </aside>
+  </div>`;
+}
+function blockedHTML(e,base){
+  const b=blocks[base], f=b.until===Infinity, c=catOf(base);
+  const big=base.length<=16?'t-display':'t-h1';
+  const ends=f?'Never':(b.until===MID?wmd(b.until)+' · 00:00':wmd(b.until)+' · '+hm(b.until));
+  return `<div class="blk ${f?'forever':'timed'}"><div class="blk-in">
+    <span class="tag ${f?'inv':'timed'}">${f?'Blocked forever':'Blocked · '+untilTag(b.until)}</span>
+    <h1 class="${big} host">${esc(base)}</h1>
+    <p class="t-h2 what">${f?'Blocked forever.':'Blocked '+untilTxt(b.until)+'.'}</p>
+    <dl class="blk-meta t-mono">
+      <div><dt class="t-micro">Since</dt><dd>${sinceTxt(b.since).replace(/^today/,'Today')}</dd></div>
+      <div><dt class="t-micro">Ends</dt><dd>${ends}</dd></div>
+      <div><dt class="t-micro">List</dt><dd>${esc(c?c.name:'Your sites')}</dd></div>
+    </dl>
+    <div class="row"><button class="btn lg ${f?'on-em':''}" data-act="back">${IC.back}Back</button>
+    <span class="t-mono">${f?'This block can’t be lifted or shortened.':'This block can be lengthened from the toolbar, not shortened.'}</span></div>
+  </div></div>`;
+}
+function pageHTML(e){
+  if(e.host==='github.com') return GH;
+  if(e.host==='en.wikipedia.org') return WK;
+  if(e.page==='google') return `<div class="gg"><div class="gg-top"><span class="gg-logo"><span style="color:#4285f4">G</span><span style="color:#ea4335">o</span><span style="color:#fbbc05">o</span><span style="color:#4285f4">g</span><span style="color:#34a853">l</span><span style="color:#ea4335">e</span></span><div class="gg-q">${esc(e.q)}</div></div><div class="gg-r">
+    ${[1,2,3].map(i=>`<div><small>example${i}.org › ${esc(e.q.split(' ')[0]||'search')}</small><a>${esc(e.q)}: result ${i}</a><p>An ordinary results page. Mast leaves search alone; only the sites on your blocklist are stopped.</p></div>`).join('')}</div></div>`;
+  return `<div class="gen"><div class="gen-top">${esc(e.host)}</div><div class="gen-b"><i style="height:320px"></i><i style="height:320px"></i><i style="height:120px"></i><i style="height:120px"></i></div></div>`;
+}
+
+let ntpScroll=0;
+function renderView(){
+  const v=$('#view'), e=entry(cur());
+  if(v.classList.contains('v-ntp')) ntpScroll=v.scrollTop;
+  v.className='view';
+  if(e.kind==='ntp'){ v.classList.add('v-ntp'); v.innerHTML=ntpHTML(); v.scrollTop=ntpScroll; return; }
+  const base=blockedBase(e.host);
+  v.innerHTML= base?blockedHTML(e,base):pageHTML(e); v.scrollTop=0;
+}
+function renderAll(){ renderTabs(); renderBar(); renderView(); if(!$('#pop').hidden) renderPop(); }
+
+/* ---------------- popover (toolbar Block) ---------------- */
+function renderPop(){
+  const e=entry(cur()); if(e.kind!=='site'){closePop();return;}
+  const base=blockedBase(e.host), bl=base&&blocks[base], cu=bl?bl.until:-1;
+  const host=base||e.host.replace(/^www\./,'');
+  if(bl&&bl.until===Infinity){
+    $('#pop').innerHTML=`<div class="row"><span class="t-micro dim">This site</span><span class="tag forever">Forever</span></div>
+      <div class="host">${esc(host)}</div>
+      <p class="t-mono note">Blocked since ${sinceTxt(bl.since)}. Forever is forever: it can't be lifted, shortened or paused.</p>
+      <div class="seg" style="--cols:3">${DUR.map(d=>`<button disabled ${d.id==='inf'?'class="inf" aria-checked="true"':''}>${d.label.replace('Until midnight','Midnight')}</button>`).join('')}</div>`;
+  } else {
+    if(durU(popDur)<=cu) popDur=(DUR.find(d=>d.u()>cu)||DUR[5]).id;
+    $('#pop').innerHTML=`<div class="row"><span class="t-micro dim">${bl?'Lengthen this block':'Block this site'}</span>${bl?`<span class="tag timed">${untilTag(cu)}</span>`:''}</div>
+      <div class="host">${esc(host)}</div>
+      <div class="seg" style="--cols:3" role="radiogroup" aria-label="Duration">${DUR.map(d=>`<button role="radio" class="${d.id==='inf'?'inf':''}" data-pdur="${d.id}" aria-checked="${d.id===popDur}" ${d.u()<=cu?'disabled':''}>${d.label.replace('Until midnight','Midnight')}</button>`).join('')}</div>
+      <p class="t-mono note">${bl?'Shorter options are struck out: blocks only get longer.':'Adds '+esc(host)+' to Your sites. Undo is open for 10 seconds.'}</p>
+      <button class="btn em lg" id="popBlock">${bl?'Lengthen to '+DUR.find(d=>d.id===popDur).label.toLowerCase().replace('until ',''):'Block '+untilTxt(durU(popDur))}</button>`;
+  }
+}
+function openPop(){ closeMenu(); popDur='mid'; const p=$('#pop'); p.hidden=false; renderPop(); place(p,$('#tbBlock')); renderBar(); }
+function closePop(){ if($('#pop').hidden)return; $('#pop').hidden=true; renderBar(); }
+function place(layer,anchor){
+  const w=$('#win').getBoundingClientRect(), r=anchor.getBoundingClientRect();
+  layer.style.top=(r.bottom-w.top+8)+'px';
+  layer.style.left=Math.max(8,Math.min(r.right-w.left-layer.offsetWidth, w.width-layer.offsetWidth-12))+'px';
+}
+
+/* ---------------- menu ---------------- */
+function renderMenu(){
+  const m=plat==='mac', k=(c,shift)=>m?(shift?'⇧':'')+'⌘'+c:'Ctrl+'+(shift?'Shift+':'')+c;
+  $('#menu').innerHTML=`
+    <button class="mi" role="menuitem" data-m="newtab">New tab<kbd>${k('T')}</kbd></button>
+    <button class="mi" role="menuitem">New window<kbd>${k('N')}</kbd></button>
+    <button class="mi" role="menuitem">New private window<kbd>${k('N',1)}</kbd></button>
+    <div class="msep"></div>
+    <button class="mi" role="menuitem" data-m="list">Blocklist<span class="tag forever" style="margin-left:auto">${Object.keys(blocks).length}</span></button>
+    <button class="mi" role="menuitem">History<kbd>${m?'⌘Y':'Ctrl+H'}</kbd></button>
+    <button class="mi" role="menuitem">Downloads<kbd>${m?'⇧⌘J':'Ctrl+J'}</kbd></button>
+    <button class="mi" role="menuitem">Bookmarks</button>
+    <div class="msep"></div>
+    <div class="mzoom"><span class="t-ui">Zoom</span><div class="seg sm"><button data-z="-1" aria-label="Zoom out">−</button><button data-z="0">${zoom}%</button><button data-z="1" aria-label="Zoom in">+</button></div></div>
+    <div class="msep"></div>
+    <button class="mi" role="menuitem">Print…<kbd>${k('P')}</kbd></button>
+    <button class="mi" role="menuitem">Find…<kbd>${k('F')}</kbd></button>
+    <button class="mi" role="menuitem">Settings<kbd>${m?'⌘,':''}</kbd></button>
+    <button class="mi" role="menuitem">Help</button>
+    <div class="msep"></div>
+    <button class="mi" role="menuitem">${m?'Quit Mast':'Exit'}<kbd>${m?'⌘Q':''}</kbd></button>`;
+}
+function openMenu(){ closePop(); const mn=$('#menu'); renderMenu(); mn.hidden=false; place(mn,$('#menuBtn')); $('#menuBtn').setAttribute('aria-expanded','true'); }
+function closeMenu(){ $('#menu').hidden=true; $('#menuBtn').setAttribute('aria-expanded','false'); }
+
+/* ---------------- block + undo ---------------- */
+let toastT=null, toastI=null;
+function doBlock(hosts,durId,name,addMine){
+  const prev={blocks:structuredClone(blocks),mine:[...CATS[5].sites],sel:new Set(sel)};
+  if(addMine&&!catOf(addMine)) CATS[5].sites.push(addMine);
+  const U=durU(durId); let n=0;
+  hosts.forEach(h=>{ const b=blocks[h]; if(!b||b.until<U){ blocks[h]={until:U,since:b?b.since:NOW}; n++; } });
+  if(!n){ blocks=prev.blocks; CATS[5].sites=prev.mine; return; }
+  sel.clear(); renderAll();
+  toast(name,n,U,()=>{ blocks=prev.blocks; CATS[5].sites=prev.mine; sel=prev.sel; renderAll(); });
+}
+function toast(name,n,U,undo){
+  clearTimeout(toastT); clearInterval(toastI);
+  const w=$('#toasts'); let left=10;
+  w.innerHTML=`<div class="layer toast" role="status"><span class="sq ${U===Infinity?'f':''}"></span><span class="msg"><b>${esc(name)}</b> blocked ${untilTxt(U)}<span class="dim"> · ${n} site${n>1?'s':''}</span></span><span class="t-mono n">10s</span><button class="btn sm" id="undo">Undo</button><i class="bar10"></i></div>`;
+  const kill=()=>{ clearTimeout(toastT); clearInterval(toastI); w.innerHTML=''; };
+  $('#undo').onclick=()=>{ undo(); kill(); };
+  toastI=setInterval(()=>{ left--; const el=w.querySelector('.n'); if(el) el.textContent=left+'s'; },1000);
+  toastT=setTimeout(kill,10000);
+}
+
+/* ---------------- navigation ---------------- */
+function nav(e){ const t=cur(); t.hist=t.hist.slice(0,t.i+1).concat(e); t.i++; if(e.kind==='site'&&blockedBase(e.host)) stopped++; closePop(); renderAll(); }
+function go(d){ const t=cur(); const j=t.i+d; if(j<0&&entry(t).kind==='site'){ nav(ntpE()); return; } if(j<0||j>=t.hist.length)return; t.i=j; const e=entry(t); if(e.kind==='site'&&blockedBase(e.host)) stopped++; closePop(); renderAll(); }
+function activate(id){ active=id; closePop(); closeMenu(); renderAll(); }
+function newTab(){ const t=mk([ntpE()]); tabs.push(t); activate(t.id); }
+function closeTab(id){ const i=tabs.findIndex(t=>t.id===id); tabs.splice(i,1); if(!tabs.length){ newTab(); return; } if(active===id) active=tabs[Math.min(i,tabs.length-1)].id; renderAll(); }
+function parseOmni(v){
+  v=v.trim(); if(!v)return null;
+  if(/\s/.test(v)||!/\.[a-z]{2,}/i.test(v)) return {kind:'site',host:'www.google.com',path:'/search?q='+encodeURIComponent(v),title:v+' - Google Search',page:'google',q:v};
+  const m=v.replace(/^[a-z]+:\/\//i,'').match(/^([^/?#]+)(.*)$/); const host=m[1].toLowerCase().replace(/^www\./,''); const path=m[2]||'/';
+  const known=SITES[host]; return {kind:'site',host,path:known&&path==='/'?known.path:path,title:known?known.title:host};
+}
+
+/* ---------------- events ---------------- */
+document.addEventListener('click',ev=>{
+  const t=ev.target;
+  const cl=t.closest('[data-close]'); if(cl){ ev.stopPropagation(); closeTab(+cl.dataset.close); return; }
+  const tb=t.closest('.tab[data-tab]'); if(tb){ activate(+tb.dataset.tab); return; }
+  const ch=t.closest('.chip[data-host]'); if(ch){ const h=ch.dataset.host; sel.has(h)?sel.delete(h):sel.add(h); renderView(); return; }
+  const cat=t.closest('[data-cat]'); if(cat){ const c=CATS.find(x=>x.id===cat.dataset.cat); const s=c.sites.filter(selectable); const st=catSel(c); s.forEach(h=>st==='on'?sel.delete(h):sel.add(h)); renderView(); return; }
+  const du=t.closest('[data-dur]'); if(du){ dur=du.dataset.dur; renderView(); return; }
+  const pd=t.closest('[data-pdur]'); if(pd){ popDur=pd.dataset.pdur; renderPop(); return; }
+  if(t.closest('#newTab')){ newTab(); return; }
+  if(t.closest('#blockBtn')){ const s=selSummary(); doBlock(s.hosts,dur,s.title); return; }
+  if(t.closest('#popBlock')){ const e=entry(cur()); const base=blockedBase(e.host)||e.host.replace(/^www\./,''); closePop(); doBlock([base],popDur,base,base); return; }
+  if(t.closest('[data-act=back]')){ go(-1); return; }
+  const z=t.closest('[data-z]'); if(z){ const d=+z.dataset.z; zoom=d?Math.max(25,Math.min(500,zoom+d*10)):100; renderMenu(); return; }
+  const mi=t.closest('.mi'); if(mi&&mi.closest('#menu')){ closeMenu(); if(mi.dataset.m==='newtab')newTab(); if(mi.dataset.m==='list'){ const nt=tabs.find(x=>entry(x).kind==='ntp'); nt?activate(nt.id):newTab(); } return; }
+  if(!t.closest('#pop')&&!t.closest('#tbBlock')) closePop();
+  if(!t.closest('#menu')&&!t.closest('#menuBtn')) closeMenu();
+});
+$('#tbBlock').onclick=()=>$('#pop').hidden?openPop():closePop();
+$('#menuBtn').onclick=()=>$('#menu').hidden?openMenu():closeMenu();
+$('#back').onclick=()=>go(-1);
+$('#fwd').onclick=()=>go(1);
+$('#reload').onclick=()=>renderView();
+$('#omniIn').addEventListener('focus',e=>e.target.select());
+$('#omniIn').addEventListener('keydown',e=>{ if(e.key==='Enter'){ const n=parseOmni(e.target.value); if(n){ e.target.blur(); nav(n); } } if(e.key==='Escape'){ e.target.blur(); renderBar(); } });
+document.addEventListener('keydown',e=>{
+  if(e.target.id==='addSite'&&e.key==='Enter'){ const v=e.target.value.trim().toLowerCase().replace(/^[a-z]+:\/\//,'').replace(/^www\./,'').split('/')[0]; if(/\.[a-z]{2,}$/.test(v)&&!catOf(v)){ CATS[5].sites.push(v); sel.add(v); renderView(); setTimeout(()=>$('#addSite')&&$('#addSite').focus()); } return; }
+  if(e.key==='Escape'){ closePop(); closeMenu(); if(!$('#sheet').hidden) $('#sheet').hidden=true; }
+  const mod=plat==='mac'?e.metaKey:e.ctrlKey;
+  if(mod&&e.key.toLowerCase()==='t'){ e.preventDefault(); newTab(); }
+  if(mod&&e.key.toLowerCase()==='l'){ e.preventDefault(); $('#omniIn').focus(); }
+});
+
+/* platform + caption + sheet */
+function setPlat(p){ plat=p; document.body.className='plat-'+p; $$('#plat [data-plat]').forEach(b=>b.setAttribute('aria-checked',String(b.dataset.plat===p))); closePop(); closeMenu(); }
+$('#plat').addEventListener('click',e=>{ const b=e.target.closest('[data-plat]'); if(b) setPlat(b.dataset.plat); });
+$('#capLogo').innerHTML=logo(20);
+$('#capMin').onclick=()=>{ const c=$('#cap'), min=!c.classList.contains('min'); c.classList.toggle('min',min); $('#capMin').setAttribute('aria-expanded',String(!min)); $('#capMin').innerHTML=min?'<svg class="i s16" viewBox="0 0 20 20"><path d="M10 5v10M5 10h10"/></svg>':'<svg class="i s16" viewBox="0 0 20 20"><path d="M5 10h10"/></svg>'; };
+$('#sysBtn').onclick=()=>{ closePop(); closeMenu(); $('#sheet').hidden=false; };
+$('#sheetX').onclick=()=>$('#sheet').hidden=true;
+$('#sheet').addEventListener('click',e=>{ if(e.target.id==='sheet') $('#sheet').hidden=true; });
+$('#sysTabs').innerHTML=[
+  tabHTML({title:'Wikipedia',fav:fav('en.wikipedia.org')}),
+  tabHTML({title:'Wikipedia',fav:fav('en.wikipedia.org')},'is-hover'),
+  tabHTML({title:'GitHub',fav:fav('github.com')},'active'),
+  tabHTML({title:'YouTube',fav:IC.block16,st:'timed',suf:'00:00'}),
+  tabHTML({title:'X',fav:IC.block16,st:'forever',suf:'∞'}),
+  tabHTML({title:'X',fav:IC.block16,st:'forever',suf:'∞'},'active'),
+].join('');
+$$('#sysTabs .tab').forEach(t=>{t.style.flex='0 0 auto';t.style.width='176px'});
+window.addEventListener('resize',()=>{ if(!$('#pop').hidden) place($('#pop'),$('#tbBlock')); if(!$('#menu').hidden) place($('#menu'),$('#menuBtn')); });
+
+/* ---------------- site mocks ---------------- */
+const fileIco='<svg viewBox="0 0 16 16"><path d="M2 1.75C2 .78 2.78 0 3.75 0h6.59l3.66 3.66v10.59c0 .97-.78 1.75-1.75 1.75h-8.5C2.78 16 2 15.22 2 14.25zM3.75 1.5a.25.25 0 0 0-.25.25v12.5c0 .14.11.25.25.25h8.5a.25.25 0 0 0 .25-.25V4.5h-3.25A.75.75 0 0 1 8.5 3.75V1.5z"/></svg>';
+const dirIco='<svg viewBox="0 0 16 16"><path d="M0 2.75C0 1.78.78 1 1.75 1h3.84c.55 0 1.07.26 1.4.7l.9 1.2c.05.06.12.1.2.1h6.16c.97 0 1.75.78 1.75 1.75v8.5c0 .97-.78 1.75-1.75 1.75H1.75A1.75 1.75 0 0 1 0 13.25z"/></svg>';
+const files=[['d','.github','ci: build linux x64 nightly','3 days ago'],['d','chrome/browser/mast','feat: block service survives restart','2 days ago'],['d','components/blocklist','feat: categories ship pre-filled','4 days ago'],['d','demo','feat(brand): white sails on deeper ember','2 days ago'],['d','docs','docs: Chromium fork wiring plan','2 days ago'],['d','patches','chore: rebase on M142','last week'],['f','DEPS','chore: rebase on M142','last week'],['f','LICENSE','initial commit','last month'],['f','README.md','docs: drop pact wording from README','last week']];
+const GH=`<div class="gh"><div class="gh-top"><svg width="32" height="32" viewBox="0 0 16 16"><path fill="#f0f6fc" d="M8 0a8 8 0 0 0-2.5 15.6c.4 0 .5-.2.5-.4v-1.5c-2.2.5-2.7-1-2.7-1-.4-.9-.9-1.2-.9-1.2-.7-.5.1-.5.1-.5.8.1 1.2.8 1.2.8.7 1.3 1.9.9 2.3.7.1-.5.3-.9.5-1.1-1.8-.2-3.6-.9-3.6-4 0-.9.3-1.6.8-2.1-.1-.2-.4-1 .1-2.1 0 0 .7-.2 2.2.8a7.5 7.5 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.4 1.1.2 1.9.1 2.1.5.6.8 1.3.8 2.1 0 3.1-1.9 3.8-3.6 4 .3.3.6.8.6 1.5v2.2c0 .2.1.5.6.4A8 8 0 0 0 8 0z"/></svg>
+<span class="crumb">mast-browser / <b>mast</b></span><span class="pill">Public</span><span class="search">Type <kbd style="border:1px solid #3d444d;border-radius:4px;padding:0 4px;margin:0 4px;font-size:12px">/</kbd> to search</span><span class="av"></span></div>
+<div class="gh-nav"><a class="on">Code</a><a>Issues <i>12</i></a><a>Pull requests <i>3</i></a><a>Actions</a><a>Projects</a><a>Security</a><a>Insights</a></div>
+<div class="gh-main"><div><div class="gh-row"><span class="gh-btn">main ▾</span><span style="color:#9198a1;font-size:14px">3 branches · 41 tags</span><span class="gh-btn">Go to file</span><span class="gh-btn g">Code ▾</span></div>
+<div class="gh-files"><div class="hd"><span class="av"></span><b>0xmiki</b><span style="color:#9198a1">feat(brand): white sails on deeper ember</span><span>56a8b69 · 2 days ago</span></div>
+${files.map(f=>`<div class="fr ${f[0]==='d'?'dir':''}">${f[0]==='d'?dirIco:fileIco}<span>${f[1]}</span><span>${f[2]}</span><span>${f[3]}</span></div>`).join('')}</div>
+<div class="gh-readme"><h2>Mast</h2><p>A Chromium-based browser whose one job is blocking distractions. The blocklist lives in the browser, not in an extension, so it can't be switched off.</p><p>Blocks can be lengthened but never shortened. Build with <code>autoninja -C out/Release chrome</code>.</p></div></div>
+<div class="gh-side"><h3>About</h3><p>The browser that blocks distractions and stays blocked.</p><div class="tp"><span>chromium</span><span>browser</span><span>focus</span><span>blocklist</span></div><div class="ln">☆ 1.2k stars</div><div class="ln">◉ 18 watching</div><div class="ln">⑂ 64 forks</div></div></div></div>`;
+const WK=`<div class="wk"><div class="wk-top"><span style="font-size:20px;color:#202122">☰</span><span class="wk-logo"><i>W</i><span><b>WIKIPEDIA</b><small>The Free Encyclopedia</small></span></span><span class="wk-search"><span>Search Wikipedia</span><b>Search</b></span></div>
+<div class="wk-body"><nav class="wk-toc"><b>Contents</b><a>(Top)</a><a>Definition</a><a>Measurement</a><a>Factors</a><a>Media and technology</a><a>See also</a><a>References</a></nav>
+<article><h1>Attention span</h1><div class="wk-tabs"><span>Article</span><span>Talk</span><span class="sp">Read</span><span>Edit</span><span>View history</span></div><p class="from">From Wikipedia, the free encyclopedia</p>
+<div class="wk-box"><div class="ph"></div><table><tr><th>Field</th><td>Psychology, neuroscience</td></tr><tr><th>Related</th><td><a class="l">Attention</a>, <a class="l">Distraction</a></td></tr></table></div>
+<p><b>Attention span</b> is the amount of time spent concentrating on a task before becoming <a class="l">distracted</a>. Distractibility occurs when attention is uncontrollably diverted to another activity or sensation. <a class="l">Attention training</a> is said to be part of education, particularly in the way students are trained to remain focused on a topic of discussion for extended periods.</p>
+<p>The ability to sustain attention varies between people and between tasks, and depends on factors such as motivation, fatigue, interest in the material and the surrounding environment.</p>
+<h2>Measurement</h2><p>Researchers measure sustained attention with continuous performance tasks, in which participants respond to occasional targets over a long run of stimuli. Performance typically declines the longer the task continues, an effect known as the <a class="l">vigilance decrement</a>.</p>
+<h2>Factors</h2><p>Environmental factors include noise, interruptions and the availability of competing activities. Studies of workplace interruptions suggest that resuming a task after a switch has a measurable cost in time and errors.</p></article></div></div>`;
+
+renderAll();
+})();
+</script>
+</body>
+</html>
