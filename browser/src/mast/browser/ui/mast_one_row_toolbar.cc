@@ -12,6 +12,8 @@
 #include "chrome/browser/ui/views/toolbar/reload_button.h"
 #include "chrome/browser/ui/views/toolbar/toolbar_button.h"
 #include "chrome/browser/ui/views/toolbar/toolbar_view.h"
+#include "components/bookmarks/common/bookmark_bar_visibility_state.h"
+#include "components/bookmarks/common/bookmark_pref_names.h"
 #include "components/prefs/pref_service.h"
 #include "mast/browser/mast_prefs.h"
 #include "mast/browser/mast_theme.h"
@@ -22,11 +24,30 @@
 
 namespace mast {
 
+namespace {
+
+// Mast has no bookmarks bar (saved sites live on the new tab page, and its
+// toggle is gone from the menu and Ctrl+Shift+B). Profiles that showed it keep
+// it hidden.
+void HideBookmarksBar(PrefService* prefs) {
+  if (prefs->FindPreference(bookmarks::prefs::kShowBookmarkBar)) {
+    prefs->SetBoolean(bookmarks::prefs::kShowBookmarkBar, false);
+  }
+  if (prefs->FindPreference(bookmarks::prefs::kBookmarkBarVisibilityState)) {
+    prefs->SetInteger(
+        bookmarks::prefs::kBookmarkBarVisibilityState,
+        static_cast<int>(bookmarks::BookmarkBarVisibilityState::kAlwaysHide));
+  }
+}
+
+}  // namespace
+
 void OnBrowserWindowReady(BrowserWindowInterface* browser) {
   // Customize's palette and backdrop, before the window first paints. Later
   // picks apply from the new tab page (mast_ui.cc).
   if (browser && browser->GetProfile()) {
     ApplyTheme(browser->GetProfile()->GetPrefs());
+    HideBookmarksBar(browser->GetProfile()->GetPrefs());
   }
   if (!IsOneRowWindow() || !browser ||
       browser->GetType() != BrowserWindowInterface::TYPE_NORMAL) {

@@ -18,6 +18,12 @@ namespace {
 
 constexpr char kDesktopMetaKey[] = "mast_desktop";
 
+// What the folder is called wherever bookmarks are listed (the bookmark
+// manager): it is what the new tab page shows. Early builds called it
+// "Desktop", which read as the computer's desktop; those get renamed.
+constexpr char16_t kFolderTitle[] = u"New tab";
+constexpr char16_t kOldFolderTitle[] = u"Desktop";
+
 const bookmarks::BookmarkNode* Find(const bookmarks::BookmarkNode* node) {
   std::string value;
   if (node->GetMetaInfo(kDesktopMetaKey, &value) && value == "1") {
@@ -69,6 +75,10 @@ const bookmarks::BookmarkNode* FindDesktopFolder(
 
 const bookmarks::BookmarkNode* DesktopFolder(bookmarks::BookmarkModel* model) {
   if (const bookmarks::BookmarkNode* found = FindDesktopFolder(model)) {
+    if (found->GetTitle() == kOldFolderTitle) {
+      model->SetTitle(found, kFolderTitle,
+                      bookmarks::metrics::BookmarkEditSource::kOther);
+    }
     return found;
   }
   if (!model || !model->loaded()) {
@@ -77,7 +87,7 @@ const bookmarks::BookmarkNode* DesktopFolder(bookmarks::BookmarkModel* model) {
   bookmarks::BookmarkNode::MetaInfoMap meta;
   meta[kDesktopMetaKey] = "1";
   const bookmarks::BookmarkNode* other = model->other_node();
-  return model->AddFolder(other, other->children().size(), u"Desktop", &meta);
+  return model->AddFolder(other, other->children().size(), kFolderTitle, &meta);
 }
 
 std::unique_ptr<power_bookmarks::SuggestedSaveLocationProvider>

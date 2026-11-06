@@ -168,7 +168,7 @@ edit(H, "chrome/browser/resources/settings/page_visibility.ts", lambda t: once(t
     "      a11y: true, ai: false, autofill: true, defaultBrowser: true, downloads: true,\n"
     "      extensions: true, languages: true, onStartup: true, people: false,\n"
     "      performance: true, reset: true, safetyHub: true, system: true, yourSavedInfo: true,\n"
-    "      appearance: {bookmarksBar: true, homeButton: true, hoverCard: true, pageZoom: true,\n"
+    "      appearance: {bookmarksBar: false, homeButton: true, hoverCard: true, pageZoom: true,\n"
     "                   setTheme: true, sidePanel: true},\n"
     "      privacy: {networkPrediction: true, searchPrediction: true},\n"
     "    };\n  }\n"))
@@ -213,6 +213,75 @@ edit(H, "chrome/browser/ui/tab_ui_helper.cc", lambda t: once(once(t,
     '    if (IsNTP(web_contents()->GetVisibleURL())) {\n'
     '      return ui::ImageModel::FromResourceId(IDR_NTP_FAVICON);\n    }\n'))
 edit(H, "chrome/browser/ui/BUILD.gn", lambda t: add_dep(t, '  source_set("tab_ui_helper") {', "//chrome/app/theme:theme_resources"))
+
+# ---------------------------------------------------------------- bookmarks
+# Saved sites live on the new tab page (a bookmarks folder, mast/browser/desktop). There is
+# no bookmarks bar, and the star doesn't ask for a folder: it puts the page on the new tab.
+
+# The star's bubble: name and Remove, no folder picker (the folder comes from Mast's
+# suggested save location, the new tab's folder).
+edit(H, "chrome/browser/ui/views/bookmarks/bookmark_bubble_view.cc", lambda t: once(once(t,
+    '      .AddCombobox(\n'
+    '          kBookmarkFolderFieldId,\n'
+    '          l10n_util::GetStringUTF16(IDS_BOOKMARK_BUBBLE_FOLDER_LABEL),\n'
+    '          std::make_unique<RecentlyUsedFoldersComboModel>(\n'
+    '              bookmark_model,\n'
+    '              bookmark_model->GetMostRecentlyAddedUserNodeForURL(url)),\n'
+    '          ui::DialogModelCombobox::Params().SetCallback(\n'
+    '              base::BindRepeating(&BookmarkBubbleDelegate::OnComboboxAction,\n'
+    '                                  base::Unretained(bubble_delegate))))\n',
+    '      // Mast: no folder picker; the star saves to the new tab page.\n'),
+    '    GetFolderModel()->MaybeChangeParent(\n'
+    '        node, dialog_model()\n'
+    '                  ->GetComboboxByUniqueId(kBookmarkFolderFieldId)\n'
+    '                  ->selected_index());\n',
+    ''))
+edit(H, "chrome/app/bookmarks_strings.grdp", lambda t: once(once(t,
+    '  <message name="IDS_BOOKMARK_BUBBLE_PAGE_BOOKMARKED" desc="Title of the bubble after bookmarking a page.">\n'
+    '    Bookmark added\n',
+    '  <message name="IDS_BOOKMARK_BUBBLE_PAGE_BOOKMARKED" desc="Title of the bubble after bookmarking a page.">\n'
+    '    Added to New Tab\n'),
+    '  <message name="IDS_BOOKMARK_BUBBLE_PAGE_BOOKMARK" desc="Title of the bubble when re-clicking on a bookmark">\n'
+    '    Edit bookmark\n',
+    '  <message name="IDS_BOOKMARK_BUBBLE_PAGE_BOOKMARK" desc="Title of the bubble when re-clicking on a bookmark">\n'
+    '    On your New Tab\n'))
+# The bookmarked (filled) star painted in Chromium's "cascading accent", which falls back to
+# the focus ring colour, kept deliberately faint in Mast: a starred page looked unstarred.
+# It uses the strong foreground of the icons around it; filled vs outline tells the state.
+edit(H, "chrome/browser/ui/views/bookmarks/bookmark_page_action_controller.cc", lambda t: once(t,
+    '      starred ? page_actions::PageActionColorSource::kCascadingAccent\n'
+    '              : page_actions::PageActionColorSource::kForeground,\n',
+    '      // Mast: the foreground either way (see make-patches.py).\n'
+    '      page_actions::PageActionColorSource::kForeground,\n'))
+# No bookmarks bar: its items leave the Bookmarks menu, and its toggle (Ctrl+Shift+B too)
+# is never enabled. mast::OnBrowserWindowReady keeps the bar hidden for old profiles.
+edit(H, "chrome/browser/ui/toolbar/bookmark_sub_menu_model.cc", lambda t: once(t,
+    '    SetElementIdentifierAt(GetIndexOfCommandId(IDC_SHOW_BOOKMARK_BAR).value(),\n'
+    '                           kShowBookmarkBarMenuItem);\n  }\n',
+    '    SetElementIdentifierAt(GetIndexOfCommandId(IDC_SHOW_BOOKMARK_BAR).value(),\n'
+    '                           kShowBookmarkBarMenuItem);\n  }\n'
+    '  // Mast: no bookmarks bar.\n'
+    '  for (int id : {IDC_SHOW_BOOKMARK_BAR, IDC_BOOKMARK_BAR_SUBMENU}) {\n'
+    '    if (const std::optional<size_t> index = GetIndexOfCommandId(id)) {\n'
+    '      RemoveItemAt(*index);\n    }\n  }\n'))
+edit(H, "chrome/browser/ui/browser_command_controller.cc", lambda t: once(t,
+    '  command_updater_->UpdateCommandEnabled(\n'
+    '      IDC_SHOW_BOOKMARK_BAR,\n'
+    '      common_enabled && !profile()->GetPrefs()->IsManagedPreference(\n'
+    '                            bookmarks::prefs::kShowBookmarkBar));\n',
+    '  // Mast: no bookmarks bar, so no toggle (or Ctrl+Shift+B) for it.\n'
+    '  command_updater_->UpdateCommandEnabled(IDC_SHOW_BOOKMARK_BAR, false);\n'))
+# Settings: the bookmarks bar's tab-group options go with it (the bar's own row is hidden
+# through page_visibility.ts above).
+edit(H, "chrome/browser/resources/settings/appearance_page/appearance_page.html.ts", lambda t: once(once(t,
+    '        label="$i18n{showTabGroupsInBookmarksBar}"\n'
+    '        ?hidden="${this.showOrganizerPanelEnabled_}">\n',
+    '        label="$i18n{showTabGroupsInBookmarksBar}"\n'
+    '        hidden>\n'),
+    '        label="$i18n{autoPinNewTabGroups}"\n'
+    '        ?hidden="${this.showOrganizerPanelEnabled_}">\n',
+    '        label="$i18n{autoPinNewTabGroups}"\n'
+    '        hidden>\n'))
 
 # ---------------------------------------------------------------- theme
 T = "mast-theme.patch"

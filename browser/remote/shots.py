@@ -271,6 +271,13 @@ p.js("chrome.send('setWallpaperTone', ['light'])")
 time.sleep(1)
 p.go("chrome://newtab")
 shot("24-wallpaper-light", settle=2)
+# The star: Ctrl+D on a site saves it to the new tab (no folder picker), and a starred
+# page shows a filled star.
+p.go("https://www.vitsoe.com/", 5)
+keys("ctrl+d")
+shot("25-star-bubble", settle=1.5)
+keys("Escape")
+shot("26-starred", settle=1)
 p.go("chrome://newtab")
 p.js("chrome.send('setPalette', ['onyx']); chrome.send('clearWallpaper')")
 time.sleep(1)

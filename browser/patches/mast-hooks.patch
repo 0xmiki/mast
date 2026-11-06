@@ -1,3 +1,19 @@
+diff -ruN a/chrome/app/bookmarks_strings.grdp b/chrome/app/bookmarks_strings.grdp
+--- a/chrome/app/bookmarks_strings.grdp
++++ b/chrome/app/bookmarks_strings.grdp
+@@ -252,10 +252,10 @@
+ 
+   <!-- Begin of Bookmarks Bubble strings. -->
+   <message name="IDS_BOOKMARK_BUBBLE_PAGE_BOOKMARKED" desc="Title of the bubble after bookmarking a page.">
+-    Bookmark added
++    Added to New Tab
+   </message>
+   <message name="IDS_BOOKMARK_BUBBLE_PAGE_BOOKMARK" desc="Title of the bubble when re-clicking on a bookmark">
+-    Edit bookmark
++    On your New Tab
+   </message>
+   <message name="IDS_BOOKMARK_BUBBLE_NAME_LABEL" desc="Text preceding the title of the page that was bookmarked" meaning="Name of an inanimate object">
+     Name
 diff -ruN a/chrome/browser/autocomplete/chrome_autocomplete_scheme_classifier.cc b/chrome/browser/autocomplete/chrome_autocomplete_scheme_classifier.cc
 --- a/chrome/browser/autocomplete/chrome_autocomplete_scheme_classifier.cc
 +++ b/chrome/browser/autocomplete/chrome_autocomplete_scheme_classifier.cc
@@ -163,6 +179,25 @@ diff -ruN a/chrome/browser/prefs/incognito_mode_prefs.cc b/chrome/browser/prefs/
  
    IncognitoModeAvailability result = kDefaultAvailability;
    // Enterprise Isolated Mode has higher priority than the Incognito mode
+diff -ruN a/chrome/browser/resources/settings/appearance_page/appearance_page.html.ts b/chrome/browser/resources/settings/appearance_page/appearance_page.html.ts
+--- a/chrome/browser/resources/settings/appearance_page/appearance_page.html.ts
++++ b/chrome/browser/resources/settings/appearance_page/appearance_page.html.ts
+@@ -218,13 +218,13 @@
+     <settings-toggle-button class="hr" id="showSavedTabGroups"
+         pref-key="bookmark_bar.show_tab_groups"
+         label="$i18n{showTabGroupsInBookmarksBar}"
+-        ?hidden="${this.showOrganizerPanelEnabled_}">
++        hidden>
+     </settings-toggle-button>
+ 
+     <settings-toggle-button class="hr" id="autoPinNewTabGroups"
+         pref-key="auto_pin_new_tab_groups"
+         label="$i18n{autoPinNewTabGroups}"
+-        ?hidden="${this.showOrganizerPanelEnabled_}">
++        hidden>
+     </settings-toggle-button>
+ 
+     ${this.showCtrlTabMru_ ? html`
 diff -ruN a/chrome/browser/resources/settings/page_visibility.ts b/chrome/browser/resources/settings/page_visibility.ts
 --- a/chrome/browser/resources/settings/page_visibility.ts
 +++ b/chrome/browser/resources/settings/page_visibility.ts
@@ -177,7 +212,7 @@ diff -ruN a/chrome/browser/resources/settings/page_visibility.ts b/chrome/browse
 +      a11y: true, ai: false, autofill: true, defaultBrowser: true, downloads: true,
 +      extensions: true, languages: true, onStartup: true, people: false,
 +      performance: true, reset: true, safetyHub: true, system: true, yourSavedInfo: true,
-+      appearance: {bookmarksBar: true, homeButton: true, hoverCard: true, pageZoom: true,
++      appearance: {bookmarksBar: false, homeButton: true, hoverCard: true, pageZoom: true,
 +                   setTheme: true, sidePanel: true},
 +      privacy: {networkPrediction: true, searchPrediction: true},
 +    };
@@ -205,6 +240,22 @@ diff -ruN a/chrome/browser/themes/theme_service.cc b/chrome/browser/themes/theme
    registry->RegisterIntegerPref(
        prefs::kDeprecatedUserColorDoNotUse, SK_ColorTRANSPARENT,
        user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
+diff -ruN a/chrome/browser/ui/browser_command_controller.cc b/chrome/browser/ui/browser_command_controller.cc
+--- a/chrome/browser/ui/browser_command_controller.cc
++++ b/chrome/browser/ui/browser_command_controller.cc
+@@ -2316,10 +2316,8 @@
+       !profile()->GetPrefs()->IsManagedPreference(
+           bookmarks::prefs::kShowBookmarkBar);
+ 
+-  command_updater_->UpdateCommandEnabled(
+-      IDC_SHOW_BOOKMARK_BAR,
+-      common_enabled && !profile()->GetPrefs()->IsManagedPreference(
+-                            bookmarks::prefs::kShowBookmarkBar));
++  // Mast: no bookmarks bar, so no toggle (or Ctrl+Shift+B) for it.
++  command_updater_->UpdateCommandEnabled(IDC_SHOW_BOOKMARK_BAR, false);
+   command_updater_->UpdateCommandEnabled(IDC_BOOKMARK_BAR_SUBMENU,
+                                          common_enabled);
+   command_updater_->UpdateCommandEnabled(IDC_BOOKMARK_BAR_SUBMENU_ALWAYS_SHOW,
 diff -ruN a/chrome/browser/ui/BUILD.gn b/chrome/browser/ui/BUILD.gn
 --- a/chrome/browser/ui/BUILD.gn
 +++ b/chrome/browser/ui/BUILD.gn
@@ -238,6 +289,67 @@ diff -ruN a/chrome/browser/ui/tab_ui_helper.cc b/chrome/browser/ui/tab_ui_helper
      // Cache the model so repeated calls return an equal ImageModel; TabData
      // compares favicons by value, and a fresh BindRepeating each call would
      // never compare equal. The bound resolver still re-runs at raster time, so
+diff -ruN a/chrome/browser/ui/toolbar/bookmark_sub_menu_model.cc b/chrome/browser/ui/toolbar/bookmark_sub_menu_model.cc
+--- a/chrome/browser/ui/toolbar/bookmark_sub_menu_model.cc
++++ b/chrome/browser/ui/toolbar/bookmark_sub_menu_model.cc
+@@ -81,6 +81,12 @@
+     SetElementIdentifierAt(GetIndexOfCommandId(IDC_SHOW_BOOKMARK_BAR).value(),
+                            kShowBookmarkBarMenuItem);
+   }
++  // Mast: no bookmarks bar.
++  for (int id : {IDC_SHOW_BOOKMARK_BAR, IDC_BOOKMARK_BAR_SUBMENU}) {
++    if (const std::optional<size_t> index = GetIndexOfCommandId(id)) {
++      RemoveItemAt(*index);
++    }
++  }
+ 
+   AddItemWithStringId(IDC_SHOW_BOOKMARK_SIDE_PANEL,
+                       IDS_SHOW_BOOKMARK_SIDE_PANEL);
+diff -ruN a/chrome/browser/ui/views/bookmarks/bookmark_bubble_view.cc b/chrome/browser/ui/views/bookmarks/bookmark_bubble_view.cc
+--- a/chrome/browser/ui/views/bookmarks/bookmark_bubble_view.cc
++++ b/chrome/browser/ui/views/bookmarks/bookmark_bubble_view.cc
+@@ -397,10 +397,6 @@
+           UserMetricsAction("BookmarkBubble_ChangeTitleInBubble"));
+     }
+ 
+-    GetFolderModel()->MaybeChangeParent(
+-        node, dialog_model()
+-                  ->GetComboboxByUniqueId(kBookmarkFolderFieldId)
+-                  ->selected_index());
+ 
+     if (auto* const user_education =
+             BrowserUserEducationInterface::From(browser_)) {
+@@ -535,15 +531,7 @@
+           bookmark_node->GetTitle(),
+           ui::DialogModelTextfield::Params().SetAccessibleName(
+               l10n_util::GetStringUTF16(IDS_BOOKMARK_AX_BUBBLE_NAME_LABEL)))
+-      .AddCombobox(
+-          kBookmarkFolderFieldId,
+-          l10n_util::GetStringUTF16(IDS_BOOKMARK_BUBBLE_FOLDER_LABEL),
+-          std::make_unique<RecentlyUsedFoldersComboModel>(
+-              bookmark_model,
+-              bookmark_model->GetMostRecentlyAddedUserNodeForURL(url)),
+-          ui::DialogModelCombobox::Params().SetCallback(
+-              base::BindRepeating(&BookmarkBubbleDelegate::OnComboboxAction,
+-                                  base::Unretained(bubble_delegate))))
++      // Mast: no folder picker; the star saves to the new tab page.
+       .SetInitiallyFocusedField(initially_focused_field);
+ 
+   if (commerce::CanTrackPrice(product_info)) {
+diff -ruN a/chrome/browser/ui/views/bookmarks/bookmark_page_action_controller.cc b/chrome/browser/ui/views/bookmarks/bookmark_page_action_controller.cc
+--- a/chrome/browser/ui/views/bookmarks/bookmark_page_action_controller.cc
++++ b/chrome/browser/ui/views/bookmarks/bookmark_page_action_controller.cc
+@@ -150,8 +150,8 @@
+           : features::IsRoundedIconsEnabled()
+               ? omnibox::kStarIcon
+               : omnibox::kStarChromeRefreshOldIcon),
+-      starred ? page_actions::PageActionColorSource::kCascadingAccent
+-              : page_actions::PageActionColorSource::kForeground,
++      // Mast: the foreground either way (see make-patches.py).
++      page_actions::PageActionColorSource::kForeground,
+       features::IsToolbarGlowUpEnabled()
+           ? std::make_optional<page_actions::PageActionAnimationParams>(
+                 {.resource_id = IDR_STAR_LOTTIE,
 diff -ruN a/chrome/browser/ui/views/page_info/BUILD.gn b/chrome/browser/ui/views/page_info/BUILD.gn
 --- a/chrome/browser/ui/views/page_info/BUILD.gn
 +++ b/chrome/browser/ui/views/page_info/BUILD.gn
