@@ -254,9 +254,17 @@ first (4 are colour mixer only; the rest are 1–3 line hooks).
     OS dark/light switch takes.
   - The pick is the profile pref `mast.theme.palette`, applied when a window opens. Mast's
     pages are served with the palette's tokens and update live.
+- **The tab row (built):** the image continues behind it, on websites too (C12).
+  - `mast_wallpaper.cc` cover-scales the image to the screen with the page's wash. It hooks
+    the two places Chromium paints a theme frame image: `BrowserFrameView::GetFrameImage`
+    (every platform's frame) and `ThemedBackground` (the toolbar, which is in the row).
+  - The new tab page lays out the same picture from the same origin (`wallpaperTop`), so
+    the two meet without a seam. The 1px separator above the page is off in one-row.
+  - Verified on Linux (Xvfb); Windows and macOS use the same frame-image path, but neither
+    has been tested.
+- **Settings (built):** it loads `colors.css` always (Chromium gated it behind the 2026
+  redesign flags). Its page, cards and selected menu item follow the palette.
 - **Step 2:**
-  - The tab row: the image continues behind it as a frame image, so it shows on websites too
-    (C12).
   - Paper, the light palette, needs light-mode mixers.
   - The palette is process-wide for now; make it per profile.
 
