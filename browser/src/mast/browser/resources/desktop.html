@@ -101,6 +101,8 @@ body.wall.light .add:hover .tile { box-shadow: inset 0 0 0 1px rgb(0 0 0/.2); co
 body.wall.light .app .label, body.wall.light .add .label, body.wall.light .hint { color: #141414; text-shadow: 0 1px 2px rgb(255 255 255/.6); }
 body.wall.light .app:hover { background: rgb(255 255 255/.25); }
 body.wall.light .customize:hover { background: #fff; }
+/* Ember as text needs a deeper tone on a light surface (the button keeps it). */
+body.wall.light .widget .status.blocked, body.wall.light .widget .ind.timed { color: #b4441a; --signal: #b4441a; }
 .customize:focus:not(:focus-visible) { outline: none; }
 .tone { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin-bottom: 8px; padding: 2px; border-radius: var(--r); background: var(--surface); }
 .tone button { height: 28px; border: 0; border-radius: 4px; background: none; color: var(--text-2); font-size: 12px; }
