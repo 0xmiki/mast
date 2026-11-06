@@ -1,3 +1,15 @@
+diff -ruN a/chrome/browser/autocomplete/chrome_autocomplete_scheme_classifier.cc b/chrome/browser/autocomplete/chrome_autocomplete_scheme_classifier.cc
+--- a/chrome/browser/autocomplete/chrome_autocomplete_scheme_classifier.cc
++++ b/chrome/browser/autocomplete/chrome_autocomplete_scheme_classifier.cc
+@@ -71,6 +71,8 @@
+   if (base::IsStringASCII(scheme) &&
+       (ProfileIOData::IsHandledProtocol(scheme) ||
+        base::EqualsCaseInsensitiveASCII(scheme, content::kViewSourceScheme) ||
++       // Mast: mast:// is chrome:// (mast/browser/mast_scheme.h).
++       base::EqualsCaseInsensitiveASCII(scheme, "mast") ||
+        base::EqualsCaseInsensitiveASCII(scheme, url::kTraceScheme) ||
+        base::EqualsCaseInsensitiveASCII(scheme, url::kJavaScriptScheme) ||
+        base::EqualsCaseInsensitiveASCII(scheme, url::kDataScheme))) {
 diff -ruN a/chrome/browser/bookmarks/BUILD.gn b/chrome/browser/bookmarks/BUILD.gn
 --- a/chrome/browser/bookmarks/BUILD.gn
 +++ b/chrome/browser/bookmarks/BUILD.gn

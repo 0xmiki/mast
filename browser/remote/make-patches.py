@@ -190,6 +190,13 @@ edit(H, "components/omnibox/browser/location_bar_model_impl.cc", lambda t: once(
     '  if (url.SchemeIs("chrome") && shown.starts_with(u"chrome://")) {\n'
     '    shown.replace(0, 6, u"mast");\n  }\n'
     '  return gfx::TruncateString(shown, max_url_display_chars_,\n                             gfx::CHARACTER_BREAK);\n'))
+# Typing mast://version in the address bar: the omnibox only treats schemes the browser
+# handles itself as URLs, and mast:// is only rewritten at navigation, so it searched.
+edit(H, "chrome/browser/autocomplete/chrome_autocomplete_scheme_classifier.cc", lambda t: once(t,
+    '       base::EqualsCaseInsensitiveASCII(scheme, content::kViewSourceScheme) ||\n',
+    '       base::EqualsCaseInsensitiveASCII(scheme, content::kViewSourceScheme) ||\n'
+    '       // Mast: mast:// is chrome:// (mast/browser/mast_scheme.h).\n'
+    '       base::EqualsCaseInsensitiveASCII(scheme, "mast") ||\n'))
 
 # New tabs show the Mast new-tab icon from the start. Before the page commits the favicon
 # driver has no icon yet, and the tab showed Chromium's default globe for a moment.
