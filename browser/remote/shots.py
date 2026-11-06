@@ -172,6 +172,14 @@ for _ in range(80):
 time.sleep(4)
 
 p = Page()
+# What a new tab's icon shows while it opens (a Chromium logo was seen for a moment):
+# the tab row, every 60ms for about a second after Ctrl+T.
+keys("ctrl+t")
+for i in range(16):
+    subprocess.run(["import", "-window", "root", "-crop", "720x41+0+0", f"{OUT}/00-newtab-icon-{i:02d}.png"])
+    time.sleep(0.06)
+print("shot 00-newtab-icon frames", flush=True)
+keys("ctrl+w")
 # The new tab page: an empty desktop first, as a fresh profile sees it.
 shot("01-desktop-empty")
 native_dump("01-desktop-empty")

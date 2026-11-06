@@ -20,9 +20,11 @@ inline constexpr SkColor kMuted = SkColorSetRGB(0x9A, 0x9A, 0x9A);
 inline constexpr SkColor kFaint = SkColorSetRGB(0x5C, 0x5C, 0x5C);
 inline constexpr SkColor kLine = SkColorSetRGB(0x17, 0x17, 0x17);
 // The signal colour: only for blocking and the state of being blocked.
-inline constexpr SkColor kEmber = SkColorSetRGB(0xFF, 0x6A, 0x3D);
-inline constexpr SkColor kEmber2 = SkColorSetRGB(0xFF, 0x8F, 0x5E);
-inline constexpr SkColor kOnEmber = SkColorSetRGB(0x1A, 0x0D, 0x07);
+// Tone 70: lighter and softer than a saturated orange, so it doesn't glow on
+// near-black (the move Chrome makes for its own dark-mode primary).
+inline constexpr SkColor kEmber = SkColorSetRGB(0xFF, 0x8F, 0x63);
+inline constexpr SkColor kEmber2 = SkColorSetRGB(0xFF, 0xA6, 0x83);
+inline constexpr SkColor kOnEmber = SkColorSetRGB(0x3D, 0x10, 0x00);
 
 }  // namespace mast::palette
 

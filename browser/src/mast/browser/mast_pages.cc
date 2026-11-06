@@ -17,7 +17,7 @@ namespace {
 constexpr char kStyle[] = R"MAST(
 :root { color-scheme: dark; --bg:#000000; --surface:#070707; --field:#141414; --pressed:#1e1e1e;
   --seg:#141414; --seg-on:#070707; --line:#171717; --text:#ededed; --text-2:#9a9a9a; --text-3:#5c5c5c;
-  --signal:#ff6a3d; --signal-text:#1a0d07; --r:6px;
+  --signal:#ff8f63; --signal-text:#3d1000; --r:6px;
   --shadow:0 8px 28px rgb(0 0 0/.45),0 0 0 1px var(--line); }
 * { box-sizing:border-box }
 html,body { margin:0; min-height:100%; background:var(--surface); color:var(--text);
@@ -27,7 +27,7 @@ button, input { font:inherit; color:inherit }
 button { cursor:pointer }
 :focus-visible { outline:2px solid var(--text-2); outline-offset:2px }
 .primary, .secondary { display:inline-flex; align-items:center; justify-content:center; gap:8px;
-  height:36px; padding:0 18px; border:0; border-radius:var(--r); font-weight:600 }
+  height:36px; padding:0 18px; border:0; border-radius:999px; font-weight:600 }
 .primary { background:var(--signal); color:var(--signal-text) }
 .primary:hover:not(:disabled) { filter:brightness(1.06) }
 .primary:active:not(:disabled) { filter:brightness(.94) }
@@ -97,10 +97,11 @@ constexpr char kDesktopPage[] =
 #include "mast/browser/resources/desktop_html.inc"
     ;
 
-// The Mast mark as the tab icon of Mast's own pages (32px, from the product
-// favicon). Chromium shows the default globe for them otherwise.
+// The Mast mark, as a monochrome outline (like other browsers' new-tab icons),
+// for the tab icon of Mast's own pages. Same image as the IDR_NTP_FAVICON
+// override, so the tab never switches between two icons.
 constexpr char kIcon[] =
-    R"(<link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABmJLR0QA/wD/AP+gvaeTAAADkElEQVRYhb2XTWhcVRiGn3Puz0ySSWKGWA3iJEIwNEMq2h9TyaZpQ00FsYWuXNW2KV0EtHZRXOhKEIpURaFIi1shSJdCre67EFwk7cJNBSm4aE2bxDSZued1MTPJzczcmYljc1bf5ZzzPe/3d+AaqtbazMEx43TGYQ5LbkiiSxJISKJklm1idvXe5veKpHtO5pbDXcvduDsf55mKodnpVGH10RUZnZNk4w7bgFefjSSuLoXehfzcwvqGAM1OpwpP/v5RmEPVDv5H+MYe0i/L6WA6P7ewbgEKTxa/2EE4kia7/ln7HMCszRwcQ/z2FNNeDa+ci6KIV6xxOtMOPBgbJ9w/uV04kjxr3GnrDEfaiTx8fYreD6+QnnhrO3Ak4QxTVk65dtJemiVD7+ynpMaPtAwXIKdBK5Fpt+YAWI++9y/jD460Bi/Z3fY/wY1B1tuEVx4Vz6P/428xHZlW4Ehgtws3PVmyl38g8+4HNQKwHjbTyzPvXWoJLgm7LXh2F32ffY//4jAm3blxdksWgpDM4ROk8geawssCWoR39dD3yXfY3v4NWE0GYis781FTeCwDTWqOoefil9j+5zG+vwGv3KtZ1hIMjtBx4FBDuERZQJNu7zx+luDlPRg/2MIpNXD9DBhr6Tt5rukE2WZw+1yOzMnztXAojVqiAkN6dC/+QC4RvrUECSq7T11CcrWAioLkNkCFdbon32lQWuICauHeCy+RenWiJvqKgsQeqCQhTNE98WYivP4Yxr673j6FomJCeE1KUF6poRG83mziqNskOJ5P+o2jCdETc9KQj4oF0rtfSxz1xB4I8vshCBu5bvgObB4T6eF84qjX7wEg3L0XXNTIb0sCTJgiPbIncdQTn+Iwvw8TpBoHR2siwoFc/TLX9EBMpT8w2NRxSyUAguyuuvBKBpbq1cekOxo6jVZXkIRbXWkqwPh+XbjEY3P/+OiCDKM1zZHpwXR2116ilPrCX3/iihFYD+/ZgfJ+OQi0+U5JFJcWKT5arIYjMe87zE/IjcbhSESPF1H5Uv0RKtvFAtH9PxLnPCHy0rfjpnW4a5KiOLzu41QPnjBBrcAlRfLcdZu7cXde4uoOwxF8M3774R0LsBR6F5B+3kH4rcA9uAhgAfJzC+vL6eAY0teb5XhKaYevAvfg2L5fKUDs77iyfj86nLfGnXaGKTkNScq0A3diGXEPp5vy3PXx2w/vxHn/Ag7Iq6bq6GeTAAAAAElFTkSuQmCC">)";
+    R"(<link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAC/0lEQVR4nMSXS2gTURSGTyYJsdFimlUliAu19YXdq+hW6wMpGrW4CXkhCFV0J2J2ougmkJi3C9006EawuJKI4EKpQheKVSsVmmwkRtwk5uV/6p0STTKZyQzkh5tzbnLvOd99zL0TiQYsiQYs3QDRaHQkFotNUZ/SDWA2m1OSJD1OJpM3qA8ZsQQb+aPZbIYSiYSfNMrQPQCIGCBOaOljJMCyyWTieLPxePyA2k66AZC0yRajvwnzBGUdvptLpVJ71PTXDIDRbcWuP4+EJpHYJEAaDofjNNwcynC9Xn+EttZe8TQB8KiQ6DV2/QOs9an/f3e73b8BxBAltBtHmekVUzUAHrO9jUbjBVwn1xHc0aldMBj8DnNNVEOYhU2kFwCj3Y3kOTk5C3VTa5vWut/vvwezgLIe5Q7pAcB6T2BaX2LEI6jm4b9f7ShJzX8CtdTFxvQJfxpLt78vgEgksgEBnnJyJF5Bkn34usC/Kc0AKxAIvIFJs48Nmcpms2bNABaL5S6Su5C8huSTPp9vmTTIarVepb8bckexWJzUBMCHCToGRPU61nWBNMrj8ZQAn1xNJEnnVANguoaQ/KGozhcKhdvUp5B4li1ATnJcVQClUukCzBaUMjqeCYVCDepTmLl5xPiGAQ0h7vGeAHyyoVwS1ct4rr+QfsmzeZZ6AeDAOQzazXDzoI+TAWpZhmPpdHpYEQC6KBqn5YtGr3gDI94nxLPWarWprgCZTIZHfkRQ3ycDheTPhT3YFaBarfLlwQfKK1B/JWO1KOz2rgDQUf7AdD0jg4WYH4XtDIBHjf0x9jFN78hgIfGiiD0aDodtbQAul2tcvFLxm+5bMlhOp3MJps6+3W7f1QaAC2OnIP3p9XrzZLDwslJH7M/s4+JaWwaL7PCFIayE+z+nEGuCPzpcx1fQb1qhHw9uVNhtnQBknw+KQ9RDaL8irDxbY6Io9Vlz2wDK5fItm832i8QfDSVhtEt4TOfYx8Eyg2v7A0ZlIxUCxI9KpRJrIxmUBv7v+A8AAAD//wUQdZAAAAAGSURBVAMAKHos3DzW9GgAAAAASUVORK5CYII=">)";
 
 std::string Fill(std::string page) {
   base::ReplaceSubstringsAfterOffset(&page, 0, "{{STYLE}}", kStyle);
