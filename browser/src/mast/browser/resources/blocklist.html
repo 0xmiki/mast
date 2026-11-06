@@ -1,0 +1,268 @@
+<!-- The blocklist: every category and site, how long, Block. A fragment, not a page:
+     chrome://mast shows it full page and the new tab page in a panel (embedded as
+     the BLOCKLIST placeholder by mast_pages.cc). Styles are scoped under .bl, clicks stay inside
+     its root, so it doesn't clash with the page around it.
+     API: MastBlocklist.mount(element), MastBlocklist.update(state) -> true if it handled
+     the result of its own request (so the host page shouldn't also react). -->
+<style>
+.bl header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 20px; }
+.bl h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+.bl .meta { color: var(--text-3); }
+.bl .meta b { color: var(--text-2); font-weight: 500; }
+.bl ul { margin: 0; padding: 0; list-style: none; }
+.bl .cats { border-top: 1px solid var(--line); }
+.bl .cat { border-bottom: 1px solid var(--line); }
+.bl .row { display: flex; align-items: center; gap: 14px; height: 52px; padding: 0 4px; }
+.bl .name { display: flex; align-items: baseline; gap: 8px; flex: 1; min-width: 0; padding: 0; border: 0; background: none;
+  text-align: left; font-size: 15px; font-weight: 500; }
+.bl .name .n { color: var(--text-3); font-size: 13px; font-weight: 400; }
+.bl .exp { display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 50%; background: none; color: var(--text-3); }
+.bl .exp:hover { background: var(--field); color: var(--text); }
+.bl .exp svg { transition: transform .15s; }
+.bl .cat.open .exp svg { transform: rotate(180deg); }
+.bl .check { display: grid; place-items: center; width: 16px; height: 16px; padding: 0; border: 1.5px solid var(--text-3);
+  border-radius: 4px; background: none; color: var(--surface); flex: none; }
+.bl .check:hover:not(:disabled) { border-color: var(--text-2); }
+.bl .check.on, .bl .check.mixed { border-color: var(--text); background: var(--text); }
+.bl .check:disabled { cursor: default; border-color: var(--line); }
+.bl .services { padding: 0 4px 12px 34px; }
+.bl .services li { display: flex; align-items: center; gap: 14px; min-height: 32px; }
+.bl .svc { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 10px; }
+.bl .svc .s { color: var(--text-2); white-space: nowrap; }
+.bl .services li.is-blocked .svc .s { color: var(--text); }
+.bl .svc .d { overflow: hidden; color: var(--text-3); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.bl .rm { display: grid; place-items: center; width: 20px; height: 20px; border: 0; border-radius: 50%; background: none; color: var(--text-3); }
+.bl .rm:hover { background: var(--field); color: var(--text); }
+.bl .add { flex: 1; height: 28px; padding: 0 10px; border: 0; border-radius: 4px; outline: 0; background: var(--field); }
+.bl .add:focus { box-shadow: 0 0 0 1px var(--text-3); }
+.bl .action { position: sticky; bottom: 0; display: grid; grid-template-columns: 1fr auto; gap: 10px 16px; align-items: center;
+  margin-top: 8px; padding: 20px 0 24px; background: linear-gradient(transparent, var(--bl-bg, var(--surface)) 18px); }
+.bl .action .label { grid-column: 1 / -1; color: var(--text-3); }
+.bl .action .end { grid-column: 1 / -1; min-height: 19px; color: var(--text-3); }
+.bl .action .end.warn { color: var(--signal); }
+.bl .seg { display: grid; grid-template-columns: repeat(6, 1fr); padding: 2px; border-radius: var(--r); background: var(--seg); }
+.bl .seg button { height: 30px; padding: 0 6px; border: 0; border-radius: 4px; background: none; color: var(--text-2); font-weight: 500; white-space: nowrap; }
+.bl .seg button:hover { color: var(--text); }
+.bl .seg button.on { background: var(--seg-on); color: var(--text); box-shadow: 0 1px 2px rgb(0 0 0/.25), 0 0 0 1px var(--line); }
+.bl-toast { position: fixed; left: 50%; bottom: 24px; z-index: 30; transform: translateX(-50%); display: flex; align-items: center;
+  gap: 14px; padding: 10px 10px 10px 16px; border-radius: 10px; background: var(--field); box-shadow: var(--shadow); white-space: nowrap; }
+.bl-toast.plain { padding-right: 16px; }
+.bl-toast button { height: 28px; padding: 0 12px; border: 0; border-radius: 4px; background: var(--pressed); font-weight: 500; }
+.bl-toast .secs { margin-left: 4px; color: var(--text-3); }
+</style>
+<script>
+const MastBlocklist = (() => {
+  const D = 864e5;
+  const DUR = [['1h', '1 hour'], ['4h', '4 hours'], ['today', 'Today'], ['week', '1 week'], ['month', '1 month'], ['forever', 'Forever']];
+  let root = null, app = null, toastHost = null;
+  let state = null;
+  const selected = new Set();  // service keys "<category>/<service>"
+  const open = new Set();
+  let dur = null;
+  let toastTimer = 0;
+  let pending = '';   // what the last Block press was for, e.g. "YouTube" or "8 sites"
+  let asked = false;  // a block/undo from this list is waiting for its result
+
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+  const hm = (t) => new Date(t).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+  const day = (t) => new Date(t).toLocaleDateString([], {month: 'short', day: 'numeric'});
+  const midnight = () => { const d = new Date(); d.setHours(24, 0, 0, 0); return d.getTime(); };
+  function untilText(u) {
+    if (u === null) return 'Blocked forever';
+    if (u === midnight()) return 'Until midnight';
+    if (new Date(u).toDateString() === new Date().toDateString()) return 'Until ' + hm(u);
+    if (u - Date.now() < 2 * D) return 'Until tomorrow ' + hm(u);
+    return 'Until ' + day(u);
+  }
+  function untilFor(id) {
+    const now = Date.now();
+    return {'1h': now + 36e5, '4h': now + 4 * 36e5, today: midnight(), week: now + 7 * D, month: now + 30 * D, forever: null}[id];
+  }
+  const ind = (b) => `<i class="ind ${b ? (b.until === null ? 'forever' : 'timed') : ''}"></i>`;
+  const tick = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 5.2l2 2 4-4.4"/></svg>';
+  const dash = '<svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" stroke-width="2"><path d="M2.5 5h5"/></svg>';
+  const chevron = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4.5l3 3 3-3"/></svg>';
+  const cross = '<svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.4"><path d="M2 2l6 6M8 2l-6 6"/></svg>';
+
+  function categories() {
+    return [...state.categories, {id: 'yours', name: 'Your sites', custom: true,
+      services: state.custom.map((d) => ({name: d, domains: [d], custom: true}))}];
+  }
+  // A service is blocked when all its domains are; it shows the block that ends first.
+  function serviceBlock(s) {
+    const bs = s.domains.map((d) => state.blocks[d]).filter(Boolean);
+    if (!bs.length) return null;
+    if (bs.length < s.domains.length) return {partial: true, until: bs[0].until};
+    return bs.reduce((a, b) => (a.until === null ? b : b.until === null ? a : b.until < a.until ? b : a));
+  }
+  const isForever = (b) => b && !b.partial && b.until === null;
+  const key = (c, s) => c.id + '/' + s.name;
+
+  function render() {
+    if (!app || !state) return;
+    const cats = categories();
+    let blockedServices = 0;
+    const rows = cats.map((c) => {
+      const blocks = c.services.map(serviceBlock);
+      const n = blocks.filter((b) => b && !b.partial).length;
+      blockedServices += n;
+      const free = c.services.filter((s, i) => !isForever(blocks[i]));
+      const picked = free.filter((s) => selected.has(key(c, s))).length;
+      const allForever = c.services.length > 0 && !free.length;
+      const mark = allForever ? '' : picked && picked === free.length ? 'on' : picked ? 'mixed' : '';
+      let status;
+      if (c.services.length && n === c.services.length) {
+        const first = blocks.reduce((a, b) => (a.until === null ? b : b.until === null ? a : b.until < a.until ? b : a));
+        status = `<span class="status blocked">${ind(first)}${untilText(first.until)}</span>`;
+      } else if (n) {
+        status = `<span class="status blocked">${ind({until: 1})}${n} of ${c.services.length} blocked</span>`;
+      } else {
+        status = `<span class="status">${ind(null)}Open</span>`;
+      }
+      const list = !open.has(c.id) ? '' : `<ul class="services">${c.services.map((s, i) => {
+        const b = blocks[i];
+        const fv = isForever(b);
+        const k = key(c, s);
+        return `<li class="${b ? 'is-blocked' : ''}">
+          <button class="check ${selected.has(k) ? 'on' : ''}" ${fv ? 'disabled title="Blocked forever"' : ''} data-svc="${esc(k)}" aria-label="Select ${esc(s.name)}">${selected.has(k) ? tick : ''}</button>
+          <span class="svc"><span class="s">${esc(s.name)}</span>${s.custom ? '' : `<span class="d">${esc(s.domains.join(', '))}</span>`}</span>
+          ${b ? `<span class="status blocked">${ind(b)}${b.partial ? 'Partly blocked' : b.until === null ? 'Forever' : untilText(b.until)}</span>`
+              : `<span class="status">Open</span>`}
+          ${s.custom && !b ? `<button class="rm" data-rm="${esc(s.name)}" aria-label="Remove ${esc(s.name)}">${cross}</button>` : ''}
+        </li>`;
+      }).join('')}${c.custom ? `<li><span class="check" style="visibility:hidden"></span><input class="add" data-add placeholder="Add a site, e.g. espn.com" spellcheck="false"></li>` : ''}</ul>`;
+      return `<li class="cat ${open.has(c.id) ? 'open' : ''}">
+        <div class="row">
+          <button class="check ${mark}" ${allForever ? 'disabled title="Blocked forever"' : ''} data-cat="${esc(c.id)}" aria-label="Select ${esc(c.name)}"
+            ${c.services.length ? '' : 'disabled'}>${mark === 'on' ? tick : mark === 'mixed' ? dash : ''}</button>
+          <button class="name" data-toggle="${esc(c.id)}">${esc(c.name)}<span class="n">${c.services.length}</span></button>
+          ${status}
+          <button class="exp" data-toggle="${esc(c.id)}" aria-label="Show sites">${chevron}</button>
+        </div>${list}
+      </li>`;
+    }).join('');
+
+    const domains = selectedDomains();
+    const count = selected.size;
+    const u = untilFor(dur);
+    const end = !count ? 'Select categories or sites, then choose how long.'
+      : u === null ? 'Forever has no end. After 10 seconds it can’t be undone.'
+      : `Ends ${endsText(u)}. Blocks can be extended, never shortened.`;
+    // Keep a half-typed site across re-renders.
+    const input = app.querySelector('[data-add]');
+    const focused = input && document.activeElement === input;
+    const typed = input ? input.value : '';
+    app.innerHTML = `
+      <header><h1>Blocklist</h1><span class="meta"><b>${blockedServices}</b> blocked · <b>${state.stopped}</b> stopped today</span></header>
+      <ul class="cats">${rows}</ul>
+      <div class="action">
+        <span class="label">How long</span>
+        <div class="seg">${DUR.map(([id, label]) => `<button data-dur="${id}" class="${id === dur ? 'on' : ''}">${label}</button>`).join('')}</div>
+        <button class="primary" data-act="block" ${domains.length ? '' : 'disabled'}>${count ? `Block ${count === 1 ? [...selected][0].split('/').slice(1).join('/') : count + ' sites'}` : 'Block'}</button>
+        <span class="end ${count && u === null ? 'warn' : ''}">${end}</span>
+      </div>`;
+    const next = app.querySelector('[data-add]');
+    if (next) { next.value = typed; if (focused) next.focus(); }
+  }
+  function endsText(u) {
+    if (u === midnight()) return 'at midnight';
+    const t = untilText(u);
+    if (t.startsWith('Until tomorrow ')) return 'tomorrow at ' + t.slice(15);
+    if (u - Date.now() < D) return 'at ' + hm(u);
+    return 'on ' + day(u);
+  }
+  function selectedDomains() {
+    const out = [];
+    for (const c of categories()) for (const s of c.services) if (selected.has(key(c, s))) out.push(...s.domains);
+    return out;
+  }
+
+  function toast(text, undo) {
+    clearInterval(toastTimer);
+    const started = Date.now();
+    const paint = () => {
+      const left = Math.ceil((10e3 - (Date.now() - started)) / 1e3);
+      if (undo && left <= 0) { toastHost.innerHTML = ''; clearInterval(toastTimer); return; }
+      toastHost.innerHTML = `<div class="bl-toast ${undo ? '' : 'plain'}">${esc(text)}${undo ? `<button data-act="undo">Undo<span class="secs">${left}</span></button>` : ''}</div>`;
+    };
+    paint();
+    toastTimer = setInterval(paint, 250);
+    if (!undo) setTimeout(() => { clearInterval(toastTimer); toastHost.innerHTML = ''; }, 2600);
+  }
+
+  function onClick(e) {
+    // The host page has its own buttons and handlers; this list's clicks are its own.
+    e.stopPropagation();
+    const t = e.target.closest('button');
+    if (!t || !state) return;
+    if (t.dataset.cat) {
+      const c = categories().find((c) => c.id === t.dataset.cat);
+      const free = c.services.filter((s) => !isForever(serviceBlock(s))).map((s) => key(c, s));
+      const all = free.every((k) => selected.has(k));
+      free.forEach((k) => (all ? selected.delete(k) : selected.add(k)));
+    } else if (t.dataset.svc) {
+      selected.has(t.dataset.svc) ? selected.delete(t.dataset.svc) : selected.add(t.dataset.svc);
+    } else if (t.dataset.toggle) {
+      open.has(t.dataset.toggle) ? open.delete(t.dataset.toggle) : open.add(t.dataset.toggle);
+    } else if (t.dataset.dur) {
+      dur = t.dataset.dur;
+    } else if (t.dataset.rm) {
+      selected.delete('yours/' + t.dataset.rm);
+      return chrome.send('removeSite', [t.dataset.rm]);
+    } else if (t.dataset.act === 'block') {
+      const domains = selectedDomains();
+      pending = selected.size === 1 ? [...selected][0].split('/').slice(1).join('/') : selected.size + ' sites';
+      selected.clear();
+      asked = true;
+      return chrome.send('block', [domains, dur]);
+    } else if (t.dataset.act === 'undo') {
+      clearInterval(toastTimer);
+      toastHost.innerHTML = '';
+      asked = true;
+      return chrome.send('undo');
+    } else return;
+    render();
+  }
+  function onKey(e) {
+    e.stopPropagation();
+    if (e.key === 'Enter' && e.target.matches('[data-add]')) {
+      const v = e.target.value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+      if (v) { selected.add('yours/' + v); e.target.value = ''; chrome.send('addSite', [v]); }
+    }
+  }
+
+  return {
+    mount(el) {
+      if (root) return;
+      root = el;
+      root.classList.add('bl');
+      root.innerHTML = '<div class="bl-app"></div><div class="bl-toast-host"></div>';
+      app = root.querySelector('.bl-app');
+      toastHost = root.querySelector('.bl-toast-host');
+      root.addEventListener('click', onClick);
+      root.addEventListener('keydown', onKey);
+      render();
+    },
+    update(s) {
+      const first = !state;
+      state = s;
+      if (first) dur = s.lastDuration || 'today';
+      let handled = false;
+      const r = s.result || {};
+      if (asked && (r.undone || 'changed' in r)) {
+        asked = false;
+        handled = true;
+        if (root) {
+          if (r.undone) toast('Undone.');
+          else if (!r.changed) toast('Already blocked at least that long.');
+          else toast(`Blocked ${pending} ${r.until === null ? 'forever' : untilText(r.until).toLowerCase()}.`, true);
+        }
+      }
+      // Drop selections that became forever.
+      for (const c of categories()) for (const sv of c.services) if (isForever(serviceBlock(sv))) selected.delete(key(c, sv));
+      render();
+      return handled;
+    },
+  };
+})();
+</script>

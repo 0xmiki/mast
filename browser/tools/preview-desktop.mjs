@@ -44,6 +44,14 @@ const mock = `<script>
       recent = { before }; s.lastDuration = a[0];
       return reply({ changed, until: u });
     }
+    if (m === 'block') {
+      const u = until(a[1]); const before = {}; let changed = 0;
+      for (const d of a[0]) { const cur = s.blocks[d]; if (cur && outlasts(cur.until, u)) continue; before[d] = cur ?? null; s.blocks[d] = { since: cur?.since ?? Date.now(), until: u }; changed++; }
+      recent = { before }; s.lastDuration = a[1];
+      return reply({ changed, until: u });
+    }
+    if (m === 'addSite' && !s.custom.includes(a[0])) s.custom.push(a[0]);
+    if (m === 'removeSite') s.custom = s.custom.filter((d) => d !== a[0]);
     if (m === 'undo' && recent) { for (const [d, b] of Object.entries(recent.before)) b ? (s.blocks[d] = b) : delete s.blocks[d]; recent = null; return reply({ undone: true }); }
     if (m === 'setDistraction') { s.distractions = s.distractions.filter((x) => x !== a[0]); if (a[1]) s.distractions.push(a[0]); }
     if (m === 'desktopAdd') { let u = a[0]; if (!u.includes('://')) u = 'https://' + u; try { new URL(u); } catch { return reply({ invalidSite: true }); }
@@ -58,6 +66,9 @@ const mock = `<script>
 let html = fs.readFileSync(path.join(res, 'desktop.html'), 'utf8');
 const letterIcon = `const icon = (url) => { const h = new URL(url).hostname.replace(/^www\\./, ''); return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" rx="7" fill="#3b3a38"/><text x="16" y="22" font-family="Inter,sans-serif" font-size="17" font-weight="600" text-anchor="middle" fill="#e9e7e3">' + h[0].toUpperCase() + '</text></svg>'); };`;
 if (!/const icon = \(url\) => [^\n]*;/.test(html)) throw new Error('icon() not found');
-html = html.replace('{{STYLE}}', style).replace('{{ICON}}', '').replace(/const icon = \(url\) => [^\n]*;/, letterIcon).replace('<script>', mock + '\n<script>');
+const blocklist = fs.readFileSync(path.join(res, 'blocklist.html'), 'utf8');
+html = html.replace('{{STYLE}}', style).replace('{{ICON}}', '').replace('{{BLOCKLIST}}', () => blocklist).replace(/const icon = \(url\) => [^\n]*;/, letterIcon).replace('<script>', mock + '\n<script>');
+// #bl opens the blocklist panel, for screenshots.
+html = html.replace('</body>', '<script>if (location.hash === "#bl") setTimeout(() => document.getElementById("editList").click(), 200);</script></body>');
 fs.writeFileSync(out, html);
 console.log(out);

@@ -169,6 +169,40 @@ edit(H, "chrome/browser/resources/settings/page_visibility.ts", lambda t: once(t
     "      privacy: {networkPrediction: true, searchPrediction: true},\n"
     "    };\n  }\n"))
 
+# mast:// for Mast's own pages, like Brave's brave://. Internally they stay chrome://
+# pages: the scheme is registered (so the omnibox treats mast://settings as a URL),
+# typing mast:// is rewritten to chrome:// first, and the omnibox shows chrome:// as mast://.
+edit(H, "chrome/common/chrome_content_client.cc", lambda t: once(t,
+    '  for (auto* standard_scheme : kChromeStandardURLSchemes)\n    schemes->standard_schemes.push_back(standard_scheme);\n',
+    '  for (auto* standard_scheme : kChromeStandardURLSchemes)\n    schemes->standard_schemes.push_back(standard_scheme);\n'
+    '  schemes->standard_schemes.push_back("mast");  // Mast: mast:// opens chrome:// pages.\n'))
+edit(H, "chrome/browser/chrome_content_browser_client.cc", lambda t: once(once(t,
+    '#include "chrome/browser/chrome_content_browser_client.h"\n',
+    '#include "chrome/browser/chrome_content_browser_client.h"\n\n#include "mast/browser/mast_scheme.h"\n'),
+    '    BrowserURLHandler* handler) {\n  // The group policy NTP URL handler must be registered before',
+    '    BrowserURLHandler* handler) {\n  // Mast: mast://x -> chrome://x, before every other handler.\n'
+    '  handler->AddHandlerPair(&mast::HandleMastScheme,\n                          BrowserURLHandler::null_handler());\n\n'
+    '  // The group policy NTP URL handler must be registered before'))
+edit(H, "components/omnibox/browser/location_bar_model_impl.cc", lambda t: once(t,
+    '  return gfx::TruncateString(formatted_text, max_url_display_chars_,\n                             gfx::CHARACTER_BREAK);\n',
+    '  // Mast: its own pages read mast://, not chrome://.\n'
+    '  std::u16string shown = formatted_text;\n'
+    '  if (url.SchemeIs("chrome") && shown.starts_with(u"chrome://")) {\n'
+    '    shown.replace(0, 6, u"mast");\n  }\n'
+    '  return gfx::TruncateString(shown, max_url_display_chars_,\n                             gfx::CHARACTER_BREAK);\n'))
+
+# New tabs show the Mast new-tab icon from the start. Before the page commits the favicon
+# driver has no icon yet, and the tab showed Chromium's default globe for a moment.
+edit(H, "chrome/browser/ui/tab_ui_helper.cc", lambda t: once(once(t,
+    '#include "chrome/grit/generated_resources.h"\n',
+    '#include "chrome/grit/generated_resources.h"\n#include "chrome/grit/theme_resources.h"\n'),
+    '  if (!favicon_driver || !favicon_driver->FaviconIsValid()) {\n',
+    '  if (!favicon_driver || !favicon_driver->FaviconIsValid()) {\n'
+    '    // Mast: a new tab shows the new-tab icon while it loads, not the globe.\n'
+    '    if (IsNTP(web_contents()->GetVisibleURL())) {\n'
+    '      return ui::ImageModel::FromResourceId(IDR_NTP_FAVICON);\n    }\n'))
+edit(H, "chrome/browser/ui/BUILD.gn", lambda t: add_dep(t, '  source_set("tab_ui_helper") {', "//chrome/app/theme:theme_resources"))
+
 # ---------------------------------------------------------------- theme
 T = "mast-theme.patch"
 

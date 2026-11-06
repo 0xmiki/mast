@@ -47,6 +47,29 @@ diff -ruN a/chrome/browser/BUILD.gn b/chrome/browser/BUILD.gn
      ":active_use_util",
      ":after_startup_task_utils",
      ":bad_message",
+diff -ruN a/chrome/browser/chrome_content_browser_client.cc b/chrome/browser/chrome_content_browser_client.cc
+--- a/chrome/browser/chrome_content_browser_client.cc
++++ b/chrome/browser/chrome_content_browser_client.cc
+@@ -4,6 +4,8 @@
+ 
+ #include "chrome/browser/chrome_content_browser_client.h"
+ 
++#include "mast/browser/mast_scheme.h"
++
+ #include <algorithm>
+ #include <iterator>
+ #include <map>
+@@ -5132,6 +5134,10 @@
+ 
+ void ChromeContentBrowserClient::BrowserURLHandlerCreated(
+     BrowserURLHandler* handler) {
++  // Mast: mast://x -> chrome://x, before every other handler.
++  handler->AddHandlerPair(&mast::HandleMastScheme,
++                          BrowserURLHandler::null_handler());
++
+   // The group policy NTP URL handler must be registered before the other NTP
+   // URL handlers below. Also register it before the "parts" handlers, so the
+   // NTP policy takes precedence over extensions that override the NTP.
 diff -ruN a/chrome/browser/chrome_content_browser_client_navigation_throttles.cc b/chrome/browser/chrome_content_browser_client_navigation_throttles.cc
 --- a/chrome/browser/chrome_content_browser_client_navigation_throttles.cc
 +++ b/chrome/browser/chrome_content_browser_client_navigation_throttles.cc
@@ -170,6 +193,39 @@ diff -ruN a/chrome/browser/themes/theme_service.cc b/chrome/browser/themes/theme
    registry->RegisterIntegerPref(
        prefs::kDeprecatedUserColorDoNotUse, SK_ColorTRANSPARENT,
        user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
+diff -ruN a/chrome/browser/ui/BUILD.gn b/chrome/browser/ui/BUILD.gn
+--- a/chrome/browser/ui/BUILD.gn
++++ b/chrome/browser/ui/BUILD.gn
+@@ -204,6 +204,7 @@
+       "//ui/base/unowned_user_data",
+     ]
+     deps = [
++    "//chrome/app/theme:theme_resources",
+       "//chrome/app:generated_resources",
+       "//chrome/browser/favicon",
+       "//chrome/browser/resource_coordinator:mojo_bindings",
+diff -ruN a/chrome/browser/ui/tab_ui_helper.cc b/chrome/browser/ui/tab_ui_helper.cc
+--- a/chrome/browser/ui/tab_ui_helper.cc
++++ b/chrome/browser/ui/tab_ui_helper.cc
+@@ -29,6 +29,7 @@
+ #include "chrome/browser/ui/web_applications/web_app_browser_controller.h"
+ #include "chrome/common/webui_url_constants.h"
+ #include "chrome/grit/generated_resources.h"
++#include "chrome/grit/theme_resources.h"
+ #include "components/favicon/content/content_favicon_util.h"
+ #include "components/security_interstitials/content/security_interstitial_tab_helper.h"
+ #include "components/tabs/public/tab_interface.h"
+@@ -231,6 +232,10 @@
+   const favicon::FaviconDriver* const favicon_driver =
+       favicon::ContentFaviconDriver::FromWebContents(web_contents());
+   if (!favicon_driver || !favicon_driver->FaviconIsValid()) {
++    // Mast: a new tab shows the new-tab icon while it loads, not the globe.
++    if (IsNTP(web_contents()->GetVisibleURL())) {
++      return ui::ImageModel::FromResourceId(IDR_NTP_FAVICON);
++    }
+     // Cache the model so repeated calls return an equal ImageModel; TabData
+     // compares favicons by value, and a fresh BindRepeating each call would
+     // never compare equal. The bound resolver still re-runs at raster time, so
 diff -ruN a/chrome/browser/ui/views/page_info/BUILD.gn b/chrome/browser/ui/views/page_info/BUILD.gn
 --- a/chrome/browser/ui/views/page_info/BUILD.gn
 +++ b/chrome/browser/ui/views/page_info/BUILD.gn
@@ -296,6 +352,34 @@ diff -ruN a/chrome/browser/ui/webui/settings/settings_ui.cc b/chrome/browser/ui/
 +  html_source->AddBoolean("showPrivacyGuide", false);
 +
    TryShowHatsSurveyWithTimeout();
+ }
+ 
+diff -ruN a/chrome/common/chrome_content_client.cc b/chrome/common/chrome_content_client.cc
+--- a/chrome/common/chrome_content_client.cc
++++ b/chrome/common/chrome_content_client.cc
+@@ -205,6 +205,7 @@
+ void ChromeContentClient::AddAdditionalSchemes(Schemes* schemes) {
+   for (auto* standard_scheme : kChromeStandardURLSchemes)
+     schemes->standard_schemes.push_back(standard_scheme);
++  schemes->standard_schemes.push_back("mast");  // Mast: mast:// opens chrome:// pages.
+ 
+ #if BUILDFLAG(IS_ANDROID)
+   schemes->referrer_schemes.push_back(content::kAndroidAppScheme);
+diff -ruN a/components/omnibox/browser/location_bar_model_impl.cc b/components/omnibox/browser/location_bar_model_impl.cc
+--- a/components/omnibox/browser/location_bar_model_impl.cc
++++ b/components/omnibox/browser/location_bar_model_impl.cc
+@@ -158,7 +158,12 @@
+   // a real problem, we could perhaps try to keep some sort of different "elided
+   // visible URL" where editing affects and reloads the "real underlying URL",
+   // but this seems very tricky for little gain.
+-  return gfx::TruncateString(formatted_text, max_url_display_chars_,
++  // Mast: its own pages read mast://, not chrome://.
++  std::u16string shown = formatted_text;
++  if (url.SchemeIs("chrome") && shown.starts_with(u"chrome://")) {
++    shown.replace(0, 6, u"mast");
++  }
++  return gfx::TruncateString(shown, max_url_display_chars_,
+                              gfx::CHARACTER_BREAK);
  }
  
 diff -ruN a/ui/views/bubble/bubble_dialog_delegate_view.h b/ui/views/bubble/bubble_dialog_delegate_view.h

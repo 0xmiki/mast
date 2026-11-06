@@ -97,6 +97,12 @@ constexpr char kDesktopPage[] =
 #include "mast/browser/resources/desktop_html.inc"
     ;
 
+// The blocklist (categories, sites, how long), shared by chrome://mast and the
+// new tab page's panel.
+constexpr char kBlocklist[] =
+#include "mast/browser/resources/blocklist_html.inc"
+    ;
+
 // The Mast mark, as a monochrome outline (like other browsers' new-tab icons),
 // for the tab icon of Mast's own pages. Same image as the IDR_NTP_FAVICON
 // override, so the tab never switches between two icons.
@@ -106,6 +112,7 @@ constexpr char kIcon[] =
 std::string Fill(std::string page) {
   base::ReplaceSubstringsAfterOffset(&page, 0, "{{STYLE}}", kStyle);
   base::ReplaceSubstringsAfterOffset(&page, 0, "{{ICON}}", kIcon);
+  base::ReplaceSubstringsAfterOffset(&page, 0, "{{BLOCKLIST}}", kBlocklist);
   return page;
 }
 

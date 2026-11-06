@@ -14,6 +14,8 @@ source_set("browser") {
     "mast_pages.h",
     "mast_prefs.cc",
     "mast_prefs.h",
+    "mast_scheme.cc",
+    "mast_scheme.h",
   ]
   deps = [
     "//base",

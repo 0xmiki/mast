@@ -68,6 +68,16 @@ dialog .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6p
 .toast button { height: 28px; padding: 0 12px; border: 0; border-radius: 4px; background: var(--pressed); font-weight: 500; }
 .toast .secs { margin-left: 4px; color: var(--text-3); }
 @media (max-width: 760px) { .desk { grid-template-columns: 1fr; } .widgets { order: -1; } }
+/* "Edit blocklist": the full list in a panel over the desktop. */
+dialog.bl-panel { width: min(760px, 94vw); height: min(86vh, 920px); padding: 0; border-radius: 12px; overflow: auto;
+  background: var(--surface); box-shadow: 0 24px 64px rgb(0 0 0/.6), 0 0 0 1px var(--line); --bl-bg: var(--surface); }
+dialog.bl-panel .bl { padding: 32px 36px 0; }
+dialog.bl-panel .bl header { padding-right: 44px; }
+/* Opening the panel focuses its first button; no ring for that. */
+.bl-close:focus { outline: none; }
+.bl-close { position: sticky; top: 12px; float: right; z-index: 2; display: grid; place-items: center; width: 32px; height: 32px;
+  margin: 12px 12px -44px 0; padding: 0; border: 0; border-radius: 50%; background: var(--field); color: var(--text-2); }
+.bl-close:hover { background: var(--pressed); color: var(--text); }
 </style>
 </head>
 <body>
@@ -84,7 +94,12 @@ dialog .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6p
     <div class="row"><button type="button" class="secondary" id="addCancel">Cancel</button><button class="primary" style="background:var(--text);color:var(--bg)">Add</button></div>
   </form>
 </dialog>
+<dialog id="blocklistDialog" class="bl-panel" aria-label="Blocklist">
+  <button class="bl-close" id="blClose" aria-label="Close"><svg width="12" height="12" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.4"><path d="M2 2l6 6M8 2l-6 6"/></svg></button>
+  <div id="blRoot"></div>
+</dialog>
 <div id="toast"></div>
+{{BLOCKLIST}}
 <script>
 const D = 864e5;
 const DUR = [['1h', '1 h'], ['4h', '4 h'], ['today', 'Today'], ['week', 'Week'], ['month', 'Month'], ['forever', '∞']];
@@ -174,7 +189,7 @@ function distractionWidget() {
     ${cats}
     <div class="seg">${DUR.map(([id, label]) => `<button data-dur="${id}" class="${id === dur ? 'on' : ''}" aria-label="${id}">${label}</button>`).join('')}</div>
     ${blockButton(d, all)}
-    <div class="links"><button class="link" id="edit">${editing ? 'Done' : 'Change what’s blocked'}</button><a class="link" href="chrome://mast">Edit blocklist</a></div>
+    <div class="links"><button class="link" id="edit">${editing ? 'Done' : 'Change what’s blocked'}</button><button class="link" id="editList">Edit blocklist</button></div>
   </div>`;
 }
 
@@ -206,18 +221,22 @@ function toast(text, undo) {
   if (!undo) setTimeout(() => { clearInterval(toastTimer); el.innerHTML = ''; }, 2600);
 }
 
+let deskAsked = false;  // a block/undo from the desktop's own buttons is waiting
 window.mastState = (s) => {
   const first = !state;
   state = s;
   if (first) dur = s.lastDuration || 'today';
+  // The blocklist panel shows its own toasts for its own requests.
+  const handled = MastBlocklist.update(s);
   const r = s.result || {};
   if (r.invalidSite) {
     document.getElementById('addErr').textContent = 'That doesn’t look like a web address.';
     return;
   }
-  if (r.undone) toast('Undone.');
-  else if ('changed' in r) {
-    if (!r.changed) toast('Already blocked at least that long.');
+  if (!handled && deskAsked && (r.undone || 'changed' in r)) {
+    deskAsked = false;
+    if (r.undone) toast('Undone.');
+    else if (!r.changed) toast('Already blocked at least that long.');
     else toast(`Blocked distractions ${untilText(r.until)}.`, true);
   }
   if (document.getElementById('addDialog').open && !r.invalidSite) document.getElementById('addDialog').close();
@@ -239,12 +258,19 @@ document.addEventListener('click', (e) => {
   if (t.id === 'addCancel') return document.getElementById('addDialog').close();
   if (t.dataset.dur) { dur = t.dataset.dur; return renderWidgets(); }
   if (t.id === 'edit') { editing = !editing; return renderWidgets(); }
-  if (t.id === 'blockAll') return chrome.send('blockDistractions', [dur]);
+  if (t.id === 'blockAll') { deskAsked = true; return chrome.send('blockDistractions', [dur]); }
   if (t.id === 'undo') {
     clearInterval(toastTimer);
     document.getElementById('toast').innerHTML = '';
+    deskAsked = true;
     return chrome.send('undo');
   }
+  if (t.id === 'editList') {
+    MastBlocklist.mount(document.getElementById('blRoot'));
+    MastBlocklist.update(state);
+    return document.getElementById('blocklistDialog').showModal();
+  }
+  if (t.id === 'blClose') return document.getElementById('blocklistDialog').close();
 });
 document.addEventListener('change', (e) => {
   if (e.target.dataset.cat) chrome.send('setDistraction', [e.target.dataset.cat, e.target.checked]);
