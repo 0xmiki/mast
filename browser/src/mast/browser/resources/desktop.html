@@ -280,7 +280,8 @@ wallImg.onload = layoutWallpaper;
 function layoutWallpaper() {
   const iw = wallImg.naturalWidth, ih = wallImg.naturalHeight;
   if (!wallpaper || !iw) return;
-  const sw = screen.width, sh = screen.height, k = Math.max(sw / iw, sh / ih);
+  // As tall as the screen from the picture's top (the browser does the same).
+  const sw = screen.width, sh = screen.height + wallTop, k = Math.max(sw / iw, sh / ih);
   const w = iw * k, h = ih * k;
   const s = document.body.style;
   s.setProperty('--wall-size', `${w}px ${h}px`);

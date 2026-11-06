@@ -43,12 +43,16 @@ def edit(patch, path, fn):
     a, b = (os.path.join(WORK, patch + ".d", side, path) for side in ("a", "b"))
     for p in (a, b):
         os.makedirs(os.path.dirname(p), exist_ok=True)
-    text = pristine(path)
+    base = pristine(path)
+    # A file edited twice in one patch: the second edit builds on the first
+    # (starting from the pristine file again silently dropped the first).
+    text = open(b).read() if path in PATCHES.get(patch, []) else base
     new = fn(text)
     assert new != text, f"no change in {path}"
-    open(a, "w").write(text)
+    open(a, "w").write(base)
     open(b, "w").write(new)
-    PATCHES.setdefault(patch, []).append(path)
+    if path not in PATCHES.setdefault(patch, []):
+        PATCHES[patch].append(path)
 
 
 # ---------------------------------------------------------------- hooks
@@ -244,6 +248,38 @@ edit(T, "ui/webui/resources/cr_elements/cr_shared_vars.css", lambda t: once(t,
     '    --cr-card-background-color: var(--color-webui-card-background,\n'
     '        var(--google-grey-900-white-4-percent));\n'))
 
+# Settings only loads the browser's colours (chrome://theme/colors.css) behind Chromium's
+# 2026 redesign flags; without them it paints Google's greys and blues, whatever the
+# palette. It always loads them in Mast, and follows palette changes live.
+edit(T, "chrome/browser/resources/settings/settings_ui/settings_ui.ts", lambda t: once(t,
+    "    const enableThemedColors =\n"
+    "        loadTimeData.getString('webuiRefresh2026') !== '' ||\n"
+    "        loadTimeData.getString('settingsRefresh2026') !== '';\n",
+    "    // Mast: always themed, so Settings follows the palette.\n"
+    "    const enableThemedColors = true;\n"))
+# The selected Settings menu item was Google blue; it's the palette's raised surface.
+edit(T, "ui/webui/resources/cr_elements/cr_nav_menu_item_style_lit.css", lambda t: once(t,
+    '    --cr-nav-menu-item-color: white;\n'
+    '    --cr-nav-menu-item-color-selected: var(--google-grey-900);\n\n'
+    '    --cr-nav-menu-item-background-color-hover: var(--google-grey-800);\n'
+    '    --cr-nav-menu-item-background-color-selected: var(--google-blue-300);\n\n'
+    '    --cr-nav-menu-item-icon-color: var(--google-grey-500);\n'
+    '    --cr-nav-menu-item-icon-color-hover: white;\n'
+    '    --cr-nav-menu-item-icon-color-selected: black;\n',
+    '    /* Mast: the palette (colors.css), Chromium\'s values as fallbacks. */\n'
+    '    --cr-nav-menu-item-color: var(--color-primary-foreground, white);\n'
+    '    --cr-nav-menu-item-color-selected: var(--color-primary-foreground,\n'
+    '        var(--google-grey-900));\n\n'
+    '    --cr-nav-menu-item-background-color-hover: var(\n'
+    '        --color-webui-card-background, var(--google-grey-800));\n'
+    '    --cr-nav-menu-item-background-color-selected: var(\n'
+    '        --color-menu-item-background-selected, var(--google-blue-300));\n\n'
+    '    --cr-nav-menu-item-icon-color: var(--color-secondary-foreground,\n'
+    '        var(--google-grey-500));\n'
+    '    --cr-nav-menu-item-icon-color-hover: var(--color-primary-foreground, white);\n'
+    '    --cr-nav-menu-item-icon-color-selected: var(--color-primary-foreground,\n'
+    '        black);\n'))
+
 # Mast surfaces, after all of Chrome's mixers.
 edit(T, "chrome/browser/ui/color/chrome_color_mixers.cc", lambda t: once(once(t,
     '#include "chrome/browser/ui/color/chrome_color_mixers.h"\n',
@@ -385,6 +421,14 @@ edit(R, "chrome/browser/ui/browser_window/internal/BUILD.gn", lambda t: add_dep(
     '      "embedder_browser_window_features.cc",\n',
     '      "embedder_browser_window_features.cc",\n      "//mast/browser/ui/mast_one_row_toolbar.cc",\n      "//mast/browser/ui/mast_one_row_toolbar.h",\n'),
     'source_set("internal") {', "//mast/common"))
+
+# No 1px line between the tab row and the page: in the one-row window the page meets the
+# row directly (with a wallpaper the line cut the picture in two).
+edit(R, "chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc", lambda t: once(t,
+    '  views().multi_contents_view->SetShouldShowTopSeparator(\n'
+    '      separator_info.multi_contents_separator);\n',
+    '  views().multi_contents_view->SetShouldShowTopSeparator(\n'
+    '      separator_info.multi_contents_separator && !mast::IsOneRowWindow());\n'))
 
 # Customize's image behind the tab row (mast/browser/ui/mast_wallpaper.h). The two places
 # Chromium paints a theme's frame image: the frame view's GetFrameImage() (every platform's

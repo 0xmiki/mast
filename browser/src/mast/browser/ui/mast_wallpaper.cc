@@ -141,10 +141,13 @@ gfx::ImageSkia WallpaperFrameImage(const BrowserView* browser_view) {
   if (w.bitmap.drawsNothing()) {
     return gfx::ImageSkia();  // still loading
   }
-  const gfx::Size screen =
+  // The picture covers the screen as seen from the image's origin: a window
+  // as tall as the screen still has picture down to its bottom edge.
+  gfx::Size screen =
       display::Screen::Get()
           ->GetDisplayNearestView(browser_view->GetWidget()->GetNativeView())
           .size();
+  screen.Enlarge(0, OneRowContentTop() + ThemeProperties::kFrameHeightAboveTabs);
   if (screen.IsEmpty()) {
     return gfx::ImageSkia();
   }
