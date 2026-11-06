@@ -5,15 +5,17 @@
 #include "base/strings/escape.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
+#include "base/strings/stringprintf.h"
 #include "mast/browser/mast_blocklist.h"
 #include "mast/browser/mast_blocks.h"
+#include "mast/ui/color/mast_palette.h"
 
 namespace mast {
 
 namespace {
 
-// The shared tokens (mirrors mast_palette.h and the Rams proposal). One signal
-// colour, used only for blocking and the state of being blocked.
+// The shared tokens (onyx; PaletteCss() follows them with the palette in use).
+// One signal colour, used only for blocking and the state of being blocked.
 constexpr char kStyle[] = R"MAST(
 :root { color-scheme: dark; --bg:#000000; --surface:#070707; --field:#141414; --pressed:#1e1e1e;
   --seg:#141414; --seg-on:#070707; --line:#171717; --text:#ededed; --text-2:#9a9a9a; --text-3:#5c5c5c;
@@ -109,8 +111,14 @@ constexpr char kBlocklist[] =
 constexpr char kIcon[] =
     R"(<link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAC/0lEQVR4nMSXS2gTURSGTyYJsdFimlUliAu19YXdq+hW6wMpGrW4CXkhCFV0J2J2ougmkJi3C9006EawuJKI4EKpQheKVSsVmmwkRtwk5uV/6p0STTKZyQzkh5tzbnLvOd99zL0TiQYsiQYs3QDRaHQkFotNUZ/SDWA2m1OSJD1OJpM3qA8ZsQQb+aPZbIYSiYSfNMrQPQCIGCBOaOljJMCyyWTieLPxePyA2k66AZC0yRajvwnzBGUdvptLpVJ71PTXDIDRbcWuP4+EJpHYJEAaDofjNNwcynC9Xn+EttZe8TQB8KiQ6DV2/QOs9an/f3e73b8BxBAltBtHmekVUzUAHrO9jUbjBVwn1xHc0aldMBj8DnNNVEOYhU2kFwCj3Y3kOTk5C3VTa5vWut/vvwezgLIe5Q7pAcB6T2BaX2LEI6jm4b9f7ShJzX8CtdTFxvQJfxpLt78vgEgksgEBnnJyJF5Bkn34usC/Kc0AKxAIvIFJs48Nmcpms2bNABaL5S6Su5C8huSTPp9vmTTIarVepb8bckexWJzUBMCHCToGRPU61nWBNMrj8ZQAn1xNJEnnVANguoaQ/KGozhcKhdvUp5B4li1ATnJcVQClUukCzBaUMjqeCYVCDepTmLl5xPiGAQ0h7vGeAHyyoVwS1ct4rr+QfsmzeZZ6AeDAOQzazXDzoI+TAWpZhmPpdHpYEQC6KBqn5YtGr3gDI94nxLPWarWprgCZTIZHfkRQ3ycDheTPhT3YFaBarfLlwQfKK1B/JWO1KOz2rgDQUf7AdD0jg4WYH4XtDIBHjf0x9jFN78hgIfGiiD0aDodtbQAul2tcvFLxm+5bMlhOp3MJps6+3W7f1QaAC2OnIP3p9XrzZLDwslJH7M/s4+JaWwaL7PCFIayE+z+nEGuCPzpcx1fQb1qhHw9uVNhtnQBknw+KQ9RDaL8irDxbY6Io9Vlz2wDK5fItm832i8QfDSVhtEt4TOfYx8Eyg2v7A0ZlIxUCxI9KpRJrIxmUBv7v+A8AAAD//wUQdZAAAAAGSURBVAMAKHos3DzW9GgAAAAASUVORK5CYII=">)";
 
+std::string Hex(SkColor c) {
+  return base::StringPrintf("#%02x%02x%02x", SkColorGetR(c), SkColorGetG(c),
+                            SkColorGetB(c));
+}
+
 std::string Fill(std::string page) {
-  base::ReplaceSubstringsAfterOffset(&page, 0, "{{STYLE}}", kStyle);
+  base::ReplaceSubstringsAfterOffset(&page, 0, "{{STYLE}}", 
+                                     std::string(kStyle) + PaletteCss());
   base::ReplaceSubstringsAfterOffset(&page, 0, "{{ICON}}", kIcon);
   base::ReplaceSubstringsAfterOffset(&page, 0, "{{BLOCKLIST}}", kBlocklist);
   return page;
@@ -143,8 +151,22 @@ std::string StartPageHtml(bool as_new_tab) {
   return page;
 }
 
-std::string DesktopPageHtml() {
-  return Fill(kDesktopPage);
+std::string PaletteCss() {
+  const palette::Palette& p = palette::Current();
+  return base::StringPrintf(
+      ":root{--bg:%s;--surface:%s;--field:%s;--pressed:%s;--seg:%s;"
+      "--seg-on:%s;--line:%s;--text:%s;--text-2:%s;--text-3:%s}",
+      Hex(p.bg).c_str(), Hex(p.chrome).c_str(), Hex(p.chrome2).c_str(),
+      Hex(p.raised2).c_str(), Hex(p.chrome2).c_str(), Hex(p.chrome).c_str(),
+      Hex(p.line).c_str(), Hex(p.text).c_str(), Hex(p.muted).c_str(),
+      Hex(p.faint).c_str());
+}
+
+std::string DesktopPageHtml(int wallpaper) {
+  std::string page = Fill(kDesktopPage);
+  base::ReplaceSubstringsAfterOffset(&page, 0, "{{WALLPAPER}}",
+                                     base::NumberToString(wallpaper));
+  return page;
 }
 
 }  // namespace mast

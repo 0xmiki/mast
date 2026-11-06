@@ -21,90 +21,91 @@ void AddMastChromeColorMixer(ui::ColorProvider* provider,
       key.color_mode != ui::ColorProviderKey::ColorMode::kDark) {
     return;
   }
-  namespace p = palette;
+  // The palette picked in Customize (mast_palette.h); providers are rebuilt
+  // when it changes.
+  const palette::Palette& p = palette::Current();
   ui::ColorMixer& mixer = provider->AddPostprocessingMixer();
 
   // Frame and tab strip: the darkest layer. Tabs sit on it; the active tab is
   // the toolbar's colour so it flows into the toolbar.
-  mixer[ui::kColorFrameActive] = {p::kBg};
-  mixer[ui::kColorFrameInactive] = {p::kBg};
-  mixer[kColorTabBackgroundInactiveFrameActive] = {p::kBg};
-  mixer[kColorTabBackgroundInactiveFrameInactive] = {p::kBg};
-  mixer[kColorTabBackgroundInactiveHoverFrameActive] = {p::kChrome2};
-  mixer[kColorTabBackgroundActiveFrameActive] = {p::kChrome};
-  mixer[kColorTabBackgroundActiveFrameInactive] = {p::kChrome};
-  mixer[kColorTabForegroundActiveFrameActive] = {p::kText};
-  mixer[kColorTabForegroundInactiveFrameActive] = {p::kMuted};
+  mixer[ui::kColorFrameActive] = {p.bg};
+  mixer[ui::kColorFrameInactive] = {p.bg};
+  mixer[kColorTabBackgroundInactiveFrameActive] = {p.bg};
+  mixer[kColorTabBackgroundInactiveFrameInactive] = {p.bg};
+  mixer[kColorTabBackgroundInactiveHoverFrameActive] = {p.chrome2};
+  mixer[kColorTabBackgroundActiveFrameActive] = {p.chrome};
+  mixer[kColorTabBackgroundActiveFrameInactive] = {p.chrome};
+  mixer[kColorTabForegroundActiveFrameActive] = {p.text};
+  mixer[kColorTabForegroundInactiveFrameActive] = {p.muted};
   mixer[kColorTabDividerFrameActive] = {SK_ColorTRANSPARENT};
   mixer[kColorTabStrokeFrameActive] = {SK_ColorTRANSPARENT};
   mixer[kColorNewTabButtonBackgroundFrameActive] = {SK_ColorTRANSPARENT};
 
   // Toolbar: one calm surface; a single hairline above the page.
-  mixer[kColorToolbar] = {p::kChrome};
-  mixer[kColorToolbarButtonIcon] = {p::kMuted};
-  mixer[kColorToolbarButtonText] = {p::kText};
+  mixer[kColorToolbar] = {p.chrome};
+  mixer[kColorToolbarButtonIcon] = {p.muted};
+  mixer[kColorToolbarButtonText] = {p.text};
   mixer[kColorToolbarSeparator] = {SK_ColorTRANSPARENT};
   mixer[kColorToolbarTopSeparatorFrameActive] = {SK_ColorTRANSPARENT};
-  mixer[kColorToolbarContentAreaSeparator] = {p::kLine};
-  mixer[kColorBookmarkBarBackground] = {p::kChrome};
-  mixer[kColorInfoBarBackground] = {p::kChrome};
+  mixer[kColorToolbarContentAreaSeparator] = {p.line};
+  mixer[kColorBookmarkBarBackground] = {p.chrome};
+  mixer[kColorInfoBarBackground] = {p.chrome};
 
   // Omnibox: a field, and its dropdown.
-  mixer[kColorLocationBarBackground] = {p::kChrome2};
-  mixer[kColorLocationBarBackgroundHovered] = {p::kRaised};
-  mixer[kColorOmniboxText] = {p::kText};
+  mixer[kColorLocationBarBackground] = {p.chrome2};
+  mixer[kColorLocationBarBackgroundHovered] = {p.raised};
+  mixer[kColorOmniboxText] = {p.text};
   // The focused field paints the results colour, so it must stay a field:
   // with the toolbar's colour the field vanished on focus, leaving only a ring.
-  mixer[kColorOmniboxResultsBackground] = {p::kChrome2};
-  mixer[kColorOmniboxResultsBackgroundHovered] = {p::kRaised};
-  mixer[kColorOmniboxResultsBackgroundSelected] = {p::kRaised2};
+  mixer[kColorOmniboxResultsBackground] = {p.chrome2};
+  mixer[kColorOmniboxResultsBackgroundHovered] = {p.raised};
+  mixer[kColorOmniboxResultsBackgroundSelected] = {p.raised2};
   // Also the omnibox focus ring (mast-theme.patch gives the ring this id,
   // which skips Chromium's 3:1 contrast lift): a hairline, not a halo.
-  mixer[kColorLocationBarBorder] = {SkColorSetRGB(0x2A, 0x2A, 0x2A)};
+  mixer[kColorLocationBarBorder] = {p.border};
   mixer[kColorOmniboxResultsFocusIndicator] = {SK_ColorTRANSPARENT};
 
   // Menus, bubbles, dialogs, focus.
   // Bubbles, dialogs and menus sit one step above the page (#141414), so they
   // keep an edge on Mast's own pages, which are #070707.
-  mixer[ui::kColorMenuBackground] = {p::kChrome2};
-  mixer[ui::kColorMenuItemBackgroundHighlighted] = {p::kRaised2};
-  mixer[ui::kColorMenuItemBackgroundSelected] = {p::kRaised2};
-  mixer[ui::kColorMenuSeparator] = {p::kLine};
-  mixer[ui::kColorBubbleBackground] = {p::kChrome2};
-  mixer[ui::kColorBubbleBorder] = {p::kRaised2};
-  mixer[ui::kColorDialogBackground] = {p::kChrome2};
-  mixer[ui::kColorComboboxBackground] = {p::kChrome2};
-  mixer[ui::kColorComboboxContainerOutline] = {p::kRaised2};
-  mixer[ui::kColorPrimaryBackground] = {p::kChrome};
-  mixer[ui::kColorTextfieldBackground] = {p::kChrome2};
+  mixer[ui::kColorMenuBackground] = {p.chrome2};
+  mixer[ui::kColorMenuItemBackgroundHighlighted] = {p.raised2};
+  mixer[ui::kColorMenuItemBackgroundSelected] = {p.raised2};
+  mixer[ui::kColorMenuSeparator] = {p.line};
+  mixer[ui::kColorBubbleBackground] = {p.chrome2};
+  mixer[ui::kColorBubbleBorder] = {p.raised2};
+  mixer[ui::kColorDialogBackground] = {p.chrome2};
+  mixer[ui::kColorComboboxBackground] = {p.chrome2};
+  mixer[ui::kColorComboboxContainerOutline] = {p.raised2};
+  mixer[ui::kColorPrimaryBackground] = {p.chrome};
+  mixer[ui::kColorTextfieldBackground] = {p.chrome2};
   // Focus is neutral: the signal colour means blocked, nothing else.
   // Keyboard focus stays visible but quiet. Chromium lifts focus rings to 3:1
   // contrast against their background, so this is a floor, not the result.
-  mixer[ui::kColorFocusableBorderFocused] = {p::kFaint};
+  mixer[ui::kColorFocusableBorderFocused] = {p.faint};
 
   // Text selection: neutral too.
   constexpr SkColor kSelection = SkColorSetRGB(0x45, 0x43, 0x40);
   mixer[ui::kColorTextSelectionBackground] = {kSelection};
-  mixer[ui::kColorTextSelectionForeground] = {p::kText};
+  mixer[ui::kColorTextSelectionForeground] = {p.text};
   mixer[kColorOmniboxSelectionBackground] = {kSelection};
-  mixer[kColorOmniboxSelectionForeground] = {p::kText};
+  mixer[kColorOmniboxSelectionForeground] = {p.text};
 
   // One row (mast/common/mast_features.h), seamless: the tab row is the page's
   // colour with no line under it; the active tab is a raised pill, like the
   // address field.
   if (IsOneRowWindow()) {
-    mixer[ui::kColorFrameActive] = {p::kChrome};
-    mixer[ui::kColorFrameInactive] = {p::kChrome};
-    mixer[kColorToolbar] = {p::kChrome};
-    mixer[kColorTabBackgroundInactiveFrameActive] = {p::kChrome};
-    mixer[kColorTabBackgroundInactiveFrameInactive] = {p::kChrome};
-    mixer[kColorTabBackgroundActiveFrameActive] = {p::kChrome2};
-    mixer[kColorTabBackgroundActiveFrameInactive] = {p::kChrome2};
-    mixer[kColorTabBackgroundInactiveHoverFrameActive] = {
-        SkColorSetRGB(0x0F, 0x0F, 0x0F)};
+    mixer[ui::kColorFrameActive] = {p.chrome};
+    mixer[ui::kColorFrameInactive] = {p.chrome};
+    mixer[kColorToolbar] = {p.chrome};
+    mixer[kColorTabBackgroundInactiveFrameActive] = {p.chrome};
+    mixer[kColorTabBackgroundInactiveFrameInactive] = {p.chrome};
+    mixer[kColorTabBackgroundActiveFrameActive] = {p.chrome2};
+    mixer[kColorTabBackgroundActiveFrameInactive] = {p.chrome2};
+    mixer[kColorTabBackgroundInactiveHoverFrameActive] = {p.hover};
     // The 1px separator above the page takes the row's colour: transparent
     // showed the darker region behind it as a line.
-    mixer[kColorToolbarContentAreaSeparator] = {p::kChrome};
+    mixer[kColorToolbarContentAreaSeparator] = {p.chrome};
   }
 }
 

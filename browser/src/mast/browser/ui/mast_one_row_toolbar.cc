@@ -4,6 +4,7 @@
 
 #include <optional>
 
+#include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
 #include "chrome/browser/ui/views/frame/browser_view.h"
 #include "chrome/browser/ui/views/frame/toolbar_button_provider.h"
@@ -11,6 +12,9 @@
 #include "chrome/browser/ui/views/toolbar/reload_button.h"
 #include "chrome/browser/ui/views/toolbar/toolbar_button.h"
 #include "chrome/browser/ui/views/toolbar/toolbar_view.h"
+#include "components/prefs/pref_service.h"
+#include "mast/browser/mast_prefs.h"
+#include "mast/browser/mast_theme.h"
 #include "mast/common/mast_features.h"
 #include "ui/gfx/geometry/size.h"
 #include "ui/views/layout/flex_layout_types.h"
@@ -19,6 +23,11 @@
 namespace mast {
 
 void OnBrowserWindowReady(BrowserWindowInterface* browser) {
+  // The palette picked in Customize, before the window first paints. Later
+  // picks apply from the new tab page (mast_ui.cc).
+  if (browser && browser->GetProfile()) {
+    ApplyPalette(browser->GetProfile()->GetPrefs()->GetString(kPalettePref));
+  }
   if (!IsOneRowWindow() || !browser ||
       browser->GetType() != BrowserWindowInterface::TYPE_NORMAL) {
     return;

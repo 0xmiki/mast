@@ -265,4 +265,17 @@ const MastBlocklist = (() => {
     },
   };
 })();
+
+// Customize's palette, live: the page was served with the palette of the
+// time; a later pick (here or in another tab) arrives with the state.
+function mastPalette(theme) {
+  if (!theme) return;
+  let el = document.getElementById('mast-palette');
+  if (!el) {
+    el = document.createElement('style');
+    el.id = 'mast-palette';
+    document.head.append(el);
+  }
+  if (el.textContent !== theme.css) el.textContent = theme.css;
+}
 </script>

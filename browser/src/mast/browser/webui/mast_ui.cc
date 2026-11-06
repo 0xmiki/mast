@@ -3,11 +3,15 @@
 #include "mast/browser/webui/mast_ui.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
+#include "base/base64.h"
+#include "base/files/file_path.h"
+#include "base/files/file_util.h"
 #include "base/functional/bind.h"
 #include "base/memory/raw_ptr.h"
 #include "base/memory/ref_counted_memory.h"
@@ -15,7 +19,11 @@
 #include "base/scoped_observation.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
+#include "base/strings/stringprintf.h"
 #include "base/strings/utf_string_conversions.h"
+#include "base/task/thread_pool.h"
+#include "base/memory/weak_ptr.h"
+#include "base/files/file_path.h"
 #include "base/values.h"
 #include "chrome/browser/bookmarks/bookmark_model_factory.h"
 #include "chrome/browser/profiles/profile.h"
@@ -37,6 +45,8 @@
 #include "mast/browser/mast_blocks.h"
 #include "mast/browser/mast_pages.h"
 #include "mast/browser/mast_prefs.h"
+#include "mast/browser/mast_theme.h"
+#include "mast/ui/color/mast_palette.h"
 #include "components/prefs/pref_service.h"
 #include "services/network/public/mojom/content_security_policy.mojom.h"
 #include "url/gurl.h"
@@ -115,6 +125,48 @@ void HideBookmarksBarByDefault(PrefService* prefs) {
   }
 }
 
+// Customize's wallpaper lives in the profile folder: clearing browsing data
+// keeps it (the page's own storage would not), and the native frame can use
+// the same file later.
+base::FilePath WallpaperPath(Profile* profile) {
+  return profile->GetPath().AppendASCII(kWallpaperFile);
+}
+
+// The page scales the image down (2560 px wide at most) and sends a JPEG.
+constexpr size_t kMaxWallpaperBytes = 8 * 1024 * 1024;
+
+constexpr base::TaskTraits kFileTraits = {
+    base::MayBlock(), base::TaskPriority::USER_VISIBLE,
+    base::TaskShutdownBehavior::BLOCK_SHUTDOWN};
+
+scoped_refptr<base::RefCountedMemory> ReadWallpaper(
+    const base::FilePath& path) {
+  std::string jpeg;
+  if (!base::ReadFileToString(path, &jpeg)) {
+    jpeg.clear();
+  }
+  return base::MakeRefCounted<base::RefCountedString>(std::move(jpeg));
+}
+
+std::string HexColor(SkColor c) {
+  return base::StringPrintf("#%02x%02x%02x", SkColorGetR(c), SkColorGetG(c),
+                            SkColorGetB(c));
+}
+
+// The palettes Customize offers, with the colours its swatches show.
+base::ListValue PalettesValue() {
+  base::ListValue palettes;
+  for (const palette::Palette& p : palette::kPalettes) {
+    palettes.Append(base::DictValue()
+                        .Set("id", p.id)
+                        .Set("name", p.name)
+                        .Set("surface", HexColor(p.chrome))
+                        .Set("field", HexColor(p.chrome2))
+                        .Set("text", HexColor(p.text)));
+  }
+  return palettes;
+}
+
 class MastHandler : public content::WebUIMessageHandler,
                     public bookmarks::BaseBookmarkModelObserver {
  public:
@@ -139,6 +191,9 @@ class MastHandler : public content::WebUIMessageHandler,
     On("desktopAdd", &MastHandler::HandleDesktopAdd);
     On("desktopRemove", &MastHandler::HandleDesktopRemove);
     On("desktopMove", &MastHandler::HandleDesktopMove);
+    On("setPalette", &MastHandler::HandleSetPalette);
+    On("setWallpaper", &MastHandler::HandleSetWallpaper);
+    On("clearWallpaper", &MastHandler::HandleClearWallpaper);
   }
 
   void OnJavascriptAllowed() override {
@@ -281,6 +336,59 @@ class MastHandler : public content::WebUIMessageHandler,
     return sites;
   }
 
+  // ["setPalette", id]: the whole browser switches, not only this page.
+  void HandleSetPalette(const base::ListValue& args) {
+    const std::string id = StringArg(args);
+    if (std::ranges::none_of(palette::kPalettes, [&](const palette::Palette& p) {
+          return p.id == id;
+        })) {
+      return;
+    }
+    profile_->GetPrefs()->SetString(kPalettePref, id);
+    ApplyPalette(id);
+    SendState();
+  }
+
+  // ["setWallpaper", base64 JPEG]
+  void HandleSetWallpaper(const base::ListValue& args) {
+    std::optional<std::vector<uint8_t>> jpeg =
+        base::Base64Decode(StringArg(args));
+    if (!jpeg || jpeg->empty() || jpeg->size() > kMaxWallpaperBytes) {
+      return SendState(base::DictValue().Set("wallpaperFailed", true));
+    }
+    base::ThreadPool::PostTaskAndReplyWithResult(
+        FROM_HERE, kFileTraits,
+        base::BindOnce(
+            [](const base::FilePath& path, const std::vector<uint8_t>& data) {
+              return base::WriteFile(path, data);
+            },
+            WallpaperPath(profile_), std::move(*jpeg)),
+        base::BindOnce(&MastHandler::OnWallpaperWritten,
+                       weak_factory_.GetWeakPtr()));
+  }
+
+  void OnWallpaperWritten(bool ok) {
+    if (!ok) {
+      return SendState(base::DictValue().Set("wallpaperFailed", true));
+    }
+    // A new version per upload, never reused (see kWallpaperPref).
+    PrefService* prefs = profile_->GetPrefs();
+    prefs->SetInteger(kWallpaperPref,
+                      std::abs(prefs->GetInteger(kWallpaperPref)) + 1);
+    SendState();
+  }
+
+  void HandleClearWallpaper(const base::ListValue& args) {
+    PrefService* prefs = profile_->GetPrefs();
+    prefs->SetInteger(kWallpaperPref,
+                      -std::abs(prefs->GetInteger(kWallpaperPref)));
+    base::ThreadPool::PostTask(
+        FROM_HERE, kFileTraits,
+        base::BindOnce(base::IgnoreResult(&base::DeleteFile),
+                       WallpaperPath(profile_)));
+    SendState();
+  }
+
   void HandleUndo(const base::ListValue& args) {
     MastBlocks::Get().Undo();
     SendState(base::DictValue().Set("undone", true));
@@ -325,6 +433,13 @@ class MastHandler : public content::WebUIMessageHandler,
     state.Set("desktopReady", bookmarks_ && bookmarks_->loaded());
     state.Set("widgets",
               profile_->GetPrefs()->GetList(kDesktopWidgetsPref).Clone());
+    state.Set("theme",
+              base::DictValue()
+                  .Set("palette", palette::Current().id)
+                  .Set("css", PaletteCss())
+                  .Set("wallpaper", std::max(0, profile_->GetPrefs()->GetInteger(
+                                                    kWallpaperPref))));
+    state.Set("palettes", PalettesValue());
     state.Set("result", std::move(result));
     CallJavascriptFunction("mastState", base::Value(std::move(state)));
   }
@@ -334,6 +449,7 @@ class MastHandler : public content::WebUIMessageHandler,
   base::ScopedObservation<bookmarks::BookmarkModel,
                           bookmarks::BookmarkModelObserver>
       observation_{this};
+  base::WeakPtrFactory<MastHandler> weak_factory_{this};
 };
 
 }  // namespace
@@ -368,16 +484,30 @@ MastUI::MastUI(content::WebUI* web_ui, std::string_view host)
   source->DisableTrustedTypesCSP();
   source->SetRequestFilter(
       base::BindRepeating([](const std::string& path) {
-        return path.empty() || path == "index.html";
+        return path.empty() || path == "index.html" ||
+               base::StartsWith(path, "wallpaper-");
       }),
       base::BindRepeating(
-          [](bool as_new_tab, const std::string& path,
+          [](bool as_new_tab, PrefService* prefs,
+             const base::FilePath& wallpaper, const std::string& path,
              content::WebUIDataSource::GotDataCallback callback) {
+            // Customize's image, wallpaper-<version>.jpg (the version only
+            // keeps a replaced image out of the cache).
+            if (base::StartsWith(path, "wallpaper-")) {
+              base::ThreadPool::PostTaskAndReplyWithResult(
+                  FROM_HERE, kFileTraits,
+                  base::BindOnce(&ReadWallpaper, wallpaper),
+                  std::move(callback));
+              return;
+            }
             // New tabs open the desktop; chrome://mast is the full blocklist.
             std::move(callback).Run(base::MakeRefCounted<base::RefCountedString>(
-                as_new_tab ? DesktopPageHtml() : StartPageHtml(false)));
+                as_new_tab ? DesktopPageHtml(std::max(
+                                 0, prefs->GetInteger(kWallpaperPref)))
+                           : StartPageHtml(false)));
           },
-          as_new_tab));
+          as_new_tab, base::Unretained(profile->GetPrefs()),
+          WallpaperPath(profile)));
   web_ui->AddMessageHandler(std::make_unique<MastHandler>(profile));
 }
 

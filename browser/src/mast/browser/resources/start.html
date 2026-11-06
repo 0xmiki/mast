@@ -14,7 +14,7 @@
 {{BLOCKLIST}}
 <script>
 MastBlocklist.mount(document.getElementById('app'));
-window.mastState = (s) => MastBlocklist.update(s);
+window.mastState = (s) => { mastPalette(s.theme); MastBlocklist.update(s); };
 chrome.send('getState');
 setInterval(() => document.visibilityState === 'visible' && chrome.send('getState'), 30e3);
 </script>

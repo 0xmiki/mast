@@ -78,6 +78,40 @@ dialog.bl-panel .bl header { padding-right: 44px; }
 .bl-close { position: sticky; top: 12px; float: right; z-index: 2; display: grid; place-items: center; width: 32px; height: 32px;
   margin: 12px 12px -44px 0; padding: 0; border: 0; border-radius: 50%; background: var(--field); color: var(--text-2); }
 .bl-close:hover { background: var(--pressed); color: var(--text); }
+/* Customize: a wallpaper in the clear style (no blur: a light wash keeps text
+   legible, and widgets and tiles go dark), and the browser's palette. */
+body.wall { background: linear-gradient(rgb(0 0 0/.22), rgb(0 0 0/.22)), var(--wall) center/cover no-repeat fixed, var(--surface); }
+body.wall .widget { background: rgb(0 0 0/.58); box-shadow: inset 0 0 0 1px rgb(255 255 255/.06); }
+body.wall .tile { background: rgb(0 0 0/.5); box-shadow: inset 0 0 0 1px rgb(255 255 255/.08); }
+body.wall .add .tile { background: rgb(0 0 0/.3); box-shadow: inset 0 0 0 1px rgb(255 255 255/.35); color: var(--text-2); }
+body.wall .app .label, body.wall .hint { color: var(--text); text-shadow: 0 1px 3px rgb(0 0 0/.85); }
+body.wall .app:hover { background: rgb(0 0 0/.28); }
+.customize { position: fixed; right: 20px; bottom: 20px; display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px;
+  border: 0; border-radius: var(--r); background: var(--field); color: var(--text-2); font-size: 12px; font-weight: 500; }
+.customize:hover { background: var(--pressed); color: var(--text); }
+body.wall .customize { background: rgb(0 0 0/.58); color: var(--text); }
+dialog.cz { width: 400px; padding: 18px 20px 20px; }
+.cz header { display: flex; align-items: center; justify-content: space-between; margin: 0 -6px 14px 0; }
+.cz header h3 { margin: 0; }
+.cz h4 { margin: 0 0 10px; color: var(--text-2); font-size: 12px; font-weight: 600; }
+.cz .x { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--text-2); }
+.cz .x:hover { background: var(--pressed); color: var(--text); }
+.cz .x:focus { outline: none; }
+.bgs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; }
+.bgs button { display: grid; place-items: center; aspect-ratio: 16 / 10; padding: 0; border: 0; border-radius: 8px; background: var(--surface) center/cover;
+  box-shadow: inset 0 0 0 1px var(--line); color: var(--text-2); font-size: 12px; }
+.bgs button:hover { color: var(--text); }
+.bgs button.on { box-shadow: inset 0 0 0 2px var(--text); }
+.bgs .up { background: none; box-shadow: inset 0 0 0 1px var(--text-3); }
+.bgs .up:hover { box-shadow: inset 0 0 0 1px var(--text-2); }
+.bgs .up[disabled] { cursor: default; opacity: .6; }
+.sw { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.sw button { display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 4px 0; border: 0; background: none; color: var(--text-2); font-size: 11px; }
+.sw button:hover, .sw button.on { color: var(--text); }
+.sw i { width: 40px; height: 40px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(255 255 255/.12); }
+.sw button.on i { box-shadow: inset 0 0 0 1px rgb(255 255 255/.12), 0 0 0 2px var(--field), 0 0 0 4px var(--text); }
+.cz .note { display: flex; align-items: center; gap: 8px; margin: 16px 0 0; color: var(--text-3); font-size: 12px; }
+.cz .note .ind { box-shadow: none; background: var(--signal); }
 </style>
 </head>
 <body>
@@ -97,6 +131,16 @@ dialog.bl-panel .bl header { padding-right: 44px; }
 <dialog id="blocklistDialog" class="bl-panel" aria-label="Blocklist">
   <button class="bl-close" id="blClose" aria-label="Close"><svg width="12" height="12" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.4"><path d="M2 2l6 6M8 2l-6 6"/></svg></button>
   <div id="blRoot"></div>
+</dialog>
+<button class="customize" id="customize"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2.5 4.5h6M12 4.5h1.5M2.5 11.5h1.5M7.5 11.5h6"/><circle cx="10" cy="4.5" r="1.75"/><circle cx="5.75" cy="11.5" r="1.75"/></svg>Customize</button>
+<dialog id="czDialog" class="cz" aria-label="Customize">
+  <header><h3>Customize</h3><button class="x" id="czClose" aria-label="Close"><svg width="12" height="12" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.4"><path d="M2 2l6 6M8 2l-6 6"/></svg></button></header>
+  <h4>Background</h4>
+  <div class="bgs" id="czBgs"></div>
+  <h4>Colors</h4>
+  <div class="sw" id="czSw"></div>
+  <p class="note"><i class="ind"></i>Ember stays the same: it always means blocked.</p>
+  <input type="file" id="czFile" accept="image/*" hidden>
 </dialog>
 <div id="toast"></div>
 {{BLOCKLIST}}
@@ -221,14 +265,68 @@ function toast(text, undo) {
   if (!undo) setTimeout(() => { clearInterval(toastTimer); el.innerHTML = ''; }, 2600);
 }
 
+// Customize: the wallpaper (a file in the profile folder, served by this
+// page's own source) and the palette (the whole browser's, not only this page).
+let wallpaper = {{WALLPAPER}};  // version; 0 is none
+let czBusy = false;             // an upload is on its way
+function applyWallpaper(v) {
+  v = Math.max(0, v || 0);
+  wallpaper = v;
+  document.body.classList.toggle('wall', v > 0);
+  if (v > 0) document.body.style.setProperty('--wall', `url(wallpaper-${v}.jpg)`);
+  else document.body.style.removeProperty('--wall');
+}
+applyWallpaper(wallpaper);
+
+function renderCustomize() {
+  if (!state || !document.getElementById('czDialog').open) return;
+  const t = state.theme || {};
+  document.getElementById('czBgs').innerHTML =
+    `<button data-bg="none" class="${wallpaper ? '' : 'on'}" aria-pressed="${!wallpaper}">None</button>` +
+    (wallpaper ? `<button data-bg="image" class="on" aria-pressed="true" aria-label="Your image" style="background-image:url(wallpaper-${wallpaper}.jpg)"></button>` : '') +
+    `<button data-bg="upload" class="up" ${czBusy ? 'disabled' : ''}>${czBusy ? 'Saving…' : wallpaper ? 'Replace' : 'Upload image'}</button>`;
+  document.getElementById('czSw').innerHTML = (state.palettes || []).map((p) => `
+    <button data-palette="${esc(p.id)}" class="${p.id === t.palette ? 'on' : ''}" aria-pressed="${p.id === t.palette}">
+      <i style="background:linear-gradient(135deg, ${p.surface} 50%, ${p.field} 50%)"></i>${esc(p.name)}</button>`).join('');
+}
+
+// Large photos are scaled down here (2560 px on the long side, JPEG), so the
+// browser stores and serves a few hundred KB instead of tens of MB.
+async function uploadWallpaper(file) {
+  czBusy = true;
+  renderCustomize();
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, 2560 / Math.max(bmp.width, bmp.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bmp.width * scale);
+    canvas.height = Math.round(bmp.height * scale);
+    canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    const url = canvas.toDataURL('image/jpeg', 0.86);
+    chrome.send('setWallpaper', [url.slice(url.indexOf(',') + 1)]);
+  } catch (e) {
+    czBusy = false;
+    renderCustomize();
+    toast('That image can’t be used. Try a JPEG or PNG.');
+  }
+}
+document.getElementById('czFile').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (file) uploadWallpaper(file);
+});
+
 let deskAsked = false;  // a block/undo from the desktop's own buttons is waiting
 window.mastState = (s) => {
   const first = !state;
   state = s;
   if (first) dur = s.lastDuration || 'today';
+  mastPalette(s.theme);
+  if (s.theme && Math.max(0, s.theme.wallpaper) !== wallpaper) { czBusy = false; applyWallpaper(s.theme.wallpaper); }
   // The blocklist panel shows its own toasts for its own requests.
   const handled = MastBlocklist.update(s);
   const r = s.result || {};
+  if (r.wallpaperFailed) { czBusy = false; toast('That image couldn’t be saved.'); }
   if (r.invalidSite) {
     document.getElementById('addErr').textContent = 'That doesn’t look like a web address.';
     return;
@@ -241,6 +339,7 @@ window.mastState = (s) => {
   }
   if (document.getElementById('addDialog').open && !r.invalidSite) document.getElementById('addDialog').close();
   render();
+  renderCustomize();
 };
 
 document.addEventListener('click', (e) => {
@@ -271,6 +370,11 @@ document.addEventListener('click', (e) => {
     return document.getElementById('blocklistDialog').showModal();
   }
   if (t.id === 'blClose') return document.getElementById('blocklistDialog').close();
+  if (t.id === 'customize') { document.getElementById('czDialog').showModal(); return renderCustomize(); }
+  if (t.id === 'czClose') return document.getElementById('czDialog').close();
+  if (t.dataset.bg === 'none') return wallpaper && chrome.send('clearWallpaper');
+  if (t.dataset.bg === 'upload') return document.getElementById('czFile').click();
+  if (t.dataset.palette) return chrome.send('setPalette', [t.dataset.palette]);
 });
 document.addEventListener('change', (e) => {
   if (e.target.dataset.cat) chrome.send('setDistraction', [e.target.dataset.cat, e.target.checked]);

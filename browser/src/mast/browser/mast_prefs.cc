@@ -20,6 +20,8 @@ void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry) {
   widgets.Append("clock");
   widgets.Append("distractions");
   registry->RegisterListPref(kDesktopWidgetsPref, std::move(widgets));
+  registry->RegisterStringPref(kPalettePref, "onyx");
+  registry->RegisterIntegerPref(kWallpaperPref, 0);
 }
 
 }  // namespace mast

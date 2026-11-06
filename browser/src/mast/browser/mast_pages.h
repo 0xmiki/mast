@@ -20,7 +20,12 @@ std::string StartPageHtml(bool as_new_tab);
 
 // The new tab page: saved sites as a desktop of icons, plus widgets (clock,
 // and one button that blocks every distraction).
-std::string DesktopPageHtml();
+// `wallpaper` is the Customize image's version (kWallpaperPref; 0 is none).
+std::string DesktopPageHtml(int wallpaper);
+
+// The palette in use as CSS custom properties (":root{--bg:...}"), for
+// pages already open when the palette changes.
+std::string PaletteCss();
 
 }  // namespace mast
 
