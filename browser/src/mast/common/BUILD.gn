@@ -1,0 +1,11 @@
+# Copyright 2026 The Mast Authors
+# Mast's feature switches. Tiny and base-only, so any upstream target can depend
+# on it (layout, tabs, omnibox, colours, window features).
+
+source_set("common") {
+  sources = [
+    "mast_features.cc",
+    "mast_features.h",
+  ]
+  deps = [ "//base" ]
+}

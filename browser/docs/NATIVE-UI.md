@@ -129,6 +129,17 @@ mixers, but costs a `browser_tests` build, so it's for later.
 
 ## 5. The fixes, smallest first
 
+**Status (2026-11-06): written, anchors validated with `./mast check-patches`, not yet built.**
+Three decisions changed while writing them:
+- **Prominent buttons stay neutral globally.** Chromium uses them in save-password and
+  clear-data dialogs, and ember means blocking only. Mast's own Block/Extend button sets ember
+  itself, in `OnWidgetInitialized()`.
+- **A second omnibox cause.** The focused field paints `kColorOmniboxResultsBackground`, which
+  we had set to the toolbar colour, so the field vanished on focus and only the ring was left.
+  It's now `#262626`, like the unfocused field.
+- **The omnibox stays a pill.** Both approved Pencil designs draw it as one, so item 10 is dropped.
+- **Tabs:** top radius 8, foot 4. The overlap is 2×4 − 6 = 2 px, still positive.
+
 Mixer-only (our files, no upstream patch):
 1. `kColorSysStateFocusRing` → a quiet value. Rings still pass through the clamp, so this
    mainly fixes buttons and checkboxes.

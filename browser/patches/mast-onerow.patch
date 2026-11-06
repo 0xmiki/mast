@@ -1,0 +1,176 @@
+diff -ruN a/chrome/browser/ui/browser_window/internal/BUILD.gn b/chrome/browser/ui/browser_window/internal/BUILD.gn
+--- a/chrome/browser/ui/browser_window/internal/BUILD.gn
++++ b/chrome/browser/ui/browser_window/internal/BUILD.gn
+@@ -13,6 +13,7 @@
+     "profile_browser_collection.cc",
+   ]
+   deps = [
++    "//mast/common",
+     "//base",
+     "//chrome/browser:browser_process",
+     "//chrome/browser:global_features",
+@@ -66,6 +67,8 @@
+       "create_browser_window_non_android.cc",
+       "desktop_browser_window_capabilities.cc",
+       "embedder_browser_window_features.cc",
++      "//mast/browser/ui/mast_one_row_toolbar.cc",
++      "//mast/browser/ui/mast_one_row_toolbar.h",
+       "global_browser_collection_platform_delegate_non_android.cc",
+     ]
+     public_deps = [
+diff -ruN a/chrome/browser/ui/browser_window/internal/embedder_browser_window_features.cc b/chrome/browser/ui/browser_window/internal/embedder_browser_window_features.cc
+--- a/chrome/browser/ui/browser_window/internal/embedder_browser_window_features.cc
++++ b/chrome/browser/ui/browser_window/internal/embedder_browser_window_features.cc
+@@ -6,6 +6,7 @@
+ 
+ #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
+ #include "chrome/browser/ui/views/frame/browser_view.h"
++#include "mast/browser/ui/mast_one_row_toolbar.h"
+ 
+ DEFINE_USER_DATA(EmbedderBrowserWindowFeatures);
+ 
+@@ -26,7 +27,7 @@
+ 
+ void EmbedderBrowserWindowFeatures::InitPostWindowConstruction(
+     BrowserWindowInterface* browser) {
+-  // Embedder implementation goes here.
++  mast::OnBrowserWindowReady(browser);
+ }
+ 
+ void EmbedderBrowserWindowFeatures::InitPostBrowserViewConstruction(
+diff -ruN a/chrome/browser/ui/views/frame/BUILD.gn b/chrome/browser/ui/views/frame/BUILD.gn
+--- a/chrome/browser/ui/views/frame/BUILD.gn
++++ b/chrome/browser/ui/views/frame/BUILD.gn
+@@ -2444,6 +2444,7 @@
+     "//ui/views",
+   ]
+   deps = [
++    "//mast/common",
+     ":custom_corners",
+     ":custom_corners_background",
+     ":custom_floating_corner",
+diff -ruN a/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc b/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc
+--- a/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc
++++ b/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc
+@@ -4,6 +4,8 @@
+ 
+ #include "chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.h"
+ 
++#include "mast/browser/ui/mast_one_row_layout.h"
++
+ #include <algorithm>
+ #include <memory>
+ #include <optional>
+@@ -803,8 +805,16 @@
+       const int leading_margin = GetHorizontalTabStripLeadingMargin(params);
+       tabstrip_bounds = GetBoundsWithExclusion(
+           params, views().horizontal_tab_strip_region_view, leading_margin);
++      if (mast::IsOneRowWindow()) {
++        // Mast: the toolbar shares this row (see CalculateTopContainerLayout).
++        mast::FitTabStripInRow(tabstrip_bounds, params.visual_client_area.x(),
++                               views().horizontal_tab_strip_region_view,
++                               views().toolbar);
++        params.SetTop(tabstrip_bounds.bottom());
++      } else {
+       params.SetTop(tabstrip_bounds.bottom() -
+                     GetLayoutConstant(LayoutConstant::kTabstripToolbarOverlap));
++      }
+       needs_exclusion = false;
+     }
+     layout.AddChild(views().horizontal_tab_strip_region_view, tabstrip_bounds,
+@@ -1367,6 +1377,28 @@
+     bool needs_exclusion) const {
+   const int original_top = params.visual_client_area.y();
+ 
++  // Mast: one row. The top container is the toolbar's slice at the end of
++  // the tab row, just above this area (no bookmarks bar or separator in it).
++  if (const gfx::Rect slice =
++          mast::IsOneRowWindow() &&
++                  layout_data_->tab_strip_type == TabStripType::kHorizontal &&
++                  IsParentedTo(views().toolbar, views().top_container) &&
++                  IsParentedTo(views().horizontal_tab_strip_region_view,
++                               views().browser_view)
++              ? mast::TakeOneRowToolbarSlice(params.visual_client_area)
++              : gfx::Rect();
++      !slice.IsEmpty()) {
++    layout.AddChild(views().toolbar, gfx::Rect(slice.size()),
++                    delegate().IsToolbarVisible());
++    if (IsParentedTo(views().bookmark_bar, views().top_container)) {
++      layout.AddChild(views().bookmark_bar, gfx::Rect(), false);
++    }
++    if (IsParentedTo(views().top_container_separator, views().top_container)) {
++      layout.AddChild(views().top_container_separator, gfx::Rect(), false);
++    }
++    return slice;
++  }
++
+   if (IsParentedTo(views().horizontal_tab_strip_region_view,
+                    views().top_container)) {
+     gfx::Rect tabstrip_bounds;
+diff -ruN a/chrome/browser/ui/views/omnibox/BUILD.gn b/chrome/browser/ui/views/omnibox/BUILD.gn
+--- a/chrome/browser/ui/views/omnibox/BUILD.gn
++++ b/chrome/browser/ui/views/omnibox/BUILD.gn
+@@ -115,6 +115,7 @@
+   ]
+ 
+   deps = [
++    "//mast/common",
+     ":omnibox",
+     "//chrome/app:command_ids",
+     "//chrome/app/vector_icons",
+diff -ruN a/chrome/browser/ui/views/omnibox/omnibox_popup_presenter_base.cc b/chrome/browser/ui/views/omnibox/omnibox_popup_presenter_base.cc
+--- a/chrome/browser/ui/views/omnibox/omnibox_popup_presenter_base.cc
++++ b/chrome/browser/ui/views/omnibox/omnibox_popup_presenter_base.cc
+@@ -4,6 +4,8 @@
+ 
+ #include "chrome/browser/ui/views/omnibox/omnibox_popup_presenter_base.h"
+ 
++#include "mast/browser/ui/mast_one_row_layout.h"
++
+ #include <optional>
+ 
+ #include "base/auto_reset.h"
+@@ -355,6 +357,10 @@
+     // The width is known, and is the basis for consistent web content rendering
+     // so width is specified exactly; then only height adjusts dynamically.
+     gfx::Rect widget_bounds = location_bar_->BoundsInScreen();
++    if (widget_->parent()) {  // Mast: the popup's parent is the browser window.
++      mast::WidenOmniboxPopup(widget_bounds,
++                              widget_->parent()->GetWindowBoundsInScreen());
++    }
+ 
+     widget_bounds.Inset(
+         -RoundedOmniboxResultsFrame::GetLocationBarAlignmentInsets());
+diff -ruN a/chrome/browser/ui/views/tabs/common/BUILD.gn b/chrome/browser/ui/views/tabs/common/BUILD.gn
+--- a/chrome/browser/ui/views/tabs/common/BUILD.gn
++++ b/chrome/browser/ui/views/tabs/common/BUILD.gn
+@@ -87,6 +87,7 @@
+   ]
+ 
+   deps = [
++    "//mast/common",
+     "//base:i18n",
+     "//cc/paint",
+     "//chrome/app/theme:theme_resources",
+diff -ruN a/chrome/browser/ui/views/tabs/common/horizontal_tab_style_views.cc b/chrome/browser/ui/views/tabs/common/horizontal_tab_style_views.cc
+--- a/chrome/browser/ui/views/tabs/common/horizontal_tab_style_views.cc
++++ b/chrome/browser/ui/views/tabs/common/horizontal_tab_style_views.cc
+@@ -4,6 +4,8 @@
+ 
+ #include "chrome/browser/ui/views/tabs/common/horizontal_tab_style_views.h"
+ 
++#include "mast/common/mast_features.h"
++
+ #include <algorithm>
+ #include <cmath>
+ #include <utility>
+@@ -90,7 +92,8 @@
+ 
+   // Selected, hover, and inactive tab fills are a detached squarcle tab.
+   if (path_type == TabStyle::PathType::kHighlight ||
+-      path_type == TabStyle::PathType::kHitTest) {
++      path_type == TabStyle::PathType::kHitTest ||
++      mast::IsOneRowWindow()) {  // Mast: pill tabs.
+     float top_left_corner_radius = content_corner_radius;
+     float top_right_corner_radius = content_corner_radius;
+     float bottom_left_corner_radius = content_corner_radius;

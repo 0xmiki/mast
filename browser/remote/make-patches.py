@@ -8,11 +8,18 @@ moves code fails loudly here instead of silently producing a broken patch.
 import os, re, shutil, subprocess
 
 SRC = "/root/chromium/src"
-WORK = "/root/pw"
+WORK = os.environ.get("MAST_PATCH_WORK", "/root/pw")
+# Local mode (./mast check-patches): read base files rebuilt from Chromium's source site plus
+# ungoogled's patches by tools/base-file.mjs, so anchors are checked without the builder.
+LOCAL = os.environ.get("MAST_LOCAL_BASE")
 shutil.rmtree(WORK, ignore_errors=True)
 
 
 def pristine(path):
+    if LOCAL:
+        local = subprocess.run(["node", os.path.join(LOCAL, "tools/base-file.mjs"), path],
+                               capture_output=True, text=True, check=True).stdout.strip()
+        return open(local).read()
     return subprocess.run(["git", "-C", SRC, "show", f"HEAD:{path}"],
                           capture_output=True, text=True, check=True).stdout
 
@@ -54,11 +61,14 @@ edit(H, "chrome/browser/chrome_content_browser_client_navigation_throttles.cc", 
     '  supervised_user::ClassifyUrlNavigationThrottle::MaybeCreateAndAdd(registry);\n  mast::MastNavigationThrottle::MaybeCreateAndAdd(registry);\n'))
 edit(H, "chrome/browser/BUILD.gn", lambda t: add_dep(t, 'source_set("core") {', "//mast/browser"))
 
-edit(H, "chrome/browser/prefs/browser_prefs.cc", lambda t: once(once(t,
+edit(H, "chrome/browser/prefs/browser_prefs.cc", lambda t: once(once(once(t,
     '#include "chrome/browser/prefs/incognito_mode_prefs.h"\n',
-    '#include "chrome/browser/prefs/incognito_mode_prefs.h"\n#include "mast/browser/mast_blocks.h"\n'),
+    '#include "chrome/browser/prefs/incognito_mode_prefs.h"\n#include "mast/browser/mast_blocks.h"\n#include "mast/browser/mast_prefs.h"\n'),
     '  BrowserProcessImpl::RegisterPrefs(registry);\n',
-    '  BrowserProcessImpl::RegisterPrefs(registry);\n  mast::MastBlocks::RegisterLocalStatePrefs(registry);\n'))
+    '  BrowserProcessImpl::RegisterPrefs(registry);\n  mast::MastBlocks::RegisterLocalStatePrefs(registry);\n'),
+    # Last in RegisterProfilePrefs(), so Mast can change upstream defaults.
+    '  registry->RegisterBooleanPref(prefs::kStaticStorageQuotaEnabled, false);\n}\n',
+    '  registry->RegisterBooleanPref(prefs::kStaticStorageQuotaEnabled, false);\n  mast::RegisterProfilePrefs(registry);\n}\n'))
 edit(H, "chrome/browser/prefs/incognito_mode_prefs.cc", lambda t: once(once(t,
     '#include "chrome/browser/prefs/incognito_mode_prefs.h"\n',
     '#include "chrome/browser/prefs/incognito_mode_prefs.h"\n\n#include "mast/browser/mast_blocks.h"\n'),
@@ -70,29 +80,54 @@ edit(H, "chrome/browser/prefs/BUILD.gn", lambda t: add_dep(t, 'source_set("impl"
 # omnibox still treats it as the NTP).
 edit(H, "chrome/browser/ui/webui/chrome_web_ui_configs.cc", lambda t: once(once(once(once(t,
     '#include "content/public/browser/webui_config_map.h"\n',
-    '#include "content/public/browser/webui_config_map.h"\n#include "mast/browser/mast_ui.h"\n'),
+    '#include "content/public/browser/webui_config_map.h"\n#include "mast/browser/webui/mast_ui.h"\n'),
     '  auto& map = content::WebUIConfigMap::GetInstance();\n',
     '  auto& map = content::WebUIConfigMap::GetInstance();\n  map.AddWebUIConfig(std::make_unique<mast::MastUIConfig>(mast::kMastHost));\n'),
     '  map.AddWebUIConfig(std::make_unique<NewTabPageUIConfig>());\n',
     '  map.AddWebUIConfig(\n      std::make_unique<mast::MastUIConfig>(chrome::kChromeUINewTabPageHost));\n'),
     '  map.AddWebUIConfig(std::make_unique<NewTabPageThirdPartyUIConfig>());\n',
     '  map.AddWebUIConfig(std::make_unique<mast::MastUIConfig>(\n      chrome::kChromeUINewTabPageThirdPartyHost));\n'))
-edit(H, "chrome/browser/ui/webui/BUILD.gn", lambda t: add_dep(t, 'source_set("configs") {', "//mast/browser"))
+edit(H, "chrome/browser/ui/webui/BUILD.gn", lambda t: add_dep(t, 'source_set("configs") {', "//mast/browser/webui"))
 
-# Toolbar: the Block button for the current site, just before the avatar.
-edit(H, "chrome/browser/ui/views/toolbar/toolbar_view.cc", lambda t: once(once(t,
-    '#include "chrome/browser/ui/views/toolbar/toolbar_view.h"\n',
-    '#include "chrome/browser/ui/views/toolbar/toolbar_view.h"\n\n#include "mast/browser/ui/mast_toolbar_button.h"\n'),
-    '  if (!features::IsWebUIAvatarButtonEnabled()) {\n    avatar_ = AddChildView',
-    '  AddChildView(std::make_unique<mast::MastToolbarButton>(browser_));\n\n  if (!features::IsWebUIAvatarButtonEnabled()) {\n    avatar_ = AddChildView').replace(
+# The star (and Ctrl+D) saves to the Desktop folder behind the new tab page. Mast's
+# provider takes the slot of the shopping one (commerce is off in Mast); the shopping
+# provider stays as the fallback so upstream code is unchanged and still compiles.
+edit(H, "chrome/browser/bookmarks/chrome_bookmark_client.cc", lambda t: once(once(t,
+    '#include "chrome/browser/bookmarks/chrome_bookmark_client.h"\n',
+    '#include "chrome/browser/bookmarks/chrome_bookmark_client.h"\n\n#include "mast/browser/desktop/mast_desktop.h"\n'),
+    '  shopping_save_location_provider_ =\n      std::make_unique<ShoppingCollectionProvider>(model, profile_);\n',
+    '  // Mast: new bookmarks go to the Desktop folder (the new tab page).\n'
+    '  shopping_save_location_provider_ =\n      mast::CreateDesktopSaveLocationProvider(model);\n'
+    '  if (!shopping_save_location_provider_) {\n'
+    '    shopping_save_location_provider_ =\n        std::make_unique<ShoppingCollectionProvider>(model, profile_);\n  }\n'))
+edit(H, "chrome/browser/bookmarks/BUILD.gn", lambda t: add_dep(t, 'source_set("impl") {', "//mast/browser/desktop"))
+
+# Toolbar: no profile button (Mast has no sign-in).
+edit(H, "chrome/browser/ui/views/toolbar/toolbar_view.cc", lambda t: once(t,
     '        AvatarToolbarButtonInterface::CanShowForProfile(browser_->GetProfile());\n',
-    '        false;  // Mast: no sign-in, so no profile button.\n', 1))
-edit(H, "chrome/browser/ui/views/toolbar/BUILD.gn", lambda t: add_dep(once(t,
-    '    "toolbar_view.cc",\n',
-    '    "toolbar_view.cc",\n    "//mast/browser/ui/mast_toolbar_button.cc",\n    "//mast/browser/ui/mast_toolbar_button.h",\n'),
+    '        false;  // Mast: no sign-in, so no profile button.\n'))
+
+# Page info (the icon at the start of the address bar): "Block this site", after the
+# extensions row. It opens Mast's block bubble from the same icon.
+edit(H, "chrome/browser/ui/views/page_info/page_info_main_view.cc", lambda t: once(once(t,
+    '#include "chrome/browser/ui/views/page_info/page_info_main_view.h"\n',
+    '#include "chrome/browser/ui/views/page_info/page_info_main_view.h"\n\n#include "mast/browser/ui/mast_block_bubble.h"\n'),
+    '        views::style::STYLE_BODY_4, kColorPageInfoSubtitleForeground);\n  }\n\n  int link_text_id = 0;\n',
+    '        views::style::STYLE_BODY_4, kColorPageInfoSubtitleForeground);\n  }\n\n'
+    '  // Mast: "Block this site".\n'
+    '  site_settings_view_->AddChildView(mast::CreateBlockSiteRow(\n'
+    '      ui_delegate_->GetWebContents(),\n'
+    '      base::BindRepeating(\n'
+    '          [](PageInfoNavigationHandler* handler) {\n'
+    '            if (handler) {\n              handler->CloseBubble();\n            }\n'
+    '          },\n          base::Unretained(navigation_handler_))));\n\n'
+    '  int link_text_id = 0;\n'))
+edit(H, "chrome/browser/ui/views/page_info/BUILD.gn", lambda t: add_dep(once(t,
+    '    "page_info_main_view.cc",\n',
+    '    "page_info_main_view.cc",\n    "//mast/browser/ui/mast_block_bubble.cc",\n    "//mast/browser/ui/mast_block_bubble.h",\n'),
     'source_set("impl") {', "//mast/browser"))
 
-# The toolbar Block bubbles subclass BubbleDialogDelegateView, whose constructor is
+# Mast's block bubbles subclass BubbleDialogDelegateView, whose constructor is
 # limited to a friend list (like the home button's undo bubble).
 edit(H, "ui/views/bubble/bubble_dialog_delegate_view.h", lambda t: once(once(t,
     'class HomePageUndoBubble;\n',
@@ -109,6 +144,30 @@ def theme(t):
              'static_cast<int>(ui::SystemTheme::kDefault));')
     return t
 edit(H, "chrome/browser/themes/theme_service.cc", theme)
+
+# Settings without Google: no "You and Google" page (account, Google services, import),
+# no AI page, no Privacy Guide. Import moves to Mast's own onboarding (IMPORT-PLAN.md).
+edit(H, "chrome/browser/ui/webui/settings/settings_ui.cc", lambda t: once(t,
+    '  TryShowHatsSurveyWithTimeout();\n}\n',
+    '  // Mast: no AI or Google pages in Settings.\n'
+    '  html_source->AddBoolean("showAiPage", false);\n'
+    '  html_source->AddBoolean("showGlicSettings", false);\n'
+    '  html_source->AddBoolean("showGeicSettings", false);\n'
+    '  html_source->AddBoolean("showPrivacyGuide", false);\n\n'
+    '  TryShowHatsSurveyWithTimeout();\n}\n'))
+edit(H, "chrome/browser/resources/settings/page_visibility.ts", lambda t: once(t,
+    "  if (!loadTimeData.getBoolean('isGuest')) {\n    return undefined;\n  }\n",
+    "  if (!loadTimeData.getBoolean('isGuest')) {\n"
+    "    // Mast: no Google account page and no AI page. Every key is listed: the\n"
+    "    // menu hides pages whose entry is missing.\n"
+    "    return {\n"
+    "      a11y: true, ai: false, autofill: true, defaultBrowser: true, downloads: true,\n"
+    "      extensions: true, languages: true, onStartup: true, people: false,\n"
+    "      performance: true, reset: true, safetyHub: true, system: true, yourSavedInfo: true,\n"
+    "      appearance: {bookmarksBar: true, homeButton: true, hoverCard: true, pageZoom: true,\n"
+    "                   setTheme: true, sidePanel: true},\n"
+    "      privacy: {networkPrediction: true, searchPrediction: true},\n"
+    "    };\n  }\n"))
 
 # ---------------------------------------------------------------- theme
 T = "mast-theme.patch"
@@ -136,9 +195,10 @@ edit(T, "chrome/browser/ui/color/chrome_color_mixers.cc", lambda t: once(once(t,
     '#include "chrome/browser/ui/color/chrome_color_mixers.h"\n\n#include "mast/browser/ui/color/mast_chrome_color_mixer.h"\n'),
     '  AddMaterialTabStripColorMixer(provider, key);\n',
     '  AddMaterialTabStripColorMixer(provider, key);\n  mast::AddMastChromeColorMixer(provider, key);\n'))
-edit(T, "chrome/browser/ui/color/BUILD.gn", lambda t: once(t,
+edit(T, "chrome/browser/ui/color/BUILD.gn", lambda t: add_dep(once(t,
     '    "chrome_color_mixers.cc",\n',
-    '    "chrome_color_mixers.cc",\n    "//mast/browser/ui/color/mast_chrome_color_mixer.cc",\n    "//mast/browser/ui/color/mast_chrome_color_mixer.h",\n'))
+    '    "chrome_color_mixers.cc",\n    "//mast/browser/ui/color/mast_chrome_color_mixer.cc",\n    "//mast/browser/ui/color/mast_chrome_color_mixer.h",\n'),
+    'source_set("mixers") {', "//mast/common"))
 
 # Calm UI: no ink ripples (the demo has none), no profile button (no sign-in),
 # Inter for internal pages instead of Roboto.
@@ -147,6 +207,122 @@ edit(T, "ui/views/style/platform_style.h", lambda t: once(t,
     'static constexpr bool kUseRipples = false;  // Mast: no ink ripples.'))
 edit(T, "ui/base/webui/web_ui_util.cc", lambda t: once(t,
     'return "Roboto, " + GetFontFamily();', 'return "Inter, " + GetFontFamily();'))
+
+# Native UI shape (docs/NATIVE-UI.md). The omnibox focus ring gets its own colour id,
+# which skips Chromium's 3:1 contrast lift, and a 1px halo: a hairline, not a glow.
+edit(T, "chrome/browser/ui/views/location_bar/location_bar_view.cc", lambda t: once(t,
+    '    views::FocusRing::Get(this)->SetOutsetFocusRingDisabled(true);\n',
+    '    views::FocusRing::Get(this)->SetOutsetFocusRingDisabled(true);\n'
+    '    // Mast: a hairline focus ring (kColorLocationBarBorder in Mast\'s mixer).\n'
+    '    views::FocusRing::Get(this)->SetColorId(kColorLocationBarBorder);\n'
+    '    views::FocusRing::Get(this)->SetHaloThickness(1.f);\n'))
+
+# One radius table for dialogs, menus, comboboxes, textfields and buttons: tighter
+# corners (Mast's bubbles are 10px, its buttons 6px; Chromium's are 12-16px and pills).
+def radii(t):
+    t = once(t, '    case ShapeSysTokens::kSmall:\n      return 8;\n', '    case ShapeSysTokens::kSmall:\n      return 6;  // Mast\n')
+    t = once(t, '    case ShapeSysTokens::kMediumSmall:\n      return 12;\n', '    case ShapeSysTokens::kMediumSmall:\n      return 10;  // Mast\n')
+    t = once(t, '    case ShapeSysTokens::kMedium:\n      return 16;\n', '    case ShapeSysTokens::kMedium:\n      return 10;  // Mast\n')
+    t = once(t, '          {ShapeContextTokens::kButtonRadius, ShapeSysTokens::kFull},\n',
+             '          {ShapeContextTokens::kButtonRadius, ShapeSysTokens::kSmall},  // Mast\n')
+    return t
+edit(T, "ui/views/layout/layout_provider.cc", radii)
+
+# Inter for the native UI too (fontconfig falls back to the system sans without it).
+edit(T, "ui/gfx/platform_font_skia.cc", lambda t: once(t,
+    '    params = linux_ui->GetDefaultFontRenderParams();\n',
+    '    params = linux_ui->GetDefaultFontRenderParams();\n    family = "Inter";  // Mast\n'))
+
+# Tabs: 8px top corners and a small foot (4px) instead of Chrome's swoop. The foot
+# stays above the separator width so the tab-overlap maths stays positive.
+edit(T, "chrome/browser/ui/tabs/tab_style.cc", lambda t: once(once(t,
+    'int TabStyle::GetTopCornerRadius() const {\n  return 10;\n',
+    'int TabStyle::GetTopCornerRadius() const {\n  return 8;  // Mast\n'),
+    'int TabStyle::GetBottomCornerRadius() const {\n  return 12;\n',
+    'int TabStyle::GetBottomCornerRadius() const {\n  return 4;  // Mast\n'))
+
+# ---------------------------------------------------------------- one row
+# Tabs, then back / address / forward, then the menu, in one row that is also the
+# titlebar (mast/common/mast_features.h; --disable-features=MastOneRowWindow for two
+# rows). The geometry is mast/browser/ui/mast_one_row_layout.h; these are the hooks.
+R = "mast-onerow.patch"
+
+# Tabs take the row up to where the toolbar starts; the toolbar's top container is
+# exactly the slice at the end, so it never paints over the tabs.
+edit(R, "chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc", lambda t: once(once(once(t,
+    '#include "chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.h"\n',
+    '#include "chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.h"\n\n#include "mast/browser/ui/mast_one_row_layout.h"\n'),
+    '          params, views().horizontal_tab_strip_region_view, leading_margin);\n'
+    '      params.SetTop(tabstrip_bounds.bottom() -\n'
+    '                    GetLayoutConstant(LayoutConstant::kTabstripToolbarOverlap));\n'
+    '      needs_exclusion = false;\n    }\n    layout.AddChild(views().horizontal_tab_strip_region_view, tabstrip_bounds,\n'
+    '                    layout_data_->tab_strip_type == TabStripType::kHorizontal);\n  }\n\n  // This will be',
+    '          params, views().horizontal_tab_strip_region_view, leading_margin);\n'
+    '      if (mast::IsOneRowWindow()) {\n'
+    '        // Mast: the toolbar shares this row (see CalculateTopContainerLayout).\n'
+    '        mast::FitTabStripInRow(tabstrip_bounds, params.visual_client_area.x(),\n'
+    '                               views().horizontal_tab_strip_region_view,\n'
+    '                               views().toolbar);\n'
+    '        params.SetTop(tabstrip_bounds.bottom());\n'
+    '      } else {\n'
+    '      params.SetTop(tabstrip_bounds.bottom() -\n'
+    '                    GetLayoutConstant(LayoutConstant::kTabstripToolbarOverlap));\n'
+    '      }\n      needs_exclusion = false;\n    }\n    layout.AddChild(views().horizontal_tab_strip_region_view, tabstrip_bounds,\n'
+    '                    layout_data_->tab_strip_type == TabStripType::kHorizontal);\n  }\n\n  // This will be'),
+    '    bool needs_exclusion) const {\n  const int original_top = params.visual_client_area.y();\n',
+    '    bool needs_exclusion) const {\n  const int original_top = params.visual_client_area.y();\n\n'
+    '  // Mast: one row. The top container is the toolbar\'s slice at the end of\n'
+    '  // the tab row, just above this area (no bookmarks bar or separator in it).\n'
+    '  if (const gfx::Rect slice =\n'
+    '          mast::IsOneRowWindow() &&\n'
+    '                  layout_data_->tab_strip_type == TabStripType::kHorizontal &&\n'
+    '                  IsParentedTo(views().toolbar, views().top_container) &&\n'
+    '                  IsParentedTo(views().horizontal_tab_strip_region_view,\n'
+    '                               views().browser_view)\n'
+    '              ? mast::TakeOneRowToolbarSlice(params.visual_client_area)\n'
+    '              : gfx::Rect();\n'
+    '      !slice.IsEmpty()) {\n'
+    '    layout.AddChild(views().toolbar, gfx::Rect(slice.size()),\n'
+    '                    delegate().IsToolbarVisible());\n'
+    '    if (IsParentedTo(views().bookmark_bar, views().top_container)) {\n'
+    '      layout.AddChild(views().bookmark_bar, gfx::Rect(), false);\n    }\n'
+    '    if (IsParentedTo(views().top_container_separator, views().top_container)) {\n'
+    '      layout.AddChild(views().top_container_separator, gfx::Rect(), false);\n    }\n'
+    '    return slice;\n  }\n'))
+edit(R, "chrome/browser/ui/views/frame/BUILD.gn", lambda t: add_dep(t, 'source_set("browser_view_tabbed_layout_impl") {', "//mast/common"))
+
+# Tabs are pills: every tab shape (fill, border, clip) uses the detached rounded rect
+# Chromium already draws for hover and hit tests, instead of the swoop into the toolbar.
+edit(R, "chrome/browser/ui/views/tabs/common/horizontal_tab_style_views.cc", lambda t: once(once(t,
+    '#include "chrome/browser/ui/views/tabs/common/horizontal_tab_style_views.h"\n',
+    '#include "chrome/browser/ui/views/tabs/common/horizontal_tab_style_views.h"\n\n#include "mast/common/mast_features.h"\n'),
+    '  if (path_type == TabStyle::PathType::kHighlight ||\n      path_type == TabStyle::PathType::kHitTest) {\n    float top_left_corner_radius',
+    '  if (path_type == TabStyle::PathType::kHighlight ||\n      path_type == TabStyle::PathType::kHitTest ||\n'
+    '      mast::IsOneRowWindow()) {  // Mast: pill tabs.\n    float top_left_corner_radius'))
+edit(R, "chrome/browser/ui/views/tabs/common/BUILD.gn", lambda t: add_dep(t, 'source_set("impl") {', "//mast/common"))
+
+# The suggestion list opens wider than the narrow address bar, growing left.
+edit(R, "chrome/browser/ui/views/omnibox/omnibox_popup_presenter_base.cc", lambda t: once(once(t,
+    '#include "chrome/browser/ui/views/omnibox/omnibox_popup_presenter_base.h"\n',
+    '#include "chrome/browser/ui/views/omnibox/omnibox_popup_presenter_base.h"\n\n#include "mast/browser/ui/mast_one_row_layout.h"\n'),
+    '    gfx::Rect widget_bounds = location_bar_->BoundsInScreen();\n',
+    '    gfx::Rect widget_bounds = location_bar_->BoundsInScreen();\n'
+    '    if (widget_->parent()) {  // Mast: the popup\'s parent is the browser window.\n'
+    '      mast::WidenOmniboxPopup(widget_bounds,\n'
+    '                              widget_->parent()->GetWindowBoundsInScreen());\n    }\n'))
+edit(R, "chrome/browser/ui/views/omnibox/BUILD.gn", lambda t: add_dep(t, 'source_set("impl") {', "//mast/common"))
+
+# The toolbar's one-row arrangement, once the window and its toolbar exist (the
+# embedder hook Chromium leaves for forks).
+edit(R, "chrome/browser/ui/browser_window/internal/embedder_browser_window_features.cc", lambda t: once(once(t,
+    '#include "chrome/browser/ui/views/frame/browser_view.h"\n',
+    '#include "chrome/browser/ui/views/frame/browser_view.h"\n#include "mast/browser/ui/mast_one_row_toolbar.h"\n'),
+    'void EmbedderBrowserWindowFeatures::InitPostWindowConstruction(\n    BrowserWindowInterface* browser) {\n  // Embedder implementation goes here.\n}',
+    'void EmbedderBrowserWindowFeatures::InitPostWindowConstruction(\n    BrowserWindowInterface* browser) {\n  mast::OnBrowserWindowReady(browser);\n}'))
+edit(R, "chrome/browser/ui/browser_window/internal/BUILD.gn", lambda t: add_dep(once(t,
+    '      "embedder_browser_window_features.cc",\n',
+    '      "embedder_browser_window_features.cc",\n      "//mast/browser/ui/mast_one_row_toolbar.cc",\n      "//mast/browser/ui/mast_one_row_toolbar.h",\n'),
+    'source_set("internal") {', "//mast/common"))
 
 # ---------------------------------------------------------------- branding
 B = "mast-branding.patch"

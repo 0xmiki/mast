@@ -3,6 +3,7 @@
 #include "mast/browser/ui/color/mast_chrome_color_mixer.h"
 
 #include "chrome/browser/ui/color/chrome_color_id.h"
+#include "mast/common/mast_features.h"
 #include "mast/ui/color/mast_palette.h"
 #include "ui/color/color_id.h"
 #include "ui/color/color_mixer.h"
@@ -52,21 +53,34 @@ void AddMastChromeColorMixer(ui::ColorProvider* provider,
   mixer[kColorLocationBarBackground] = {p::kChrome2};
   mixer[kColorLocationBarBackgroundHovered] = {p::kRaised};
   mixer[kColorOmniboxText] = {p::kText};
-  mixer[kColorOmniboxResultsBackground] = {p::kChrome};
+  // The focused field paints the results colour, so it must stay a field:
+  // with the toolbar's colour the field vanished on focus, leaving only a ring.
+  mixer[kColorOmniboxResultsBackground] = {p::kChrome2};
   mixer[kColorOmniboxResultsBackgroundHovered] = {p::kRaised};
   mixer[kColorOmniboxResultsBackgroundSelected] = {p::kRaised2};
-  mixer[kColorLocationBarBorder] = {SK_ColorTRANSPARENT};
+  // Also the omnibox focus ring (mast-theme.patch gives the ring this id,
+  // which skips Chromium's 3:1 contrast lift): a hairline, not a halo.
+  mixer[kColorLocationBarBorder] = {SkColorSetRGB(0x3B, 0x3A, 0x38)};
+  mixer[kColorOmniboxResultsFocusIndicator] = {SK_ColorTRANSPARENT};
 
   // Menus, bubbles, dialogs, focus.
-  mixer[ui::kColorMenuBackground] = {p::kChrome};
-  mixer[ui::kColorMenuItemBackgroundHighlighted] = {p::kRaised};
+  // Bubbles, dialogs and menus sit one step above the page (#262626), so they
+  // keep an edge on Mast's own pages, which are #1c1c1c.
+  mixer[ui::kColorMenuBackground] = {p::kChrome2};
+  mixer[ui::kColorMenuItemBackgroundHighlighted] = {p::kRaised2};
+  mixer[ui::kColorMenuItemBackgroundSelected] = {p::kRaised2};
   mixer[ui::kColorMenuSeparator] = {p::kLine};
-  mixer[ui::kColorBubbleBackground] = {p::kChrome};
-  mixer[ui::kColorDialogBackground] = {p::kChrome};
+  mixer[ui::kColorBubbleBackground] = {p::kChrome2};
+  mixer[ui::kColorBubbleBorder] = {p::kRaised2};
+  mixer[ui::kColorDialogBackground] = {p::kChrome2};
+  mixer[ui::kColorComboboxBackground] = {p::kChrome2};
+  mixer[ui::kColorComboboxContainerOutline] = {p::kRaised2};
   mixer[ui::kColorPrimaryBackground] = {p::kChrome};
   mixer[ui::kColorTextfieldBackground] = {p::kChrome2};
   // Focus is neutral: the signal colour means blocked, nothing else.
-  mixer[ui::kColorFocusableBorderFocused] = {p::kMuted};
+  // Keyboard focus stays visible but quiet. Chromium lifts focus rings to 3:1
+  // contrast against their background, so this is a floor, not the result.
+  mixer[ui::kColorFocusableBorderFocused] = {p::kFaint};
 
   // Text selection: neutral too.
   constexpr SkColor kSelection = SkColorSetRGB(0x45, 0x43, 0x40);
@@ -74,6 +88,16 @@ void AddMastChromeColorMixer(ui::ColorProvider* provider,
   mixer[ui::kColorTextSelectionForeground] = {p::kText};
   mixer[kColorOmniboxSelectionBackground] = {kSelection};
   mixer[kColorOmniboxSelectionForeground] = {p::kText};
+
+  // One row (mast/common/mast_features.h): tabs and toolbar share the frame's
+  // colour; the active tab is a raised pill, like the address field.
+  if (IsOneRowWindow()) {
+    mixer[kColorToolbar] = {p::kBg};
+    mixer[kColorTabBackgroundActiveFrameActive] = {p::kChrome2};
+    mixer[kColorTabBackgroundActiveFrameInactive] = {p::kChrome2};
+    mixer[kColorTabBackgroundInactiveHoverFrameActive] = {
+        SkColorSetRGB(0x1E, 0x1E, 0x1E)};
+  }
 }
 
 }  // namespace mast

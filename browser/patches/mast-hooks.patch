@@ -1,3 +1,41 @@
+diff -ruN a/chrome/browser/bookmarks/BUILD.gn b/chrome/browser/bookmarks/BUILD.gn
+--- a/chrome/browser/bookmarks/BUILD.gn
++++ b/chrome/browser/bookmarks/BUILD.gn
+@@ -59,6 +59,7 @@
+   public_deps = [ "//chrome/browser:browser_public_dependencies" ]
+ 
+   deps = [
++    "//mast/browser/desktop",
+     ":bookmarks",
+     "//chrome/browser:browser_process",
+     "//chrome/browser/commerce",
+diff -ruN a/chrome/browser/bookmarks/chrome_bookmark_client.cc b/chrome/browser/bookmarks/chrome_bookmark_client.cc
+--- a/chrome/browser/bookmarks/chrome_bookmark_client.cc
++++ b/chrome/browser/bookmarks/chrome_bookmark_client.cc
+@@ -4,6 +4,8 @@
+ 
+ #include "chrome/browser/bookmarks/chrome_bookmark_client.h"
+ 
++#include "mast/browser/desktop/mast_desktop.h"
++
+ #include "base/metrics/histogram_functions.h"
+ #include "base/metrics/user_metrics.h"
+ #include "base/notreached.h"
+@@ -123,8 +125,13 @@
+   }
+   model_ = model;
+ 
++  // Mast: new bookmarks go to the Desktop folder (the new tab page).
+   shopping_save_location_provider_ =
+-      std::make_unique<ShoppingCollectionProvider>(model, profile_);
++      mast::CreateDesktopSaveLocationProvider(model);
++  if (!shopping_save_location_provider_) {
++    shopping_save_location_provider_ =
++        std::make_unique<ShoppingCollectionProvider>(model, profile_);
++  }
+ 
+   AddSuggestedSaveLocationProvider(shopping_save_location_provider_.get());
+ 
 diff -ruN a/chrome/browser/BUILD.gn b/chrome/browser/BUILD.gn
 --- a/chrome/browser/BUILD.gn
 +++ b/chrome/browser/BUILD.gn
@@ -31,15 +69,16 @@ diff -ruN a/chrome/browser/chrome_content_browser_client_navigation_throttles.cc
 diff -ruN a/chrome/browser/prefs/browser_prefs.cc b/chrome/browser/prefs/browser_prefs.cc
 --- a/chrome/browser/prefs/browser_prefs.cc
 +++ b/chrome/browser/prefs/browser_prefs.cc
-@@ -62,6 +62,7 @@
+@@ -62,6 +62,8 @@
  #include "chrome/browser/platform_experience/prefs.h"
  #include "chrome/browser/prefs/chrome_pref_service_factory.h"
  #include "chrome/browser/prefs/incognito_mode_prefs.h"
 +#include "mast/browser/mast_blocks.h"
++#include "mast/browser/mast_prefs.h"
  #include "chrome/browser/prefs/session_startup_pref.h"
  #include "chrome/browser/preloading/prefetch/prefetch_service/prefetch_origin_decider.h"
  #include "chrome/browser/preloading/prefetch/search_prefetch/search_prefetch_service.h"
-@@ -1530,6 +1531,7 @@
+@@ -1530,6 +1532,7 @@
    breadcrumbs::RegisterPrefs(registry);
    browser_shutdown::RegisterPrefs(registry);
    BrowserProcessImpl::RegisterPrefs(registry);
@@ -47,6 +86,14 @@ diff -ruN a/chrome/browser/prefs/browser_prefs.cc b/chrome/browser/prefs/browser
    ChromeContentBrowserClient::RegisterLocalStatePrefs(registry);
  #if BUILDFLAG(CHROME_FOR_TESTING)
    chrome_for_testing::RegisterPrefs(registry);
+@@ -2376,6 +2379,7 @@
+ #endif  // BUILDFLAG(IS_ANDROID)
+ 
+   registry->RegisterBooleanPref(prefs::kStaticStorageQuotaEnabled, false);
++  mast::RegisterProfilePrefs(registry);
+ }
+ 
+ void RegisterUserProfilePrefs(user_prefs::PrefRegistrySyncable* registry) {
 diff -ruN a/chrome/browser/prefs/BUILD.gn b/chrome/browser/prefs/BUILD.gn
 --- a/chrome/browser/prefs/BUILD.gn
 +++ b/chrome/browser/prefs/BUILD.gn
@@ -81,6 +128,27 @@ diff -ruN a/chrome/browser/prefs/incognito_mode_prefs.cc b/chrome/browser/prefs/
  
    IncognitoModeAvailability result = kDefaultAvailability;
    // Enterprise Isolated Mode has higher priority than the Incognito mode
+diff -ruN a/chrome/browser/resources/settings/page_visibility.ts b/chrome/browser/resources/settings/page_visibility.ts
+--- a/chrome/browser/resources/settings/page_visibility.ts
++++ b/chrome/browser/resources/settings/page_visibility.ts
+@@ -44,7 +44,16 @@
+ 
+ function createPageVisibility(): PageVisibility|undefined {
+   if (!loadTimeData.getBoolean('isGuest')) {
+-    return undefined;
++    // Mast: no Google account page and no AI page. Every key is listed: the
++    // menu hides pages whose entry is missing.
++    return {
++      a11y: true, ai: false, autofill: true, defaultBrowser: true, downloads: true,
++      extensions: true, languages: true, onStartup: true, people: false,
++      performance: true, reset: true, safetyHub: true, system: true, yourSavedInfo: true,
++      appearance: {bookmarksBar: true, homeButton: true, hoverCard: true, pageZoom: true,
++                   setTheme: true, sidePanel: true},
++      privacy: {networkPrediction: true, searchPrediction: true},
++    };
+   }
+ 
+   // <if expr="not is_chromeos">
 diff -ruN a/chrome/browser/themes/theme_service.cc b/chrome/browser/themes/theme_service.cc
 --- a/chrome/browser/themes/theme_service.cc
 +++ b/chrome/browser/themes/theme_service.cc
@@ -102,44 +170,60 @@ diff -ruN a/chrome/browser/themes/theme_service.cc b/chrome/browser/themes/theme
    registry->RegisterIntegerPref(
        prefs::kDeprecatedUserColorDoNotUse, SK_ColorTRANSPARENT,
        user_prefs::PrefRegistrySyncable::SYNCABLE_PREF);
-diff -ruN a/chrome/browser/ui/views/toolbar/BUILD.gn b/chrome/browser/ui/views/toolbar/BUILD.gn
---- a/chrome/browser/ui/views/toolbar/BUILD.gn
-+++ b/chrome/browser/ui/views/toolbar/BUILD.gn
-@@ -199,6 +199,8 @@
-     "toolbar_icon_container_view.cc",
-     "toolbar_ink_drop_util.cc",
-     "toolbar_view.cc",
-+    "//mast/browser/ui/mast_toolbar_button.cc",
-+    "//mast/browser/ui/mast_toolbar_button.h",
-     "webui_app_menu_control.cc",
-     "webui_avatar_toolbar_button.cc",
-     "webui_back_forward_control.cc",
-@@ -216,6 +218,7 @@
+diff -ruN a/chrome/browser/ui/views/page_info/BUILD.gn b/chrome/browser/ui/views/page_info/BUILD.gn
+--- a/chrome/browser/ui/views/page_info/BUILD.gn
++++ b/chrome/browser/ui/views/page_info/BUILD.gn
+@@ -66,6 +66,8 @@
+     "page_info_bubble_view_base.cc",
+     "page_info_cookies_content_view.cc",
+     "page_info_main_view.cc",
++    "//mast/browser/ui/mast_block_bubble.cc",
++    "//mast/browser/ui/mast_block_bubble.h",
+     "page_info_merchant_trust_content_view.cc",
+     "page_info_merchant_trust_controller.cc",
+     "page_info_merchant_trust_coordinator.cc",
+@@ -80,6 +82,7 @@
    ]
  
    deps = [
 +    "//mast/browser",
-     ":toolbar",
-     "//base:i18n",
-     "//build:branding_buildflags",
+     ":page_info",
+     "//base",
+     "//chrome/browser:browser_public_dependencies",
+diff -ruN a/chrome/browser/ui/views/page_info/page_info_main_view.cc b/chrome/browser/ui/views/page_info/page_info_main_view.cc
+--- a/chrome/browser/ui/views/page_info/page_info_main_view.cc
++++ b/chrome/browser/ui/views/page_info/page_info_main_view.cc
+@@ -4,6 +4,8 @@
+ 
+ #include "chrome/browser/ui/views/page_info/page_info_main_view.h"
+ 
++#include "mast/browser/ui/mast_block_bubble.h"
++
+ #include <memory>
+ #include <optional>
+ 
+@@ -202,6 +204,17 @@
+         views::style::STYLE_BODY_4, kColorPageInfoSubtitleForeground);
+   }
+ 
++  // Mast: "Block this site".
++  site_settings_view_->AddChildView(mast::CreateBlockSiteRow(
++      ui_delegate_->GetWebContents(),
++      base::BindRepeating(
++          [](PageInfoNavigationHandler* handler) {
++            if (handler) {
++              handler->CloseBubble();
++            }
++          },
++          base::Unretained(navigation_handler_))));
++
+   int link_text_id = 0;
+   int tooltip_text_id = 0;
+   if (ui_delegate_->ShouldShowSiteSettings(&link_text_id, &tooltip_text_id)) {
 diff -ruN a/chrome/browser/ui/views/toolbar/toolbar_view.cc b/chrome/browser/ui/views/toolbar/toolbar_view.cc
 --- a/chrome/browser/ui/views/toolbar/toolbar_view.cc
 +++ b/chrome/browser/ui/views/toolbar/toolbar_view.cc
-@@ -4,6 +4,8 @@
- 
- #include "chrome/browser/ui/views/toolbar/toolbar_view.h"
- 
-+#include "mast/browser/ui/mast_toolbar_button.h"
-+
- #include <algorithm>
- #include <memory>
- #include <utility>
-@@ -609,10 +611,12 @@
-     UpdateGlicButtonVisibility();
-   }
- 
-+  AddChildView(std::make_unique<mast::MastToolbarButton>(browser_));
-+
+@@ -612,7 +612,7 @@
    if (!features::IsWebUIAvatarButtonEnabled()) {
      avatar_ = AddChildView(std::make_unique<AvatarToolbarButton>(browser_));
      bool show_avatar_toolbar_button =
@@ -155,7 +239,7 @@ diff -ruN a/chrome/browser/ui/webui/BUILD.gn b/chrome/browser/ui/webui/BUILD.gn
    }
  
    deps = [
-+    "//mast/browser",
++    "//mast/browser/webui",
      ":gcm_internals_ui",
      ":net_export_ui",
      ":ntp_tiles_internals_ui",
@@ -166,7 +250,7 @@ diff -ruN a/chrome/browser/ui/webui/chrome_web_ui_configs.cc b/chrome/browser/ui
  #include "components/security_interstitials/content/known_interception_disclosure_ui.h"
  #include "components/webui/user_actions/user_actions_ui.h"
  #include "content/public/browser/webui_config_map.h"
-+#include "mast/browser/mast_ui.h"
++#include "mast/browser/webui/mast_ui.h"
  #include "extensions/buildflags/buildflags.h"
  #include "printing/buildflags/buildflags.h"
  #include "ui/webui/buildflags.h"
@@ -198,6 +282,22 @@ diff -ruN a/chrome/browser/ui/webui/chrome_web_ui_configs.cc b/chrome/browser/ui
  #endif  // BUILDFLAG(ENABLE_WEBUI_NTP)
    map.AddWebUIConfig(std::make_unique<NewTabUIConfig>());
    map.AddWebUIConfig(std::make_unique<OmniboxEverywhereUIConfig>());
+diff -ruN a/chrome/browser/ui/webui/settings/settings_ui.cc b/chrome/browser/ui/webui/settings/settings_ui.cc
+--- a/chrome/browser/ui/webui/settings/settings_ui.cc
++++ b/chrome/browser/ui/webui/settings/settings_ui.cc
+@@ -721,6 +721,12 @@
+                 kGlicOsWidgetKeyboardShortcutElementId,
+             });
+ 
++  // Mast: no AI or Google pages in Settings.
++  html_source->AddBoolean("showAiPage", false);
++  html_source->AddBoolean("showGlicSettings", false);
++  html_source->AddBoolean("showGeicSettings", false);
++  html_source->AddBoolean("showPrivacyGuide", false);
++
+   TryShowHatsSurveyWithTimeout();
+ }
+ 
 diff -ruN a/ui/views/bubble/bubble_dialog_delegate_view.h b/ui/views/bubble/bubble_dialog_delegate_view.h
 --- a/ui/views/bubble/bubble_dialog_delegate_view.h
 +++ b/ui/views/bubble/bubble_dialog_delegate_view.h
