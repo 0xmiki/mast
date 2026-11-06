@@ -236,17 +236,29 @@ first (4 are colour mixer only; the rest are 1–3 line hooks).
 ### I. Customize: wallpaper and colours (design C13)
 
 - A Customize button on the new tab page opens a panel:
-  - **Background:** none, preset images, or an uploaded image.
-  - **Colours:** six palettes; onyx is the default. Ember never changes.
+  - **Background:** none, or an uploaded image (Replace once one is set). No presets: the
+    design's wallpapers are third-party art and can't ship.
+  - **Colours:** onyx (default), graphite, ink, espresso, moss. Ember never changes.
 - **Style:** the wallpaper is clear, with no frosted glass (dropped 2026-11-06, cross-platform
-  risk). The tab row sits straight on the image under a dark wash (C10, C12); widgets and
-  tiles are plain dark tints.
-- **The page:** the upload and the image are our own WebUI. Store the image in the profile
-  directory, not a pref.
-- **The tab row:** the image continues behind it as a theme frame image, so it shows on
-  websites too (C12).
-- **Native colours:** palettes need the Mast mixer to read a profile pref and recompute on
-  change, instead of using compile-time constants.
+  risk). A light dark wash keeps text legible; widgets and tiles are plain dark tints.
+- **Step 1 (built):**
+  - The page scales the image down (2560 px on the long side, JPEG) and sends it with
+    `chrome.send('setWallpaper')`.
+  - The handler writes `Mast Wallpaper.jpg` in the profile folder (thread pool, not the UI
+    thread). It bumps the version pref `mast.ntp.wallpaper`: 0 is none, negative is cleared,
+    and versions are never reused, so no cached image comes back.
+  - The page's own data source serves the file as `wallpaper-<version>.jpg`.
+  - Palettes switch the native UI too. `mast_palette.h` holds the palettes and the current
+    one; the Chrome mixer reads `palette::Current()`. `mast::ApplyPalette()` resets the
+    ColorProvider cache and sends `NativeTheme::NotifyOnNativeThemeUpdated()`, the path an
+    OS dark/light switch takes.
+  - The pick is the profile pref `mast.theme.palette`, applied when a window opens. Mast's
+    pages are served with the palette's tokens and update live.
+- **Step 2:**
+  - The tab row: the image continues behind it as a frame image, so it shows on websites too
+    (C12).
+  - Paper, the light palette, needs light-mode mixers.
+  - The palette is process-wide for now; make it per profile.
 
 ### H. Leftovers from the de-Google pass
 

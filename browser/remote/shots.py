@@ -234,3 +234,34 @@ if native_dump("15-page-info", click=(None, "Block this site for a while")):
     keys("Return")
     shot("16-undo", settle=0.8)
 keys("Escape")
+# "Edit blocklist" opens the list in a panel on the new tab page.
+p.go("chrome://newtab")
+p.js("document.getElementById('editList').click()")
+shot("17-blocklist-panel")
+p.js("document.getElementById('blClose').click()")
+# Customize: the panel, then a palette (the whole window should follow), then an image.
+p.js("document.getElementById('customize').click()")
+shot("18-customize")
+p.js("chrome.send('setPalette', ['ink'])")
+shot("19-palette-ink", settle=2)
+native_dump("19-palette-ink")
+p.js("""(() => {
+  const c = document.createElement('canvas'); c.width = 1920; c.height = 1080;
+  const g = c.getContext('2d'); const l = g.createLinearGradient(0, 0, 1920, 1080);
+  l.addColorStop(0, '#1d3b53'); l.addColorStop(.55, '#7a4b3a'); l.addColorStop(1, '#e0a96d');
+  g.fillStyle = l; g.fillRect(0, 0, 1920, 1080);
+  g.fillStyle = 'rgba(255,255,255,.12)'; for (let i = 0; i < 9; i++) { g.beginPath(); g.arc(200 + i * 210, 760 - i * 40, 90 + i * 12, 0, 7); g.fill(); }
+  const u = c.toDataURL('image/jpeg', .86); chrome.send('setWallpaper', [u.slice(u.indexOf(',') + 1)]);
+})()""")
+time.sleep(1.5)
+p.go("chrome://newtab")
+shot("20-wallpaper")
+p.go("https://en.wikipedia.org/wiki/Dieter_Rams", 5)
+shot("21-site-ink")
+# mast:// works in the address bar and chrome:// pages show as mast://.
+keys("ctrl+l", text="mast://version")
+keys("Return")
+shot("22-mast-scheme", settle=2.5)
+p.go("chrome://newtab")
+p.js("chrome.send('setPalette', ['onyx']); chrome.send('clearWallpaper')")
+time.sleep(1)
