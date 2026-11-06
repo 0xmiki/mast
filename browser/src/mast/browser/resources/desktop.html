@@ -5,38 +5,41 @@
 <title>New Tab</title>
 {{ICON}}
 <style>{{STYLE}}
-/* New tab: a desktop. Saved sites are icons (a bookmarks folder, "Desktop"),
-   widgets sit in a column on the right. The address bar already searches. */
+/* New tab: a desktop. Saved sites are icons straight on it (design C14), in a
+   grid that fills columns from the top left like a desktop's; they are a
+   bookmarks folder. Widgets sit in a column on the right. */
 body { background: var(--surface); }
 .desk { display: grid; grid-template-columns: 1fr 320px; gap: 48px; min-height: 100vh; padding: 40px 48px; }
-.apps { display: grid; grid-template-columns: repeat(auto-fill, 96px); grid-auto-rows: min-content; gap: 12px 20px; align-content: start; }
-.app { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; width: 96px; padding: 10px 0;
-  border-radius: 10px; color: var(--text); text-decoration: none; }
-.app:hover { background: rgb(255 255 255/.03); }
+.apps { display: grid; grid-auto-flow: column; grid-template-rows: repeat(auto-fill, 92px); grid-auto-columns: 84px; gap: 2px 4px;
+  align-content: start; justify-content: start; height: calc(100vh - 80px); }
+.app { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; width: 84px; height: 92px; padding: 8px 4px;
+  border-radius: 8px; color: var(--text); text-decoration: none; }
+.app:hover { background: rgb(255 255 255/.06); box-shadow: inset 0 0 0 1px rgb(255 255 255/.08); }
 .app:focus-visible { outline: 2px solid var(--text-3); outline-offset: 0; }
-.tile { display: grid; place-items: center; width: 60px; height: 60px; border-radius: 15px; background: var(--field);
-  box-shadow: inset 0 0 0 1px var(--line); }
-.tile img { width: 32px; height: 32px; }
-.app .label { width: 100%; padding: 0 4px; overflow: hidden; font-size: 12px; line-height: 1.35; text-align: center;
+.tile { display: grid; place-items: center; flex: none; width: 44px; height: 44px; }
+.tile img { width: 40px; height: 40px; border-radius: 9px; filter: drop-shadow(0 2px 5px rgb(0 0 0/.35)); }
+.app .label { width: 100%; overflow: hidden; font-size: 12px; line-height: 1.25; text-align: center;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
-.app .rm { position: absolute; top: 4px; right: 12px; display: none; place-items: center; width: 20px; height: 20px; padding: 0;
+.app .rm { position: absolute; top: 2px; right: 6px; display: none; place-items: center; width: 20px; height: 20px; padding: 0;
   border: 0; border-radius: 50%; background: var(--pressed); color: var(--text-2); box-shadow: 0 0 0 1px var(--line); }
 .app:hover .rm, .app:focus-within .rm { display: grid; }
 .app .rm:hover { color: var(--text); }
 .app.dragging { opacity: .35; }
-.app.drop-before::before { content: ''; position: absolute; left: -11px; top: 14px; width: 2px; height: 56px; border-radius: 1px; background: var(--text-2); }
-.add .tile { background: none; box-shadow: inset 0 0 0 1px var(--text-3); color: var(--text-3); }
-.add .label { color: var(--text-3); }
-.add:hover .tile { color: var(--text-2); box-shadow: inset 0 0 0 1px var(--text-2); }
-.hint { grid-column: 1 / -1; margin: 6px 0 0 10px; color: var(--text-3); font-size: 12px; }
+.app.drop-before::before { content: ''; position: absolute; left: 10px; right: 10px; top: -2px; height: 2px; border-radius: 1px; background: var(--text-2); }
+.add { border: 0; background: none; font: inherit; }
+.add .tile { color: var(--text-2); }
+.add .label { color: var(--text-2); }
+.add:hover .tile, .add:hover .label { color: var(--text); }
+.hint { grid-row: 1; align-self: center; width: 260px; margin: 0 0 0 12px; color: var(--text-3); font-size: 12px; }
+/* Customize, in the bottom-right corner. */
+.customize { position: fixed; right: 20px; bottom: 20px; display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px;
+  border: 0; border-radius: var(--r); background: var(--field); color: var(--text-2); font-size: 12px; font-weight: 500; }
+.customize:hover { background: var(--pressed); color: var(--text); }
 .widgets { display: flex; flex-direction: column; gap: 16px; }
 .widget { padding: 18px 20px; border-radius: 14px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
 .clock .time { font-size: 44px; font-weight: 300; letter-spacing: -0.035em; line-height: 1.15; }
 .clock .date { color: var(--text-2); }
 .dist { display: flex; flex-direction: column; gap: 14px; padding: 20px; }
-.dist .top { display: flex; align-items: center; justify-content: space-between; }
-.dist h2 { margin: 0; font-size: 13px; font-weight: 600; }
-.dist .sum { margin-top: -8px; color: var(--text-3); font-size: 12px; }
 .seg { display: grid; grid-template-columns: repeat(6, 1fr); padding: 2px; border-radius: var(--r); background: var(--seg); }
 .seg button { height: 26px; padding: 0; border: 0; border-radius: 4px; background: none; color: var(--text-2); font-size: 12px; white-space: nowrap; }
 .seg button:hover { color: var(--text); }
@@ -80,32 +83,38 @@ dialog.bl-panel .bl header { padding-right: 44px; }
 .bl-close:hover { background: var(--pressed); color: var(--text); }
 /* Customize: a wallpaper in the clear style (no blur: a light wash keeps text
    legible, and widgets and tiles go dark), and the browser's palette. */
-body.wall { background-color: var(--surface); background-image: linear-gradient(rgb(0 0 0/.22), rgb(0 0 0/.22)), var(--wall);
-  background-size: 100% 100%, var(--wall-size, cover); background-position: 0 0, var(--wall-pos, center); background-repeat: no-repeat; background-attachment: fixed; }
-.customize { position: fixed; right: 20px; bottom: 20px; display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px;
-  border: 0; border-radius: var(--r); background: var(--field); color: var(--text-2); font-size: 12px; font-weight: 500; }
-.customize:hover { background: var(--pressed); color: var(--text); }
-/* On a picture (design C10): dark, translucent surfaces with hairlines, so
-   tiles, widgets and buttons hold up on any image; labels carry a soft
-   shadow. A light image (Customize: Light) flips them to light surfaces and
-   dark text. */
-body.wall .widget, body.wall .customize { background: rgb(12 12 12/.85); box-shadow: inset 0 0 0 1px rgb(255 255 255/.08); }
-body.wall .tile, body.wall .add .tile { background: rgb(10 10 10/.55); box-shadow: inset 0 0 0 1px rgb(255 255 255/.12); color: rgb(242 242 242/.85); }
-body.wall .add:hover .tile { box-shadow: inset 0 0 0 1px rgb(255 255 255/.24); color: #fff; }
+/* Customize's picture: its own layer, so it fades in once decoded instead of
+   popping in a frame after the page (Chromium's NTP fades its background the
+   same way). Laid out like the tab row's copy (mast_wallpaper.cc). */
+#wall { position: fixed; inset: 0; z-index: -1; opacity: 0; pointer-events: none; background-repeat: no-repeat;
+  background-image: linear-gradient(rgb(0 0 0/.22), rgb(0 0 0/.22)), var(--wall);
+  background-size: 100% 100%, var(--wall-size, cover); background-position: 0 0, var(--wall-pos, center); }
+/* The body must not paint over the layer (html keeps the page colour). */
+body.wall { background: transparent; }
+#wall.shown { opacity: 1; transition: opacity .22s ease-out; }
+#wall.instant { transition: none; }
+body.light #wall { background-image: var(--wall); background-size: var(--wall-size, cover); background-position: var(--wall-pos, center); }
+/* On a picture, icons stand on it (labels carry a soft shadow), and widgets
+   are translucent like the active tab's pill, so the picture comes through
+   instead of black panels taking the stage. A light picture (Customize: Light)
+   gets dark text and light glass. */
+body.wall .widget, body.wall .customize { background: rgb(255 255 255/.12); box-shadow: inset 0 0 0 1px rgb(255 255 255/.1);
+  --text: #f2f2f2; --text-2: rgb(242 242 242/.82); --text-3: rgb(242 242 242/.62); --seg: rgb(0 0 0/.22); --pressed: rgb(255 255 255/.16);
+  --field: rgb(255 255 255/.08); --line: rgb(255 255 255/.1); color: var(--text); text-shadow: 0 1px 2px rgb(0 0 0/.3); }
+body.wall .widget .primary { text-shadow: none; }
 body.wall .app .label, body.wall .add .label, body.wall .hint { color: #ededed; text-shadow: 0 1px 3px rgb(0 0 0/.7); }
-body.wall .app:hover { background: rgb(255 255 255/.06); }
-body.wall .customize { color: #ededed; }
-body.wall .customize:hover { background: rgb(28 28 28/.9); }
-body.wall.light { background-image: var(--wall); background-size: var(--wall-size, cover); background-position: var(--wall-pos, center); }
-body.wall.light .widget, body.wall.light .customize { background: rgb(255 255 255/.82); box-shadow: inset 0 0 0 1px rgb(0 0 0/.06);
-  --text: #141414; --text-2: #4d4d4d; --text-3: #6e6e6e; --field: rgb(0 0 0/.06); --seg: rgb(0 0 0/.06); --pressed: #fff; --line: rgb(0 0 0/.08); color: var(--text); }
-body.wall.light .tile, body.wall.light .add .tile { background: rgb(255 255 255/.6); box-shadow: inset 0 0 0 1px rgb(0 0 0/.08); color: rgb(20 20 20/.8); }
-body.wall.light .add:hover .tile { box-shadow: inset 0 0 0 1px rgb(0 0 0/.2); color: #141414; }
+body.wall .add .tile { color: #ededed; filter: drop-shadow(0 1px 3px rgb(0 0 0/.7)); }
+body.wall .app:hover { background: rgb(255 255 255/.1); box-shadow: inset 0 0 0 1px rgb(255 255 255/.15); }
+body.wall .customize:hover { background: rgb(255 255 255/.2); }
+body.wall.light .widget, body.wall.light .customize { background: rgb(255 255 255/.5); box-shadow: inset 0 0 0 1px rgb(0 0 0/.06);
+  --text: #141414; --text-2: #3d3d3d; --text-3: #5e5e5e; --seg: rgb(0 0 0/.07); --pressed: rgb(255 255 255/.85); --field: rgb(0 0 0/.06);
+  --line: rgb(0 0 0/.08); text-shadow: none; }
 body.wall.light .app .label, body.wall.light .add .label, body.wall.light .hint { color: #141414; text-shadow: 0 1px 2px rgb(255 255 255/.6); }
-body.wall.light .app:hover { background: rgb(255 255 255/.25); }
-body.wall.light .customize:hover { background: #fff; }
-/* Ember as text needs a deeper tone on a light surface (the button keeps it). */
-body.wall.light .widget .status.blocked, body.wall.light .widget .ind.timed { color: #b4441a; --signal: #b4441a; }
+body.wall.light .add .tile { color: #141414; filter: none; }
+body.wall.light .app:hover { background: rgb(255 255 255/.3); box-shadow: inset 0 0 0 1px rgb(0 0 0/.08); }
+body.wall.light .customize:hover { background: rgb(255 255 255/.7); }
+/* Ember as text needs a deeper tone on light glass (the filled button keeps it). */
+body.wall.light .dist .primary.held { color: #b4441a; box-shadow: inset 0 0 0 1.5px #b4441a; }
 .customize:focus:not(:focus-visible) { outline: none; }
 .tone { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin-bottom: 8px; padding: 2px; border-radius: var(--r); background: var(--surface); }
 .tone button { height: 28px; border: 0; border-radius: 4px; background: none; color: var(--text-2); font-size: 12px; }
@@ -137,6 +146,7 @@ dialog.cz { width: 400px; padding: 18px 20px 20px; }
 </style>
 </head>
 <body>
+<div id="wall" aria-hidden="true"></div>
 <main class="desk">
   <section class="apps" id="apps" aria-label="Saved sites"></section>
   <aside class="widgets" id="widgets"></aside>
@@ -193,7 +203,7 @@ function untilFor(id) {
 }
 const outlasts = (a, b) => a === null || (b !== null && a > b);
 const ind = (b) => `<i class="ind ${b ? (b.until === null ? 'forever' : 'timed') : ''}"></i>`;
-const plus = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12M4 10h12"/></svg>';
+const plus = '<svg width="26" height="26" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12M4 10h12"/></svg>';
 const cross = '<svg width="8" height="8" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.6"><path d="M2 2l6 6M8 2l-6 6"/></svg>';
 const icon = (url) => 'chrome://favicon2/?size=32&scaleFactor=2x&showFallbackMonogram=&pageUrl=' + encodeURIComponent(url);
 
@@ -244,15 +254,12 @@ function clockWidget() {
 function distractionWidget() {
   const d = distraction();
   const all = d.services > 0 && d.blocked === d.services;
-  const status = all ? `<span class="status blocked">${ind(d.first)}Blocked ${untilText(d.first.until)}</span>`
-    : d.blocked ? `<span class="status blocked">${ind({until: 1})}${d.blocked} of ${d.services} blocked</span>`
-    : `<span class="status">${ind(null)}Open</span>`;
   const cats = !editing ? '' : `<div class="cats">${state.categories.map((c) => `
       <label><input type="checkbox" data-cat="${esc(c.id)}" ${state.distractions.includes(c.id) ? 'checked' : ''}>
         <span class="nm">${esc(c.name)}</span><span class="ct">${c.services.length}</span></label>`).join('')}</div>`;
-  return `<div class="widget dist">
-    <div class="top"><h2>Distractions</h2>${status}</div>
-    <div class="sum">${d.cats} ${d.cats === 1 ? 'category' : 'categories'} · ${d.services} sites</div>
+  // No title or counts: the button says what it does and, once blocked, for
+  // how long; "Change what's blocked" opens the categories.
+  return `<div class="widget dist" aria-label="Distractions">
     ${cats}
     <div class="seg">${DUR.map(([id, label]) => `<button data-dur="${id}" class="${id === dur ? 'on' : ''}" aria-label="${id}">${label}</button>`).join('')}</div>
     ${blockButton(d, all)}
@@ -299,7 +306,13 @@ let tone = {{WALLPAPER_TONE}};     // "dark" or "light": what the picture is
 // browser paints from the same image, mast_wallpaper.cc) and this page show
 // one continuous picture.
 const wallImg = new Image();
-wallImg.onload = layoutWallpaper;
+const wallEl = document.getElementById("wall");
+// Fade the picture in once it is decoded: no frame of half-drawn image. A
+// picture already in memory (most new tabs) shows at once, without a fade.
+wallImg.onload = () => {
+  layoutWallpaper();
+  wallImg.decode().catch(() => {}).then(() => requestAnimationFrame(() => wallEl.classList.add("shown")));
+};
 function layoutWallpaper() {
   const iw = wallImg.naturalWidth, ih = wallImg.naturalHeight;
   if (!wallpaper || !iw) return;
@@ -315,9 +328,16 @@ function applyWallpaper(v) {
   v = Math.max(0, v || 0);
   wallpaper = v;
   document.body.classList.toggle('wall', v > 0);
+  const url = `wallpaper-${v}.jpg`;
+  if (v > 0 && wallImg.getAttribute("src") === url) return;
+  wallEl.classList.remove("shown", "instant");
   if (v > 0) {
-    document.body.style.setProperty('--wall', `url(wallpaper-${v}.jpg)`);
-    wallImg.src = `wallpaper-${v}.jpg`;
+    document.body.style.setProperty('--wall', `url(${url})`);
+    wallImg.src = url;
+    if (wallImg.complete && wallImg.naturalWidth) {
+      layoutWallpaper();
+      wallEl.classList.add("instant", "shown");
+    }
   } else {
     document.body.style.removeProperty('--wall');
   }

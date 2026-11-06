@@ -82,6 +82,8 @@ const mock = `<script>
 </script>`;
 
 let html = fs.readFileSync(path.join(res, 'desktop.html'), 'utf8');
+// Regression guard: the Customize button lost its base rule twice in restyles.
+if (!/^\.customize \{[^}]*position: fixed/m.test(html)) throw new Error('desktop.html: .customize base rule missing');
 const letterIcon = `const icon = (url) => { const h = new URL(url).hostname.replace(/^www\\./, ''); return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" rx="7" fill="#3b3a38"/><text x="16" y="22" font-family="Inter,sans-serif" font-size="17" font-weight="600" text-anchor="middle" fill="#e9e7e3">' + h[0].toUpperCase() + '</text></svg>'); };`;
 if (!/const icon = \(url\) => [^\n]*;/.test(html)) throw new Error('icon() not found');
 const blocklist = fs.readFileSync(path.join(res, 'blocklist.html'), 'utf8');
