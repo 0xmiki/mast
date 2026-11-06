@@ -27,7 +27,7 @@ button, input { font:inherit; color:inherit }
 button { cursor:pointer }
 :focus-visible { outline:2px solid var(--text-2); outline-offset:2px }
 .primary, .secondary { display:inline-flex; align-items:center; justify-content:center; gap:8px;
-  height:36px; padding:0 18px; border:0; border-radius:999px; font-weight:600 }
+  height:36px; padding:0 18px; border:0; border-radius:var(--r); font-weight:600 }
 .primary { background:var(--signal); color:var(--signal-text) }
 .primary:hover:not(:disabled) { filter:brightness(1.06) }
 .primary:active:not(:disabled) { filter:brightness(.94) }

@@ -218,11 +218,13 @@ edit(T, "chrome/browser/ui/views/location_bar/location_bar_view.cc", lambda t: o
     '    views::FocusRing::Get(this)->SetHaloThickness(1.f);\n'))
 
 # One radius table for dialogs, menus, comboboxes, textfields and buttons: tighter
-# corners (Mast's bubbles are 10px; Chromium's are 12-16px). Buttons stay pills, as in Mast's pages.
+# corners (Mast's bubbles are 10px, its buttons 6px; Chromium's are 12-16px and pills).
 def radii(t):
     t = once(t, '    case ShapeSysTokens::kSmall:\n      return 8;\n', '    case ShapeSysTokens::kSmall:\n      return 6;  // Mast\n')
     t = once(t, '    case ShapeSysTokens::kMediumSmall:\n      return 12;\n', '    case ShapeSysTokens::kMediumSmall:\n      return 10;  // Mast\n')
     t = once(t, '    case ShapeSysTokens::kMedium:\n      return 16;\n', '    case ShapeSysTokens::kMedium:\n      return 10;  // Mast\n')
+    t = once(t, '          {ShapeContextTokens::kButtonRadius, ShapeSysTokens::kFull},\n',
+             '          {ShapeContextTokens::kButtonRadius, ShapeSysTokens::kSmall},  // Mast\n')
     return t
 edit(T, "ui/views/layout/layout_provider.cc", radii)
 

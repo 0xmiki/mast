@@ -142,6 +142,15 @@ diff -ruN a/ui/gfx/platform_font_skia.cc b/ui/gfx/platform_font_skia.cc
 diff -ruN a/ui/views/layout/layout_provider.cc b/ui/views/layout/layout_provider.cc
 --- a/ui/views/layout/layout_provider.cc
 +++ b/ui/views/layout/layout_provider.cc
+@@ -207,7 +207,7 @@
+   static constexpr auto shape_token_map =
+       base::MakeFixedFlatMap<ShapeContextTokens, ShapeSysTokens>({
+           {ShapeContextTokens::kBadgeRadius, ShapeSysTokens::kXSmall},
+-          {ShapeContextTokens::kButtonRadius, ShapeSysTokens::kFull},
++          {ShapeContextTokens::kButtonRadius, ShapeSysTokens::kSmall},  // Mast
+           {ShapeContextTokens::kComboboxRadius, ShapeSysTokens::kSmall},
+           {ShapeContextTokens::kDialogRadius, ShapeSysTokens::kMediumSmall},
+           {ShapeContextTokens::kExtensionsMenuButtonRadius,
 @@ -233,11 +233,11 @@
      case ShapeSysTokens::kXSmall:
        return 4;
