@@ -11,6 +11,7 @@
 #   ./mast hold <minutes>   keep an idle builder alive that long (e.g. while writing code)
 #   ./mast run              run the downloaded browser locally
 #   ./mast shots            screenshot fixed UI scenes on the builder (Xvfb) -> shots/<time>/
+#   ./mast check-patches    check every make-patches.py anchor locally (no builder, no cost)
 #   ./mast status | ssh | logs [job] | destroy
 set -euo pipefail
 
@@ -104,7 +105,8 @@ check_budget() {
 
 cmd_up() {
 	need hcloud
-	exists && { HOST=$(server_ip); log "builder already running ($(server_type), $HOST)"; return; }
+	# The firewall follows your current IP even for a running builder (home IPs change).
+	exists && { ensure_key_and_firewall; HOST=$(server_ip); log "builder already running ($(server_type), $HOST)"; return; }
 	check_budget
 	ensure_key_and_firewall
 	local type=${1:-$MAST_TYPE} image snap
@@ -248,7 +250,10 @@ push() {
 # Run remote/<job>.sh detached on the builder (survives your laptop disconnecting), then follow its log.
 job() {
 	local name=$1
-	rssh "cd ~/mast && rm -f $name.status && (nohup bash -c 'bash remote/$name.sh; echo \$? > ~/mast/$name.status' > ~/mast/$name.log 2>&1 &)"
+	# Explicit check: callers use "job build || ...", where bash ignores set -e inside
+	# the function, so a failed start used to fall through and replay the old log.
+	rssh "cd ~/mast && rm -f $name.status && (nohup bash -c 'bash remote/$name.sh; echo \$? > ~/mast/$name.status' > ~/mast/$name.log 2>&1 &)" ||
+		{ echo "mast: couldn't start $name on the builder (ssh failed)" >&2; return 1; }
 	follow "$name"
 }
 
@@ -310,6 +315,7 @@ cmd_build() {
 }
 
 cmd_shots() {
+	ensure_key_and_firewall
 	[[ -n $HOST ]] || HOST=$(server_ip)
 	local dir
 	dir="$ROOT/shots/$(date +%m%d-%H%M%S)"
@@ -317,7 +323,7 @@ cmd_shots() {
 	log "rendering scenes on the builder"
 	rssh "bash ~/mast/remote/shots.sh"
 	mkdir -p "$dir"
-	rsync -az --timeout=120 -e "ssh ${SSH_OPTS[*]}" "root@$HOST:mast/shots/*.jpg" "$dir/"
+	rsync -az --timeout=120 -e "ssh ${SSH_OPTS[*]}" --include="*.jpg" --include="*.json" --include="*.txt" --exclude="*" "root@$HOST:mast/shots/" "$dir/"
 	ln -sfn "$dir" "$ROOT/shots/latest"
 	log "screenshots in ${dir#"$ROOT/"}"
 }
@@ -340,11 +346,24 @@ cmd_run() {
 	fi
 }
 
+# Validate make-patches.py anchors against base files rebuilt locally (tools/base-file.mjs),
+# so a wrong anchor costs nothing instead of a builder session.
+cmd_check-patches() {
+	need node
+	local work
+	work=$(mktemp -d)
+	MAST_LOCAL_BASE="$ROOT" MAST_PATCH_WORK="$work" \
+		nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#python3 -c \
+		python3 "$ROOT/remote/make-patches.py"
+	log "anchors OK; patches written to $work"
+}
+
 cmd=${1:-help}
 shift || true
 case $cmd in
 	up | down | build | resize | status | cost | hold | destroy | fetch | shots | _guard) need hcloud; need jq; "cmd_$cmd" "$@" ;;
 	run) cmd_run "$@" ;;
+	check-patches) cmd_check-patches "$@" ;;
 	ssh) HOST=$(server_ip); ssh "${SSH_OPTS[@]}" -t "root@$HOST" "$@" ;;
 	logs) HOST=$(server_ip); follow "${1:-build}" ;;
 	job) HOST=$(server_ip); job "${1:?usage: ./mast job bootstrap|build}" ;;

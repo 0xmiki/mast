@@ -23,7 +23,7 @@ sleep 1
 "$OUT/chrome" --no-sandbox --user-data-dir=/tmp/mast-shot-profile --no-first-run \
 	--no-default-browser-check --test-type --ozone-platform=x11 --window-position=0,0 \
 	--window-size="$W,$H" --remote-debugging-port=9333 --remote-allow-origins='*' \
-	--log-net-log="$SHOTS/netlog.json" \
+	--log-net-log="$SHOTS/netlog.json" --enable-ui-devtools=9223 \
 	> "$SHOTS/chrome.log" 2>&1 &
 CHROME=$!
 trap 'kill $CHROME $XVFB 2>/dev/null || true' EXIT

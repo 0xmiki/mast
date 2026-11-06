@@ -1,6 +1,9 @@
 """Drive Mast through fixed scenes and screenshot the whole (virtual) screen.
 
 CDP navigates pages; xdotool sends real key presses for native UI (omnibox, app menu).
+UI DevTools (--enable-ui-devtools=9223) is the inspector for the native UI: each dump
+records every view's class, screen bounds and properties (with Background/Border colour
+ids) next to the screenshot, and finds native controls to click by their properties.
 """
 import json
 import subprocess
@@ -41,6 +44,99 @@ class Page:
         return self.send("Runtime.evaluate", expression=expression, returnByValue=True)
 
 
+class NativeUI:
+    """Chromium's UI DevTools: the views tree as a DOM, properties as CSS (one client)."""
+
+    def __init__(self, port=9223):
+        self.ws = websocket.create_connection(f"ws://127.0.0.1:{port}/0", suppress_origin=True,
+                                              timeout=20)
+        self.id = 0
+        self.send("DOM.enable")
+        self.send("CSS.enable")
+
+    def send(self, method, **params):
+        self.id += 1
+        self.ws.send(json.dumps({"id": self.id, "method": method, "params": params}))
+        while True:
+            msg = json.loads(self.ws.recv())
+            if msg.get("id") == self.id:
+                return msg.get("result", {})
+
+    def tree(self):
+        """Every node: id, type, class, name, depth, screen bounds, properties."""
+        out = []
+
+        def walk(node, depth):
+            a = node.get("attributes", [])
+            attrs = dict(zip(a[::2], a[1::2]))
+            row = {"id": node["nodeId"], "type": node.get("nodeName"), "class": attrs.get("class"),
+                   "name": attrs.get("name"), "depth": depth}
+            if node.get("nodeName") in ("View", "Widget", "Window"):
+                b = self.send("DOM.getNodeBoundsInScreen", nodeId=node["nodeId"])
+                row["bounds"] = b.get("boundsInScreen") or b
+                props = {}
+                for m in self.send("CSS.getMatchedStylesForNode", nodeId=node["nodeId"]).get(
+                        "matchedCSSRules", []):
+                    rule = m.get("rule", {})
+                    sel = (rule.get("selectorList", {}).get("selectors") or [{}])[0].get("text", "?")
+                    props[sel] = {p["name"]: p.get("value") for p in rule.get("style", {}).get(
+                        "cssProperties", [])}
+                row["props"] = props
+            out.append(row)
+            for c in node.get("children", []):
+                walk(c, depth + 1)
+
+        walk(self.send("DOM.getDocument")["root"], 0)
+        return out
+
+    def dump(self, name):
+        rows = self.tree()
+        with open(f"{OUT}/views-{name}.json", "w") as f:
+            json.dump(rows, f, indent=1)
+        print("views", name, len(rows), flush=True)
+        return rows
+
+    def find(self, rows, cls=None, prop_contains=None):
+        for r in rows:
+            if cls and r.get("class") != cls:
+                continue
+            if prop_contains and prop_contains not in json.dumps(r.get("props", {})):
+                continue
+            if r.get("bounds"):
+                return r
+        return None
+
+    def close(self):
+        self.ws.close()
+
+
+def native_dump(name, click=None):
+    """Dump the views tree; optionally click the first view matching click=(class, text)."""
+    try:
+        ui = NativeUI()
+    except Exception as e:  # never lose the screenshots over the inspector
+        print("ui-devtools unavailable:", e, flush=True)
+        return None
+    try:
+        rows = ui.dump(name)
+        if click:
+            r = ui.find(rows, *click)
+            if not r:
+                print("not found:", click, flush=True)
+                return None
+            b = r["bounds"]
+            x, y = int(b["x"] + b["width"] / 2), int(b["y"] + b["height"] / 2)
+            subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"])
+            print("clicked", r.get("class"), x, y, flush=True)
+            return r
+        return rows
+    except Exception as e:
+        print("ui-devtools error:", e, flush=True)
+        return None
+    finally:
+        ui.close()
+
+
 def window():
     for name in ("Mast", "Chromium", "Chrome"):
         r = subprocess.run(["xdotool", "search", "--onlyvisible", "--name", name],
@@ -76,7 +172,9 @@ for _ in range(80):
 time.sleep(4)
 
 p = Page()
-shot("01-newtab")
+# The new tab page: an empty desktop first, as a fresh profile sees it.
+shot("01-desktop-empty")
+native_dump("01-desktop-empty")
 p.go("https://en.wikipedia.org/wiki/Ulysses_pact", 5)
 shot("02-site")
 keys("ctrl+l", text="ulysses")
@@ -91,22 +189,40 @@ p.go("chrome://settings/help")
 shot("06-about")
 p.go("chrome://version")
 shot("07-version")
-# Blocks: one timed, one forever, then what each looks like.
+# The desktop with sites (Wikipedia has a favicon from the visit above; the rest fall back
+# to a monogram until visited).
 p.go("chrome://newtab")
+for url, title in [("https://en.wikipedia.org/", "Wikipedia"), ("https://github.com/", "GitHub"),
+                   ("https://svelte.dev/docs", "Svelte"), ("https://developer.mozilla.org/", "MDN"),
+                   ("https://www.vitsoe.com/", "Vitsœ"), ("https://rsms.me/inter/", "Inter")]:
+    p.js(f"chrome.send('desktopAdd', [{json.dumps(url)}, {json.dumps(title)}])")
+    time.sleep(0.3)
+p.go("chrome://newtab")
+shot("08-desktop")
+p.js("document.getElementById('edit').click()")
+shot("09-distractions-change")
+# The full blocklist (chrome://mast, "Edit blocklist").
+p.go("chrome://mast")
 p.js("document.querySelector('[data-toggle=shopping]').click()")
-shot("08-newtab-expanded")
-p.js("chrome.send('block', [['youtube.com', 'youtu.be', 'youtube-nocookie.com'], 'today'])")
+shot("10-blocklist")
+# Block distractions for today, and one site forever.
+p.go("chrome://newtab")
+p.js("chrome.send('blockDistractions', ['today'])")
 time.sleep(0.5)
 p.js("chrome.send('block', [['x.com', 'twitter.com'], 'forever'])")
 p.go("chrome://newtab")
-shot("09-newtab-blocked")
+shot("11-desktop-blocked")
 p.go("https://www.youtube.com/", 4)
-shot("10-blocked-timed")
+shot("12-blocked-timed")
 p.go("https://x.com/", 4)
-shot("11-blocked-forever")
-# The toolbar Block button sits just left of the app menu.
+shot("13-blocked-forever")
+# Page info -> "Block this site" -> the block bubble -> undo.
 p.go("https://en.wikipedia.org/wiki/Dieter_Rams", 5)
-W = int(sys.argv[2]) if len(sys.argv) > 2 else 1440
-subprocess.run(["xdotool", "mousemove", str(W - 78), "62", "click", "1"])
-shot("12-block-bubble")
+native_dump("14-site", click=("LocationIconView", None))
+shot("14-page-info")
+if native_dump("15-page-info", click=(None, "Block this site for a while")):
+    shot("15-block-bubble")
+    native_dump("15-block-bubble")
+    keys("Return")
+    shot("16-undo", settle=0.8)
 keys("Escape")
