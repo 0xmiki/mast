@@ -22,6 +22,8 @@ constexpr char kStyle[] = R"MAST(
   --signal:#ff8f63; --signal-text:#3d1000; --r:6px;
   --shadow:0 8px 28px rgb(0 0 0/.45),0 0 0 1px var(--line); }
 * { box-sizing:border-box }
+html { scrollbar-width:thin; scrollbar-color:rgb(255 255 255/.18) transparent }
+html:has(body.wall.light) { scrollbar-color:rgb(0 0 0/.28) transparent }
 html,body { margin:0; min-height:100%; background:var(--surface); color:var(--text);
   font:13px/1.45 Inter,"Inter Variable","Noto Sans","DejaVu Sans",system-ui,sans-serif;
   font-feature-settings:'tnum' 1; -webkit-font-smoothing:antialiased }

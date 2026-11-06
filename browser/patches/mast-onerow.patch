@@ -38,6 +38,39 @@ diff -ruN a/chrome/browser/ui/browser_window/internal/embedder_browser_window_fe
  }
  
  void EmbedderBrowserWindowFeatures::InitPostBrowserViewConstruction(
+diff -ruN a/chrome/browser/ui/tabs/BUILD.gn b/chrome/browser/ui/tabs/BUILD.gn
+--- a/chrome/browser/ui/tabs/BUILD.gn
++++ b/chrome/browser/ui/tabs/BUILD.gn
+@@ -133,6 +133,7 @@
+     ]
+ 
+     deps = [
++    "//mast/common",
+       "//chrome/browser/favicon",
+       "//chrome/browser/ui/color:color_headers",
+       "//ui/color",
+diff -ruN a/chrome/browser/ui/tabs/tab_favicon_theming.cc b/chrome/browser/ui/tabs/tab_favicon_theming.cc
+--- a/chrome/browser/ui/tabs/tab_favicon_theming.cc
++++ b/chrome/browser/ui/tabs/tab_favicon_theming.cc
+@@ -8,11 +8,18 @@
+ #include "chrome/browser/ui/color/chrome_color_id.h"
+ #include "ui/color/color_provider.h"
+ #include "ui/gfx/image/image_skia.h"
++#include "ui/gfx/image/image_skia_operations.h"
++#include "mast/common/mast_features.h"
+ 
+ namespace tabs {
+ 
+ gfx::ImageSkia ThemeFaviconForTab(const gfx::ImageSkia& source,
+                                   const ui::ColorProvider& color_provider) {
++  if (mast::IsOneRowWindow()) {
++    return gfx::ImageSkiaOperations::CreateColorMask(
++        source,
++        color_provider.GetColor(kColorTabForegroundInactiveFrameActive));
++  }
+   return favicon::ThemeFavicon(
+       source, color_provider.GetColor(kColorToolbarButtonIcon),
+       color_provider.GetColor(kColorTabBackgroundActiveFrameActive),
 diff -ruN a/chrome/browser/ui/views/frame/browser_frame_view.cc b/chrome/browser/ui/views/frame/browser_frame_view.cc
 --- a/chrome/browser/ui/views/frame/browser_frame_view.cc
 +++ b/chrome/browser/ui/views/frame/browser_frame_view.cc
@@ -262,3 +295,13 @@ diff -ruN a/chrome/browser/ui/views/tabs/common/horizontal_tab_style_views.cc b/
      const int bottom = top + tab_height;
  
      BrowserFrameView* const browser_frame_view =
+@@ -861,6 +870,9 @@
+ }
+ 
+ void HorizontalTabStyleViews::PaintSeparators(gfx::Canvas* canvas) const {
++  if (mast::IsOneRowWindow()) {
++    return;  // Mast: pills, no dividers
++  }
+   const auto separator_opacities = GetSeparatorOpacities(false);
+   if (!separator_opacities.left && !separator_opacities.right) {
+     return;

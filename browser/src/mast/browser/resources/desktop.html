@@ -82,6 +82,9 @@ dialog.bl-panel .bl header { padding-right: 44px; }
    legible, and widgets and tiles go dark), and the browser's palette. */
 body.wall { background-color: var(--surface); background-image: linear-gradient(rgb(0 0 0/.22), rgb(0 0 0/.22)), var(--wall);
   background-size: 100% 100%, var(--wall-size, cover); background-position: 0 0, var(--wall-pos, center); background-repeat: no-repeat; background-attachment: fixed; }
+.customize { position: fixed; right: 20px; bottom: 20px; display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px;
+  border: 0; border-radius: var(--r); background: var(--field); color: var(--text-2); font-size: 12px; font-weight: 500; }
+.customize:hover { background: var(--pressed); color: var(--text); }
 /* On a picture (design C10): dark, translucent surfaces with hairlines, so
    tiles, widgets and buttons hold up on any image; labels carry a soft
    shadow. A light image (Customize: Light) flips them to light surfaces and

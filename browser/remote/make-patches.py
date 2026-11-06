@@ -422,6 +422,33 @@ edit(R, "chrome/browser/ui/browser_window/internal/BUILD.gn", lambda t: add_dep(
     '      "embedder_browser_window_features.cc",\n      "//mast/browser/ui/mast_one_row_toolbar.cc",\n      "//mast/browser/ui/mast_one_row_toolbar.h",\n'),
     'source_set("internal") {', "//mast/common"))
 
+# No dividers between tabs in the one-row window: tabs are pills with space between them.
+# (Chromium paints dividers with SkColorSetA(colour, opacity), which overrides the colour's
+# alpha, so a transparent divider colour came out as an opaque black line on a picture.)
+edit(R, "chrome/browser/ui/views/tabs/common/horizontal_tab_style_views.cc", lambda t: once(t,
+    'void HorizontalTabStyleViews::PaintSeparators(gfx::Canvas* canvas) const {\n',
+    'void HorizontalTabStyleViews::PaintSeparators(gfx::Canvas* canvas) const {\n'
+    '  if (mast::IsOneRowWindow()) {\n    return;  // Mast: pills, no dividers\n  }\n'))
+
+# Browser pages' tab icons (the new tab's sails, Settings' gear...) are one colour in the
+# one-row window: the tabs' text colour, so they read on any palette or picture, light or
+# dark. Chromium only recolours them when their contrast looks low, and it measures that
+# against the pill colour as if it were opaque. Sites' own favicons are untouched.
+edit(R, "chrome/browser/ui/tabs/tab_favicon_theming.cc", lambda t: once(once(t,
+    '#include "ui/gfx/image/image_skia.h"\n',
+    '#include "ui/gfx/image/image_skia.h"\n#include "ui/gfx/image/image_skia_operations.h"\n'
+    '#include "mast/common/mast_features.h"\n'),
+    'gfx::ImageSkia ThemeFaviconForTab(const gfx::ImageSkia& source,\n'
+    '                                  const ui::ColorProvider& color_provider) {\n',
+    'gfx::ImageSkia ThemeFaviconForTab(const gfx::ImageSkia& source,\n'
+    '                                  const ui::ColorProvider& color_provider) {\n'
+    '  if (mast::IsOneRowWindow()) {\n'
+    '    return gfx::ImageSkiaOperations::CreateColorMask(\n'
+    '        source,\n'
+    '        color_provider.GetColor(kColorTabForegroundInactiveFrameActive));\n'
+    '  }\n'))
+edit(R, "chrome/browser/ui/tabs/BUILD.gn", lambda t: add_dep(t, 'source_set("favicon_theming") {', "//mast/common"))
+
 # No 1px line between the tab row and the page: in the one-row window the page meets the
 # row directly (with a wallpaper the line cut the picture in two).
 edit(R, "chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc", lambda t: once(t,
