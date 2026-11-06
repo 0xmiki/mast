@@ -33,18 +33,24 @@ inline gfx::Rect& PendingToolbarSlice() {
 
 // The tabs take the row up to where the toolbar starts. `row` is the tab
 // strip's usual bounds (between the window's caption areas); `client_x` is the
-// left of the area being laid out.
-inline void FitTabStripInRow(gfx::Rect& row,
-                             int client_x,
-                             const views::View* tab_strip,
-                             const views::View* toolbar) {
+// left of the area being laid out. The content starts `overlap` above the
+// row's bottom, as in Chromium's two rows: the tab strip doesn't paint its
+// last pixel row, and without the overlap the desktop showed through it.
+// Returns where the content starts.
+inline int FitTabStripInRow(gfx::Rect& row,
+                            int client_x,
+                            int overlap,
+                            const views::View* tab_strip,
+                            const views::View* toolbar) {
   const int height = OneRowHeight(tab_strip, toolbar);
   const int toolbar_width =
       std::min(toolbar->GetPreferredSize().width(), row.width());
   row.set_width(row.width() - toolbar_width);
   row.set_height(height);
-  PendingToolbarSlice() =
-      gfx::Rect(row.right() - client_x, -height, toolbar_width, height);
+  // The slice ends where the content starts, so the two meet exactly.
+  PendingToolbarSlice() = gfx::Rect(row.right() - client_x, -(height - overlap),
+                                    toolbar_width, height - overlap);
+  return row.bottom() - overlap;
 }
 
 // The top container is exactly the toolbar's slice, so its background never

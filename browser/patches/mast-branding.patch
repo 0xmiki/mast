@@ -1,3 +1,15 @@
+diff -ruN a/chrome/app/generated_resources.grd b/chrome/app/generated_resources.grd
+--- a/chrome/app/generated_resources.grd
++++ b/chrome/app/generated_resources.grd
+@@ -7424,7 +7424,7 @@
+ 
+       <!-- Omnibox -->
+       <message name="IDS_OMNIBOX_PLACEHOLDER_TEXT" desc="The text displayed in the Omnibox when it is empty and unfocused.">
+-        Search <ph name="SEARCH_ENGINE_NAME">$1<ex>Google</ex></ph> or type a URL
++        Search
+       </message>
+       <if expr="not use_titlecase">
+         <message name="IDS_PASTE_AND_GO" desc="The text label of the Paste And Go menu item when the clipboard contains a URL">
 diff -ruN a/chrome/browser/ui/startup/infobar_utils.cc b/chrome/browser/ui/startup/infobar_utils.cc
 --- a/chrome/browser/ui/startup/infobar_utils.cc
 +++ b/chrome/browser/ui/startup/infobar_utils.cc

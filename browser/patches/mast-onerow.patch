@@ -67,10 +67,10 @@ diff -ruN a/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl
            params, views().horizontal_tab_strip_region_view, leading_margin);
 +      if (mast::IsOneRowWindow()) {
 +        // Mast: the toolbar shares this row (see CalculateTopContainerLayout).
-+        mast::FitTabStripInRow(tabstrip_bounds, params.visual_client_area.x(),
-+                               views().horizontal_tab_strip_region_view,
-+                               views().toolbar);
-+        params.SetTop(tabstrip_bounds.bottom());
++        params.SetTop(mast::FitTabStripInRow(
++            tabstrip_bounds, params.visual_client_area.x(),
++            GetLayoutConstant(LayoutConstant::kTabstripToolbarOverlap),
++            views().horizontal_tab_strip_region_view, views().toolbar));
 +      } else {
        params.SetTop(tabstrip_bounds.bottom() -
                      GetLayoutConstant(LayoutConstant::kTabstripToolbarOverlap));

@@ -260,10 +260,10 @@ edit(R, "chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc
     '          params, views().horizontal_tab_strip_region_view, leading_margin);\n'
     '      if (mast::IsOneRowWindow()) {\n'
     '        // Mast: the toolbar shares this row (see CalculateTopContainerLayout).\n'
-    '        mast::FitTabStripInRow(tabstrip_bounds, params.visual_client_area.x(),\n'
-    '                               views().horizontal_tab_strip_region_view,\n'
-    '                               views().toolbar);\n'
-    '        params.SetTop(tabstrip_bounds.bottom());\n'
+    '        params.SetTop(mast::FitTabStripInRow(\n'
+    '            tabstrip_bounds, params.visual_client_area.x(),\n'
+    '            GetLayoutConstant(LayoutConstant::kTabstripToolbarOverlap),\n'
+    '            views().horizontal_tab_strip_region_view, views().toolbar));\n'
     '      } else {\n'
     '      params.SetTop(tabstrip_bounds.bottom() -\n'
     '                    GetLayoutConstant(LayoutConstant::kTabstripToolbarOverlap));\n'
@@ -339,6 +339,12 @@ def sails_glyph(t):
     assert (n1, n2) == (1, 1), (n1, n2)
     return t
 edit(B, "ui/webui/resources/cr_elements/icons.html.ts", sails_glyph)
+
+# The empty address bar says "Search": the one-row bar is narrow, and the engine's
+# name isn't worth the room. (Other languages fall back to this English text.)
+edit(B, "chrome/app/generated_resources.grd", lambda t: once(t,
+    '        Search <ph name="SEARCH_ENGINE_NAME">$1<ex>Google</ex></ph> or type a URL\n      </message>\n      <if expr="not use_titlecase">',
+    '        Search\n      </message>\n      <if expr="not use_titlecase">'))
 
 # Linux identity: desktop file (and so WM_CLASS) is "mast".
 edit(B, "chrome/common/channel_info_posix.cc", lambda t: once(t,
