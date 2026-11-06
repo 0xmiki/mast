@@ -178,3 +178,30 @@ diff -ruN a/ui/views/style/platform_style.h b/ui/views/style/platform_style.h
  
    // Whether text fields should use a "drag" cursor when not actually
    // dragging but available to do so.
+diff -ruN a/ui/webui/resources/cr_elements/cr_shared_vars.css b/ui/webui/resources/cr_elements/cr_shared_vars.css
+--- a/ui/webui/resources/cr_elements/cr_shared_vars.css
++++ b/ui/webui/resources/cr_elements/cr_shared_vars.css
+@@ -341,7 +341,9 @@
+     --cr-fallback-color-state-ripple-primary-rgb_: 76, 141, 246;
+     --cr-fallback-color-base-container: rgba(40, 40, 40, 1);
+ 
+-    --cr-card-background-color: var(--google-grey-900-white-4-percent);
++    /* Mast: the palette's raised surface. */
++    --cr-card-background-color: var(--color-webui-card-background,
++        var(--google-grey-900-white-4-percent));
+     --cr-focused-item-color: var(--google-grey-800);
+     --cr-form-field-label-color: var(--dark-secondary-color);
+     --cr-hairline-rgb: 255, 255, 255;
+diff -ruN a/ui/webui/resources/css/md_colors.css b/ui/webui/resources/css/md_colors.css
+--- a/ui/webui/resources/css/md_colors.css
++++ b/ui/webui/resources/css/md_colors.css
+@@ -13,7 +13,8 @@
+ 
+ @media (prefers-color-scheme: dark) {
+   html {
+-    --md-background-color: rgb(32, 33, 36);  /* --google-grey-900 */
++    /* Mast: the palette's page colour. */
++    --md-background-color: var(--color-webui-page-background, rgb(32, 33, 36));
+     --md-loading-message-color: #9AA0A6;  /* --google-grey-500 */
+     /* --cr-separator-line */
+     --md-toolbar-border: 1px solid rgba(255, 255, 255, .1);

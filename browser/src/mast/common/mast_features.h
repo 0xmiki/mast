@@ -27,6 +27,14 @@ inline constexpr int kOneRowLocationBarWidth = 228;
 // The suggestion list's width when it opens wider than the address bar.
 inline constexpr int kWideOmniboxPopupWidth = 560;
 
+// Where the page starts in the one-row window, in the window's (BrowserView's)
+// coordinates: set by each layout, read by the new tab page so its wallpaper
+// continues the tab row's exactly (mast_wallpaper.h). 0 until the first layout.
+inline int& OneRowContentTop() {
+  static int top = 0;
+  return top;
+}
+
 }  // namespace mast
 
 #endif  // MAST_COMMON_MAST_FEATURES_H_

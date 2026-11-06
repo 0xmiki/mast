@@ -84,6 +84,16 @@ void AddMastChromeColorMixer(ui::ColorProvider* provider,
   // contrast against their background, so this is a floor, not the result.
   mixer[ui::kColorFocusableBorderFocused] = {p.faint};
 
+  // WebUI pages (Settings, History, Downloads...): page and cards follow the
+  // palette like Mast's own pages (md_colors.css and cr_shared_vars.css read
+  // these through chrome://theme/colors.css; see mast-theme.patch).
+  mixer[kColorWebuiPageBackground] = {p.chrome};
+  mixer[kColorSettingsWebuiPageBackground] = {p.chrome};
+  mixer[kColorWebuiCardBackground] = {p.chrome2};
+  mixer[kColorSettingsSectionBackground] = {p.chrome2};
+  mixer[ui::kColorPrimaryForeground] = {p.text};
+  mixer[ui::kColorSecondaryForeground] = {p.muted};
+
   // Text selection: neutral too.
   constexpr SkColor kSelection = SkColorSetRGB(0x45, 0x43, 0x40);
   mixer[ui::kColorTextSelectionBackground] = {kSelection};

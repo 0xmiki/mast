@@ -23,6 +23,12 @@ inline void ApplyPalette(std::string_view id) {
   ui::NativeTheme::GetInstanceForNativeUi()->NotifyOnNativeThemeUpdated();
 }
 
+// Repaints every window without changing colours: Customize's image changed
+// (the tab row shows it, mast/browser/ui/mast_wallpaper.h).
+inline void RepaintBrowser() {
+  ui::NativeTheme::GetInstanceForNativeUi()->NotifyOnNativeThemeUpdated();
+}
+
 }  // namespace mast
 
 #endif  // MAST_BROWSER_MAST_THEME_H_

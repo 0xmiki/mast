@@ -27,6 +27,7 @@
 #include "base/values.h"
 #include "chrome/browser/bookmarks/bookmark_model_factory.h"
 #include "chrome/browser/profiles/profile.h"
+#include "chrome/browser/themes/theme_properties.h"
 #include "chrome/browser/ui/webui/favicon_source.h"
 #include "components/bookmarks/browser/base_bookmark_model_observer.h"
 #include "components/bookmarks/browser/bookmark_model.h"
@@ -46,6 +47,7 @@
 #include "mast/browser/mast_pages.h"
 #include "mast/browser/mast_prefs.h"
 #include "mast/browser/mast_theme.h"
+#include "mast/common/mast_features.h"
 #include "mast/ui/color/mast_palette.h"
 #include "components/prefs/pref_service.h"
 #include "services/network/public/mojom/content_security_policy.mojom.h"
@@ -151,6 +153,13 @@ scoped_refptr<base::RefCountedMemory> ReadWallpaper(
 std::string HexColor(SkColor c) {
   return base::StringPrintf("#%02x%02x%02x", SkColorGetR(c), SkColorGetG(c),
                             SkColorGetB(c));
+}
+
+// Where the wallpaper's top-left is above the page, in DIP: the image starts
+// kFrameHeightAboveTabs above the window's content (the theme-image origin the
+// tab row paints from), and the page starts below the one-row tab row.
+int WallpaperTop() {
+  return OneRowContentTop() + ThemeProperties::kFrameHeightAboveTabs;
 }
 
 // The palettes Customize offers, with the colours its swatches show.
@@ -375,6 +384,7 @@ class MastHandler : public content::WebUIMessageHandler,
     PrefService* prefs = profile_->GetPrefs();
     prefs->SetInteger(kWallpaperPref,
                       std::abs(prefs->GetInteger(kWallpaperPref)) + 1);
+    RepaintBrowser();
     SendState();
   }
 
@@ -382,6 +392,7 @@ class MastHandler : public content::WebUIMessageHandler,
     PrefService* prefs = profile_->GetPrefs();
     prefs->SetInteger(kWallpaperPref,
                       -std::abs(prefs->GetInteger(kWallpaperPref)));
+    RepaintBrowser();
     base::ThreadPool::PostTask(
         FROM_HERE, kFileTraits,
         base::BindOnce(base::IgnoreResult(&base::DeleteFile),
@@ -438,7 +449,8 @@ class MastHandler : public content::WebUIMessageHandler,
                   .Set("palette", palette::Current().id)
                   .Set("css", PaletteCss())
                   .Set("wallpaper", std::max(0, profile_->GetPrefs()->GetInteger(
-                                                    kWallpaperPref))));
+                                                    kWallpaperPref)))
+                  .Set("wallpaperTop", WallpaperTop()));
     state.Set("palettes", PalettesValue());
     state.Set("result", std::move(result));
     CallJavascriptFunction("mastState", base::Value(std::move(state)));
@@ -503,7 +515,8 @@ MastUI::MastUI(content::WebUI* web_ui, std::string_view host)
             // New tabs open the desktop; chrome://mast is the full blocklist.
             std::move(callback).Run(base::MakeRefCounted<base::RefCountedString>(
                 as_new_tab ? DesktopPageHtml(std::max(
-                                 0, prefs->GetInteger(kWallpaperPref)))
+                                 0, prefs->GetInteger(kWallpaperPref)),
+                                 WallpaperTop())
                            : StartPageHtml(false)));
           },
           as_new_tab, base::Unretained(profile->GetPrefs()),

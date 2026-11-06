@@ -80,7 +80,8 @@ dialog.bl-panel .bl header { padding-right: 44px; }
 .bl-close:hover { background: var(--pressed); color: var(--text); }
 /* Customize: a wallpaper in the clear style (no blur: a light wash keeps text
    legible, and widgets and tiles go dark), and the browser's palette. */
-body.wall { background: linear-gradient(rgb(0 0 0/.22), rgb(0 0 0/.22)), var(--wall) center/cover no-repeat fixed, var(--surface); }
+body.wall { background-color: var(--surface); background-image: linear-gradient(rgb(0 0 0/.22), rgb(0 0 0/.22)), var(--wall);
+  background-size: 100% 100%, var(--wall-size, cover); background-position: 0 0, var(--wall-pos, center); background-repeat: no-repeat; background-attachment: fixed; }
 body.wall .widget { background: rgb(0 0 0/.58); box-shadow: inset 0 0 0 1px rgb(255 255 255/.06); }
 body.wall .tile { background: rgb(0 0 0/.5); box-shadow: inset 0 0 0 1px rgb(255 255 255/.08); }
 body.wall .add .tile { background: rgb(0 0 0/.3); box-shadow: inset 0 0 0 1px rgb(255 255 255/.35); color: var(--text-2); }
@@ -267,14 +268,35 @@ function toast(text, undo) {
 
 // Customize: the wallpaper (a file in the profile folder, served by this
 // page's own source) and the palette (the whole browser's, not only this page).
-let wallpaper = {{WALLPAPER}};  // version; 0 is none
-let czBusy = false;             // an upload is on its way
+let wallpaper = {{WALLPAPER}};     // version; 0 is none
+let wallTop = {{WALLPAPER_TOP}};   // how far the picture starts above this page
+let czBusy = false;                // an upload is on its way
+// The picture is laid out like a desktop wallpaper: it covers the screen,
+// centred, starting at the top of the window, so the tab row (which the
+// browser paints from the same image, mast_wallpaper.cc) and this page show
+// one continuous picture.
+const wallImg = new Image();
+wallImg.onload = layoutWallpaper;
+function layoutWallpaper() {
+  const iw = wallImg.naturalWidth, ih = wallImg.naturalHeight;
+  if (!wallpaper || !iw) return;
+  const sw = screen.width, sh = screen.height, k = Math.max(sw / iw, sh / ih);
+  const w = iw * k, h = ih * k;
+  const s = document.body.style;
+  s.setProperty('--wall-size', `${w}px ${h}px`);
+  s.setProperty('--wall-pos', `${(sw - w) / 2}px ${(sh - h) / 2 - wallTop}px`);
+}
+addEventListener('resize', layoutWallpaper);
 function applyWallpaper(v) {
   v = Math.max(0, v || 0);
   wallpaper = v;
   document.body.classList.toggle('wall', v > 0);
-  if (v > 0) document.body.style.setProperty('--wall', `url(wallpaper-${v}.jpg)`);
-  else document.body.style.removeProperty('--wall');
+  if (v > 0) {
+    document.body.style.setProperty('--wall', `url(wallpaper-${v}.jpg)`);
+    wallImg.src = `wallpaper-${v}.jpg`;
+  } else {
+    document.body.style.removeProperty('--wall');
+  }
 }
 applyWallpaper(wallpaper);
 
@@ -322,6 +344,7 @@ window.mastState = (s) => {
   state = s;
   if (first) dur = s.lastDuration || 'today';
   mastPalette(s.theme);
+  if (s.theme && s.theme.wallpaperTop && s.theme.wallpaperTop !== wallTop) { wallTop = s.theme.wallpaperTop; layoutWallpaper(); }
   if (s.theme && Math.max(0, s.theme.wallpaper) !== wallpaper) { czBusy = false; applyWallpaper(s.theme.wallpaper); }
   // The blocklist panel shows its own toasts for its own requests.
   const handled = MastBlocklist.update(s);

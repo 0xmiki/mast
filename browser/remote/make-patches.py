@@ -230,6 +230,20 @@ edit(T, "ui/color/BUILD.gn", lambda t: once(t,
     '    "color_mixers.cc",\n',
     '    "color_mixers.cc",\n    "//mast/ui/color/mast_palette.h",\n    "//mast/ui/color/mast_ref_color_mixer.cc",\n    "//mast/ui/color/mast_ref_color_mixer.h",\n'))
 
+# Settings (and other WebUI pages) paint their page and cards from two hard-coded dark
+# greys in shared CSS, so the palette never reached them. They read the browser's colours
+# instead (chrome://theme/colors.css, which Mast's mixer sets per palette), keeping the old
+# values for pages that don't load colors.css.
+edit(T, "ui/webui/resources/css/md_colors.css", lambda t: once(t,
+    '    --md-background-color: rgb(32, 33, 36);  /* --google-grey-900 */\n',
+    '    /* Mast: the palette\'s page colour. */\n'
+    '    --md-background-color: var(--color-webui-page-background, rgb(32, 33, 36));\n'))
+edit(T, "ui/webui/resources/cr_elements/cr_shared_vars.css", lambda t: once(t,
+    '    --cr-card-background-color: var(--google-grey-900-white-4-percent);\n',
+    '    /* Mast: the palette\'s raised surface. */\n'
+    '    --cr-card-background-color: var(--color-webui-card-background,\n'
+    '        var(--google-grey-900-white-4-percent));\n'))
+
 # Mast surfaces, after all of Chrome's mixers.
 edit(T, "chrome/browser/ui/color/chrome_color_mixers.cc", lambda t: once(once(t,
     '#include "chrome/browser/ui/color/chrome_color_mixers.h"\n',
@@ -371,6 +385,34 @@ edit(R, "chrome/browser/ui/browser_window/internal/BUILD.gn", lambda t: add_dep(
     '      "embedder_browser_window_features.cc",\n',
     '      "embedder_browser_window_features.cc",\n      "//mast/browser/ui/mast_one_row_toolbar.cc",\n      "//mast/browser/ui/mast_one_row_toolbar.h",\n'),
     'source_set("internal") {', "//mast/common"))
+
+# Customize's image behind the tab row (mast/browser/ui/mast_wallpaper.h). The two places
+# Chromium paints a theme's frame image: the frame view's GetFrameImage() (every platform's
+# frame tiles it behind the tabs and window buttons) and ThemedBackground (the toolbar,
+# which is in the row in the one-row window). Both align it to the same origin.
+edit(R, "chrome/browser/ui/views/frame/browser_frame_view.cc", lambda t: once(once(t,
+    '#include "chrome/grit/theme_resources.h"\n',
+    '#include "chrome/grit/theme_resources.h"\n#include "mast/browser/ui/mast_wallpaper.h"\n'),
+    'gfx::ImageSkia BrowserFrameView::GetFrameImage(\n    BrowserFrameActiveState active_state) const {\n',
+    'gfx::ImageSkia BrowserFrameView::GetFrameImage(\n    BrowserFrameActiveState active_state) const {\n'
+    '  // Mast: Customize\'s image continues behind the tab row.\n'
+    '  if (gfx::ImageSkia wallpaper = mast::WallpaperFrameImage(GetBrowserView());\n'
+    '      !wallpaper.isNull()) {\n    return wallpaper;\n  }\n'))
+edit(R, "chrome/browser/ui/views/frame/themed_background.cc", lambda t: once(once(t,
+    '#include "chrome/browser/ui/color/chrome_color_id.h"\n',
+    '#include "chrome/browser/ui/color/chrome_color_id.h"\n#include "mast/browser/ui/mast_wallpaper.h"\n'),
+    '                                       ThemeChoice theme_choice) {\n  bool painted =\n',
+    '                                       ThemeChoice theme_choice) {\n'
+    '  // Mast: the toolbar\'s part of the tab row shows Customize\'s image too.\n'
+    '  if (mast::PaintWallpaperBackground(canvas, view, browser_view)) {\n    return;\n  }\n'
+    '  bool painted =\n'))
+edit(R, "chrome/browser/ui/views/frame/BUILD.gn", lambda t: add_dep(add_dep(add_dep(once(t,
+    'source_set("themed_background_impl") {\n  sources = [ "themed_background.cc" ]\n',
+    'source_set("themed_background_impl") {\n  sources = [\n    "themed_background.cc",\n'
+    '    "//mast/browser/ui/mast_wallpaper.cc",\n    "//mast/browser/ui/mast_wallpaper.h",\n  ]\n'),
+    'source_set("themed_background_impl") {', "//mast/common"),
+    'source_set("themed_background_impl") {', "//ui/display"),
+    'source_set("themed_background_impl") {', "//ui/gfx/codec"))
 
 # ---------------------------------------------------------------- branding
 B = "mast-branding.patch"

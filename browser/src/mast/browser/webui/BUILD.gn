@@ -21,6 +21,7 @@ source_set("webui") {
     "//content/public/common",
     "//mast/browser",
     "//mast/browser/desktop",
+    "//mast/common",
     "//services/network/public/mojom",
     "//skia",
     "//ui/color",

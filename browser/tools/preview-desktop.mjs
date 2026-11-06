@@ -86,7 +86,7 @@ if (!/const icon = \(url\) => [^\n]*;/.test(html)) throw new Error('icon() not f
 const blocklist = fs.readFileSync(path.join(res, 'blocklist.html'), 'utf8');
 html = html.replace('{{STYLE}}', style).replace('{{ICON}}', '').replace('{{BLOCKLIST}}', () => blocklist).replace(/const icon = \(url\) => [^\n]*;/, letterIcon).replace('<script>', mock + '\n<script>')
   // The page serves its image as wallpaper-<version>.jpg; here it's a data URL.
-  .replace('{{WALLPAPER}}', '0').replaceAll(/wallpaper-\$\{\w+\}\.jpg/g, () => '${window.__wallUrl}');
+  .replace('{{WALLPAPER}}', '0').replace('{{WALLPAPER_TOP}}', '57').replaceAll(/wallpaper-\$\{\w+\}\.jpg/g, () => '${window.__wallUrl}');
 if (html.includes('wallpaper-$')) throw new Error('a wallpaper URL was not mocked');
 // #bl opens the blocklist panel, #cz the Customize panel, for screenshots.
 html = html.replace('</body>', '<script>if (location.hash === "#cz") setTimeout(() => document.getElementById("customize").click(), 200);</script></body>');

@@ -50,7 +50,8 @@ inline int FitTabStripInRow(gfx::Rect& row,
   // The slice ends where the content starts, so the two meet exactly.
   PendingToolbarSlice() = gfx::Rect(row.right() - client_x, -(height - overlap),
                                     toolbar_width, height - overlap);
-  return row.bottom() - overlap;
+  OneRowContentTop() = row.bottom() - overlap;
+  return OneRowContentTop();
 }
 
 // The top container is exactly the toolbar's slice, so its background never

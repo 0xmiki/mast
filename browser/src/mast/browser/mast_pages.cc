@@ -162,10 +162,12 @@ std::string PaletteCss() {
       Hex(p.faint).c_str());
 }
 
-std::string DesktopPageHtml(int wallpaper) {
+std::string DesktopPageHtml(int wallpaper, int wallpaper_top) {
   std::string page = Fill(kDesktopPage);
   base::ReplaceSubstringsAfterOffset(&page, 0, "{{WALLPAPER}}",
                                      base::NumberToString(wallpaper));
+  base::ReplaceSubstringsAfterOffset(&page, 0, "{{WALLPAPER_TOP}}",
+                                     base::NumberToString(wallpaper_top));
   return page;
 }
 

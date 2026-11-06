@@ -38,17 +38,53 @@ diff -ruN a/chrome/browser/ui/browser_window/internal/embedder_browser_window_fe
  }
  
  void EmbedderBrowserWindowFeatures::InitPostBrowserViewConstruction(
+diff -ruN a/chrome/browser/ui/views/frame/browser_frame_view.cc b/chrome/browser/ui/views/frame/browser_frame_view.cc
+--- a/chrome/browser/ui/views/frame/browser_frame_view.cc
++++ b/chrome/browser/ui/views/frame/browser_frame_view.cc
+@@ -20,6 +20,7 @@
+ #include "chrome/browser/ui/views/frame/safe_invoke/safe_invoke.h"
+ #include "chrome/browser/ui/web_applications/app_browser_controller.h"
+ #include "chrome/grit/theme_resources.h"
++#include "mast/browser/ui/mast_wallpaper.h"
+ #include "third_party/skia/include/core/SkColor.h"
+ #include "ui/base/metadata/metadata_impl_macros.h"
+ #include "ui/base/theme_provider.h"
+@@ -333,6 +334,11 @@
+ 
+ gfx::ImageSkia BrowserFrameView::GetFrameImage(
+     BrowserFrameActiveState active_state) const {
++  // Mast: Customize's image continues behind the tab row.
++  if (gfx::ImageSkia wallpaper = mast::WallpaperFrameImage(GetBrowserView());
++      !wallpaper.isNull()) {
++    return wallpaper;
++  }
+   const ui::ThemeProvider* tp = GetThemeProvider();
+   const int frame_image_id = ShouldPaintAsActiveForState(active_state)
+                                  ? IDR_THEME_FRAME
 diff -ruN a/chrome/browser/ui/views/frame/BUILD.gn b/chrome/browser/ui/views/frame/BUILD.gn
 --- a/chrome/browser/ui/views/frame/BUILD.gn
 +++ b/chrome/browser/ui/views/frame/BUILD.gn
-@@ -2444,6 +2444,7 @@
-     "//ui/views",
+@@ -847,12 +847,19 @@
+ }
+ 
+ source_set("themed_background_impl") {
+-  sources = [ "themed_background.cc" ]
++  sources = [
++    "themed_background.cc",
++    "//mast/browser/ui/mast_wallpaper.cc",
++    "//mast/browser/ui/mast_wallpaper.h",
++  ]
+   public_deps = [
+     ":themed_background",
+     "//chrome/browser:browser_public_dependencies",
    ]
    deps = [
++    "//ui/gfx/codec",
++    "//ui/display",
 +    "//mast/common",
-     ":custom_corners",
-     ":custom_corners_background",
-     ":custom_floating_corner",
+     ":top_container_view",
+     "//base",
+     "//chrome/app/theme:theme_resources",
 diff -ruN a/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc b/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc
 --- a/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc
 +++ b/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc
@@ -107,6 +143,28 @@ diff -ruN a/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl
    if (IsParentedTo(views().horizontal_tab_strip_region_view,
                     views().top_container)) {
      gfx::Rect tabstrip_bounds;
+diff -ruN a/chrome/browser/ui/views/frame/themed_background.cc b/chrome/browser/ui/views/frame/themed_background.cc
+--- a/chrome/browser/ui/views/frame/themed_background.cc
++++ b/chrome/browser/ui/views/frame/themed_background.cc
+@@ -8,6 +8,7 @@
+ 
+ #include "chrome/browser/themes/theme_properties.h"
+ #include "chrome/browser/ui/color/chrome_color_id.h"
++#include "mast/browser/ui/mast_wallpaper.h"
+ #include "chrome/browser/ui/views/frame/browser_view.h"
+ #include "chrome/browser/ui/views/frame/top_container_view.h"
+ #include "chrome/browser/ui/views/tabs/tab_strip.h"
+@@ -107,6 +108,10 @@
+                                        const views::View* view,
+                                        const BrowserView* browser_view,
+                                        ThemeChoice theme_choice) {
++  // Mast: the toolbar's part of the tab row shows Customize's image too.
++  if (mast::PaintWallpaperBackground(canvas, view, browser_view)) {
++    return;
++  }
+   bool painted =
+       PaintThemeCustomImage(canvas, view, browser_view, theme_choice);
+   if (!painted) {
 diff -ruN a/chrome/browser/ui/views/omnibox/BUILD.gn b/chrome/browser/ui/views/omnibox/BUILD.gn
 --- a/chrome/browser/ui/views/omnibox/BUILD.gn
 +++ b/chrome/browser/ui/views/omnibox/BUILD.gn
