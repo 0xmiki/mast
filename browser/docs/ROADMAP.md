@@ -227,7 +227,13 @@ Plan:
   `<link rel="icon">` with a `data:` URI in their HTML first (no C++). If that's ignored, it's 2
   lines in `GetFaviconResourceBytes()` for our host.
 
-### G. Leftovers from the de-Google pass
+### G. Native-UI polish (see NATIVE-UI.md)
+
+The colour-only restyle left Chrome's shapes, rings, button styles and font. `NATIVE-UI.md` has
+the CSS-to-Views map, the inspector workbench (`--enable-ui-devtools`), and ten fixes, smallest
+first (4 are colour mixer only; the rest are 1–3 line hooks).
+
+### H. Leftovers from the de-Google pass
 
 - "Your Mast" in the app menu (string). Warm greys in settings (WebUI colour tokens, `DESIGN-PLAN.md` §F).
 - Our own time server for `NetworkTimeTracker` (blocks must survive clock changes).
@@ -240,7 +246,7 @@ starting servers past 90%, so **$1.23 is usable**. The snapshot costs ~$0.39/mon
 
 | Session | Contents | Estimate |
 |---|---|---|
-| 1 | A + B + D + E + F, and remove the toolbar pill (all incremental, one session) | ~1.5 h ≈ **$0.37** |
+| 1 | A + B + D + E + F, remove the toolbar pill, and the native-UI fixes in `NATIVE-UI.md` §5 (all incremental, one session; start UI DevTools first and dump the views tree before changing anything) | ~2 h ≈ **$0.49** |
 | 2–3 | C, the one-row window (iterative layout work, screenshots) | ~2–3 h ≈ **$0.50–0.75** |
 
 Both fit. Rebasing onto newer Chromium waits until after launch (§2).
