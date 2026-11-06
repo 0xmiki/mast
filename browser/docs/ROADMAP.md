@@ -233,6 +233,21 @@ The colour-only restyle left Chrome's shapes, rings, button styles and font. `NA
 the CSS-to-Views map, the inspector workbench (`--enable-ui-devtools`), and ten fixes, smallest
 first (4 are colour mixer only; the rest are 1–3 line hooks).
 
+### I. Customize: wallpaper and colours (design C13)
+
+- A Customize button on the new tab page opens a panel:
+  - **Background:** none, preset images, or an uploaded image.
+  - **Colours:** six palettes; onyx is the default. Ember never changes.
+- **Style:** the wallpaper is clear, with no frosted glass (dropped 2026-11-06, cross-platform
+  risk). The tab row sits straight on the image under a dark wash (C10, C12); widgets and
+  tiles are plain dark tints.
+- **The page:** the upload and the image are our own WebUI. Store the image in the profile
+  directory, not a pref.
+- **The tab row:** the image continues behind it as a theme frame image, so it shows on
+  websites too (C12).
+- **Native colours:** palettes need the Mast mixer to read a profile pref and recompute on
+  change, instead of using compile-time constants.
+
 ### H. Leftovers from the de-Google pass
 
 - "Your Mast" in the app menu (string). Warm greys in settings (WebUI colour tokens, `DESIGN-PLAN.md` §F).
