@@ -9,7 +9,7 @@
    grid that fills columns from the top left like a desktop's; they are a
    bookmarks folder. Widgets sit in a column on the right. */
 body { background: var(--surface); }
-.desk { display: grid; grid-template-columns: 1fr 320px; gap: 48px; min-height: 100vh; padding: 40px 48px; }
+.desk { display: grid; grid-template-columns: 1fr 280px; gap: 48px; min-height: 100vh; padding: 40px 48px; }
 .apps { display: grid; grid-auto-flow: column; grid-template-rows: repeat(auto-fill, 92px); grid-auto-columns: 84px; gap: 2px 4px;
   align-content: start; justify-content: start; height: calc(100vh - 80px); }
 .app { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; width: 84px; height: 92px; padding: 8px 4px;
@@ -32,24 +32,28 @@ body { background: var(--surface); }
 .add:hover .tile, .add:hover .label { color: var(--text); }
 .hint { grid-row: 1; align-self: center; width: 260px; margin: 0 0 0 12px; color: var(--text-3); font-size: 12px; }
 /* Customize, in the bottom-right corner. */
-.customize { position: fixed; right: 20px; bottom: 20px; display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px;
+.customize { position: fixed; right: 48px; bottom: 24px; display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px;
   border: 0; border-radius: var(--r); background: var(--field); color: var(--text-2); font-size: 12px; font-weight: 500; }
 .customize:hover { background: var(--pressed); color: var(--text); }
-.widgets { display: flex; flex-direction: column; gap: 16px; }
-.widget { padding: 18px 20px; border-radius: 14px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
-.clock .time { font-size: 44px; font-weight: 300; letter-spacing: -0.035em; line-height: 1.15; }
-.clock .date { color: var(--text-2); }
-.dist { display: flex; flex-direction: column; gap: 14px; padding: 20px; }
-.seg { display: grid; grid-template-columns: repeat(6, 1fr); padding: 2px; border-radius: var(--r); background: var(--seg); }
-.seg button { height: 26px; padding: 0; border: 0; border-radius: 4px; background: none; color: var(--text-2); font-size: 12px; white-space: nowrap; }
+/* Widgets are flat (design C17/C18a): no panels, right-aligned to the
+   desktop's edge like a desktop clock; space between groups separates them. */
+.widgets { display: flex; flex-direction: column; align-items: flex-end; gap: 44px; padding-top: 2px; text-align: right; }
+.widget { display: flex; flex-direction: column; align-items: flex-end; }
+.clock { gap: 2px; }
+.clock .time { font-size: 64px; font-weight: 300; letter-spacing: -2px; line-height: 1.1; white-space: nowrap; }
+.clock .ampm { margin-left: 6px; font-size: 20px; letter-spacing: 0; }
+.clock .date { color: var(--text-2); font-size: 14px; }
+.dist { gap: 12px; width: 100%; }
+.seg { display: flex; justify-content: flex-end; gap: 16px; }
+.seg button { height: 24px; padding: 0; border: 0; background: none; color: var(--text-2); font-size: 12px; white-space: nowrap; }
 .seg button:hover { color: var(--text); }
-.seg button.on { background: var(--pressed); color: var(--text); font-weight: 600; }
-.dist .primary { width: 100%; }
+.seg button.on { color: var(--text); font-weight: 700; }
+.dist .primary { height: 32px; padding: 0 16px; }
 .dist .primary.held { background: none; color: var(--signal); box-shadow: inset 0 0 0 1.5px var(--signal); cursor: default; }
-.links { display: flex; justify-content: center; gap: 18px; }
+.links { display: flex; justify-content: flex-end; gap: 18px; }
 .link { padding: 0; border: 0; background: none; color: var(--text-2); font-size: 12px; font-weight: 500; text-decoration: none; }
 .link:hover { color: var(--text); }
-.cats { display: flex; flex-direction: column; margin: -4px -8px 0; }
+.cats { display: flex; flex-direction: column; align-self: stretch; margin: -4px -8px 0; text-align: left; }
 .cats label { display: flex; align-items: center; gap: 10px; height: 28px; padding: 0 8px; border-radius: 5px; cursor: pointer; }
 .cats label:hover { background: var(--field); }
 .cats input { appearance: none; display: grid; place-items: center; width: 14px; height: 14px; margin: 0; border: 1.5px solid var(--text-3); border-radius: 3px; }
@@ -98,17 +102,17 @@ body.light #wall { background-image: var(--wall); background-size: var(--wall-si
    are translucent like the active tab's pill, so the picture comes through
    instead of black panels taking the stage. A light picture (Customize: Light)
    gets dark text and light glass. */
-body.wall .widget, body.wall .customize { background: rgb(255 255 255/.12); box-shadow: inset 0 0 0 1px rgb(255 255 255/.1);
+body.wall .widget, body.wall .customize { background: none; box-shadow: none;
   --text: #f2f2f2; --text-2: rgb(242 242 242/.82); --text-3: rgb(242 242 242/.62); --seg: rgb(0 0 0/.22); --pressed: rgb(255 255 255/.16);
-  --field: rgb(255 255 255/.08); --line: rgb(255 255 255/.1); color: var(--text); text-shadow: 0 1px 2px rgb(0 0 0/.3); }
+  --field: rgb(255 255 255/.08); --line: rgb(255 255 255/.1); color: var(--text); text-shadow: 0 1px 6px rgb(0 0 0/.5); }
 body.wall .widget .primary { text-shadow: none; }
 body.wall .app .label, body.wall .add .label, body.wall .hint { color: #ededed; text-shadow: 0 1px 3px rgb(0 0 0/.7); }
 body.wall .add .tile { color: #ededed; filter: drop-shadow(0 1px 3px rgb(0 0 0/.7)); }
 body.wall .app:hover { background: rgb(255 255 255/.1); box-shadow: inset 0 0 0 1px rgb(255 255 255/.15); }
 body.wall .customize:hover { background: rgb(255 255 255/.2); }
-body.wall.light .widget, body.wall.light .customize { background: rgb(255 255 255/.5); box-shadow: inset 0 0 0 1px rgb(0 0 0/.06);
+body.wall.light .widget, body.wall.light .customize { background: none; box-shadow: none;
   --text: #141414; --text-2: #3d3d3d; --text-3: #5e5e5e; --seg: rgb(0 0 0/.07); --pressed: rgb(255 255 255/.85); --field: rgb(0 0 0/.06);
-  --line: rgb(0 0 0/.08); text-shadow: none; }
+  --line: rgb(0 0 0/.08); text-shadow: 0 1px 4px rgb(255 255 255/.55); }
 body.wall.light .app .label, body.wall.light .add .label, body.wall.light .hint { color: #141414; text-shadow: 0 1px 2px rgb(255 255 255/.6); }
 body.wall.light .add .tile { color: #141414; filter: none; }
 body.wall.light .app:hover { background: rgb(255 255 255/.3); box-shadow: inset 0 0 0 1px rgb(0 0 0/.08); }
@@ -243,10 +247,16 @@ function renderWidgets() {
   w.innerHTML = order.map((id) => id === 'clock' ? clockWidget() : id === 'distractions' ? distractionWidget() : '').join('');
 }
 
+// The time on one line; a 12-hour locale's AM/PM sits small beside it.
+function clockTime(d) {
+  return new Intl.DateTimeFormat([], {hour: 'numeric', minute: '2-digit'}).formatToParts(d)
+    .map((p) => p.type === 'dayPeriod' ? `<span class="ampm">${esc(p.value)}</span>` : p.type === 'literal' && /^\s+$/.test(p.value) ? '' : esc(p.value)).join('');
+}
+
 function clockWidget() {
   const now = new Date();
   return `<div class="widget clock" id="clock">
-    <div class="time">${now.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</div>
+    <div class="time">${clockTime(now)}</div>
     <div class="date">${now.toLocaleDateString([], {weekday: 'long', month: 'long', day: 'numeric'})}</div>
   </div>`;
 }
