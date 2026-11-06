@@ -102,7 +102,9 @@ void AddMastChromeColorMixer(ui::ColorProvider* provider,
     mixer[kColorTabBackgroundActiveFrameInactive] = {p::kChrome2};
     mixer[kColorTabBackgroundInactiveHoverFrameActive] = {
         SkColorSetRGB(0x0F, 0x0F, 0x0F)};
-    mixer[kColorToolbarContentAreaSeparator] = {SK_ColorTRANSPARENT};
+    // The 1px separator above the page takes the row's colour: transparent
+    // showed the darker region behind it as a line.
+    mixer[kColorToolbarContentAreaSeparator] = {p::kChrome};
   }
 }
 
