@@ -60,12 +60,12 @@ void AddMastChromeColorMixer(ui::ColorProvider* provider,
   mixer[kColorOmniboxResultsBackgroundSelected] = {p::kRaised2};
   // Also the omnibox focus ring (mast-theme.patch gives the ring this id,
   // which skips Chromium's 3:1 contrast lift): a hairline, not a halo.
-  mixer[kColorLocationBarBorder] = {SkColorSetRGB(0x3B, 0x3A, 0x38)};
+  mixer[kColorLocationBarBorder] = {SkColorSetRGB(0x2A, 0x2A, 0x2A)};
   mixer[kColorOmniboxResultsFocusIndicator] = {SK_ColorTRANSPARENT};
 
   // Menus, bubbles, dialogs, focus.
-  // Bubbles, dialogs and menus sit one step above the page (#262626), so they
-  // keep an edge on Mast's own pages, which are #1c1c1c.
+  // Bubbles, dialogs and menus sit one step above the page (#141414), so they
+  // keep an edge on Mast's own pages, which are #070707.
   mixer[ui::kColorMenuBackground] = {p::kChrome2};
   mixer[ui::kColorMenuItemBackgroundHighlighted] = {p::kRaised2};
   mixer[ui::kColorMenuItemBackgroundSelected] = {p::kRaised2};
@@ -89,14 +89,20 @@ void AddMastChromeColorMixer(ui::ColorProvider* provider,
   mixer[kColorOmniboxSelectionBackground] = {kSelection};
   mixer[kColorOmniboxSelectionForeground] = {p::kText};
 
-  // One row (mast/common/mast_features.h): tabs and toolbar share the frame's
-  // colour; the active tab is a raised pill, like the address field.
+  // One row (mast/common/mast_features.h), seamless: the tab row is the page's
+  // colour with no line under it; the active tab is a raised pill, like the
+  // address field.
   if (IsOneRowWindow()) {
-    mixer[kColorToolbar] = {p::kBg};
+    mixer[ui::kColorFrameActive] = {p::kChrome};
+    mixer[ui::kColorFrameInactive] = {p::kChrome};
+    mixer[kColorToolbar] = {p::kChrome};
+    mixer[kColorTabBackgroundInactiveFrameActive] = {p::kChrome};
+    mixer[kColorTabBackgroundInactiveFrameInactive] = {p::kChrome};
     mixer[kColorTabBackgroundActiveFrameActive] = {p::kChrome2};
     mixer[kColorTabBackgroundActiveFrameInactive] = {p::kChrome2};
     mixer[kColorTabBackgroundInactiveHoverFrameActive] = {
-        SkColorSetRGB(0x1E, 0x1E, 0x1E)};
+        SkColorSetRGB(0x0F, 0x0F, 0x0F)};
+    mixer[kColorToolbarContentAreaSeparator] = {SK_ColorTRANSPARENT};
   }
 }
 

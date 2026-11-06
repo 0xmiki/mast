@@ -15,8 +15,8 @@ namespace {
 // The shared tokens (mirrors mast_palette.h and the Rams proposal). One signal
 // colour, used only for blocking and the state of being blocked.
 constexpr char kStyle[] = R"MAST(
-:root { color-scheme: dark; --bg:#141414; --surface:#1c1c1c; --field:#262626; --pressed:#303030;
-  --seg:#262626; --seg-on:#1c1c1c; --line:#2c2c2c; --text:#e9e7e3; --text-2:#a29f99; --text-3:#6f6c67;
+:root { color-scheme: dark; --bg:#000000; --surface:#070707; --field:#141414; --pressed:#1e1e1e;
+  --seg:#141414; --seg-on:#070707; --line:#171717; --text:#ededed; --text-2:#9a9a9a; --text-3:#5c5c5c;
   --signal:#ff6a3d; --signal-text:#1a0d07; --r:6px;
   --shadow:0 8px 28px rgb(0 0 0/.45),0 0 0 1px var(--line); }
 * { box-sizing:border-box }
