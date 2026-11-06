@@ -32,6 +32,13 @@ constexpr char kCustomSitesPref[] = "mast.custom_sites";
 constexpr char kLastDurationPref[] = "mast.last_duration";
 constexpr char kBlockedDayPref[] = "mast.stats.blocked_day";
 constexpr char kBlockedCountPref[] = "mast.stats.blocked_count";
+constexpr char kDistractionsPref[] = "mast.distractions";
+
+// Blocked by "Block distractions" until someone changes the set. Shopping,
+// games, trading, dating and messaging stay open: people often need them.
+constexpr const char* kDefaultDistractions[] = {
+    "social", "video",  "streaming", "news",  "forums",
+    "entertainment", "sports", "gambling", "adult"};
 
 double Ms(base::Time t) {
   return static_cast<double>(t.InMillisecondsSinceUnixEpoch());
@@ -136,6 +143,11 @@ void MastBlocks::RegisterLocalStatePrefs(PrefRegistrySimple* registry) {
   registry->RegisterStringPref(kLastDurationPref, "today");
   registry->RegisterStringPref(kBlockedDayPref, std::string());
   registry->RegisterIntegerPref(kBlockedCountPref, 0);
+  base::ListValue distractions;
+  for (const char* id : kDefaultDistractions) {
+    distractions.Append(id);
+  }
+  registry->RegisterListPref(kDistractionsPref, std::move(distractions));
 }
 
 PrefService* MastBlocks::prefs() const {
@@ -362,6 +374,49 @@ void MastBlocks::ReloadBlockedTabs() {
                                        /*check_for_repost=*/false);
     }
   }
+}
+
+std::vector<std::string> MastBlocks::DistractionCategories() const {
+  std::vector<std::string> ids;
+  if (PrefService* p = prefs()) {
+    for (const base::Value& v : p->GetList(kDistractionsPref)) {
+      if (v.is_string()) {
+        ids.push_back(v.GetString());
+      }
+    }
+  }
+  return ids;
+}
+
+void MastBlocks::SetDistraction(std::string_view category_id, bool on) {
+  PrefService* p = prefs();
+  const bool known = std::ranges::any_of(
+      Categories(), [&](const Category& c) { return c.id == category_id; });
+  if (!p || !known) {
+    return;
+  }
+  ScopedListPrefUpdate update(p, kDistractionsPref);
+  update.Get().EraseValue(base::Value(category_id));
+  if (on) {
+    update.Get().Append(category_id);
+  }
+}
+
+std::vector<std::string> MastBlocks::DistractionDomains() const {
+  const std::vector<std::string> ids = DistractionCategories();
+  const std::set<std::string> wanted(ids.begin(), ids.end());
+  std::vector<std::string> domains;
+  for (const Category& c : Categories()) {
+    if (!wanted.contains(c.id)) {
+      continue;
+    }
+    for (const Service& s : c.services) {
+      domains.insert(domains.end(), s.domains.begin(), s.domains.end());
+    }
+  }
+  const std::vector<std::string> custom = CustomSites();
+  domains.insert(domains.end(), custom.begin(), custom.end());
+  return domains;
 }
 
 bool AnyBlockActive() {

@@ -1,7 +1,7 @@
 // Copyright 2026 The Mast Authors
 
-#ifndef MAST_BROWSER_MAST_UI_H_
-#define MAST_BROWSER_MAST_UI_H_
+#ifndef MAST_BROWSER_WEBUI_MAST_UI_H_
+#define MAST_BROWSER_WEBUI_MAST_UI_H_
 
 #include <string>
 #include <string_view>
@@ -38,4 +38,4 @@ class MastUIConfig : public content::WebUIConfig {
 
 }  // namespace mast
 
-#endif  // MAST_BROWSER_MAST_UI_H_
+#endif  // MAST_BROWSER_WEBUI_MAST_UI_H_

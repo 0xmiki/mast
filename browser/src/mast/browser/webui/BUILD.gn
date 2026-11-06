@@ -1,0 +1,27 @@
+# Copyright 2026 The Mast Authors
+# chrome://mast and the new tab page (the desktop of saved sites and widgets).
+# Only //chrome/browser/ui/webui:configs depends on this, so it can use the
+# bookmarks model and the favicon source.
+
+source_set("webui") {
+  sources = [
+    "mast_ui.cc",
+    "mast_ui.h",
+  ]
+  deps = [
+    "//base",
+    "//chrome/browser/bookmarks",
+    "//chrome/browser/profiles:profile",
+    "//chrome/browser/ui/webui:favicon_source",
+    "//components/bookmarks/browser",
+    "//components/bookmarks/common",
+    "//components/favicon_base",
+    "//components/prefs",
+    "//content/public/browser",
+    "//content/public/common",
+    "//mast/browser",
+    "//mast/browser/desktop",
+    "//services/network/public/mojom",
+    "//url",
+  ]
+}

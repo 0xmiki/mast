@@ -12,12 +12,14 @@ source_set("browser") {
     "mast_navigation_throttle.h",
     "mast_pages.cc",
     "mast_pages.h",
-    "mast_ui.cc",
-    "mast_ui.h",
+    "mast_prefs.cc",
+    "mast_prefs.h",
   ]
   deps = [
     "//base",
     "//chrome/browser:browser_process",
+    "//chrome/common:constants",
+    "//components/pref_registry",
     "//components/prefs",
     "//content/public/browser",
     "//content/public/common",

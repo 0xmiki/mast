@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>New Tab</title>
+{{ICON}}
+<style>{{STYLE}}
+/* New tab: a desktop. Saved sites are icons (a bookmarks folder, "Desktop"),
+   widgets sit in a column on the right. The address bar already searches. */
+body { background: var(--surface); }
+.desk { display: grid; grid-template-columns: 1fr 320px; gap: 48px; min-height: 100vh; padding: 40px 48px; }
+.apps { display: grid; grid-template-columns: repeat(auto-fill, 96px); grid-auto-rows: min-content; gap: 12px 20px; align-content: start; }
+.app { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; width: 96px; padding: 10px 0;
+  border-radius: 10px; color: var(--text); text-decoration: none; }
+.app:hover { background: rgb(255 255 255/.03); }
+.app:focus-visible { outline: 2px solid var(--text-3); outline-offset: 0; }
+.tile { display: grid; place-items: center; width: 60px; height: 60px; border-radius: 15px; background: var(--field);
+  box-shadow: inset 0 0 0 1px var(--line); }
+.tile img { width: 32px; height: 32px; }
+.app .label { width: 100%; padding: 0 4px; overflow: hidden; font-size: 12px; line-height: 1.35; text-align: center;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+.app .rm { position: absolute; top: 4px; right: 12px; display: none; place-items: center; width: 20px; height: 20px; padding: 0;
+  border: 0; border-radius: 50%; background: var(--pressed); color: var(--text-2); box-shadow: 0 0 0 1px var(--line); }
+.app:hover .rm, .app:focus-within .rm { display: grid; }
+.app .rm:hover { color: var(--text); }
+.app.dragging { opacity: .35; }
+.app.drop-before::before { content: ''; position: absolute; left: -11px; top: 14px; width: 2px; height: 56px; border-radius: 1px; background: var(--text-2); }
+.add .tile { background: none; box-shadow: inset 0 0 0 1px var(--text-3); color: var(--text-3); }
+.add .label { color: var(--text-3); }
+.add:hover .tile { color: var(--text-2); box-shadow: inset 0 0 0 1px var(--text-2); }
+.hint { grid-column: 1 / -1; margin: 6px 0 0 10px; color: var(--text-3); font-size: 12px; }
+.widgets { display: flex; flex-direction: column; gap: 16px; }
+.widget { padding: 18px 20px; border-radius: 14px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.clock .time { font-size: 44px; font-weight: 300; letter-spacing: -0.035em; line-height: 1.15; }
+.clock .date { color: var(--text-2); }
+.dist { display: flex; flex-direction: column; gap: 14px; padding: 20px; }
+.dist .top { display: flex; align-items: center; justify-content: space-between; }
+.dist h2 { margin: 0; font-size: 13px; font-weight: 600; }
+.dist .sum { margin-top: -8px; color: var(--text-3); font-size: 12px; }
+.seg { display: grid; grid-template-columns: repeat(6, 1fr); padding: 2px; border-radius: var(--r); background: var(--seg); }
+.seg button { height: 26px; padding: 0; border: 0; border-radius: 4px; background: none; color: var(--text-2); font-size: 12px; white-space: nowrap; }
+.seg button:hover { color: var(--text); }
+.seg button.on { background: var(--pressed); color: var(--text); font-weight: 600; }
+.dist .primary { width: 100%; }
+.dist .primary.held { background: none; color: var(--signal); box-shadow: inset 0 0 0 1.5px var(--signal); cursor: default; }
+.links { display: flex; justify-content: center; gap: 18px; }
+.link { padding: 0; border: 0; background: none; color: var(--text-2); font-size: 12px; font-weight: 500; text-decoration: none; }
+.link:hover { color: var(--text); }
+.cats { display: flex; flex-direction: column; margin: -4px -8px 0; }
+.cats label { display: flex; align-items: center; gap: 10px; height: 28px; padding: 0 8px; border-radius: 5px; cursor: pointer; }
+.cats label:hover { background: var(--field); }
+.cats input { appearance: none; display: grid; place-items: center; width: 14px; height: 14px; margin: 0; border: 1.5px solid var(--text-3); border-radius: 3px; }
+.cats input:checked { border-color: var(--signal); background: var(--signal); }
+.cats input:checked::after { content: ''; width: 7px; height: 4px; margin-top: -2px; border: solid var(--signal-text); border-width: 0 0 1.5px 1.5px; transform: rotate(-45deg); }
+.cats .nm { flex: 1; }
+.cats .ct { color: var(--text-3); font-size: 12px; }
+dialog { width: 340px; padding: 18px; border: 0; border-radius: 10px; background: var(--field); color: var(--text); box-shadow: var(--shadow); }
+dialog::backdrop { background: rgb(0 0 0/.35); }
+dialog h3 { margin: 0 0 12px; font-size: 14px; font-weight: 600; }
+dialog input { width: 100%; height: 34px; margin-bottom: 8px; padding: 0 10px; border: 0; border-radius: var(--r); outline: 0;
+  background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+dialog input:focus { box-shadow: inset 0 0 0 1px var(--text-3); }
+dialog .err { min-height: 18px; color: var(--signal); font-size: 12px; }
+dialog .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+.toast { position: fixed; left: 50%; bottom: 24px; z-index: 30; transform: translateX(-50%); display: flex; align-items: center;
+  gap: 14px; padding: 10px 10px 10px 16px; border-radius: 10px; background: var(--field); box-shadow: var(--shadow); white-space: nowrap; }
+.toast.plain { padding-right: 16px; }
+.toast button { height: 28px; padding: 0 12px; border: 0; border-radius: 4px; background: var(--pressed); font-weight: 500; }
+.toast .secs { margin-left: 4px; color: var(--text-3); }
+@media (max-width: 760px) { .desk { grid-template-columns: 1fr; } .widgets { order: -1; } }
+</style>
+</head>
+<body>
+<main class="desk">
+  <section class="apps" id="apps" aria-label="Saved sites"></section>
+  <aside class="widgets" id="widgets"></aside>
+</main>
+<dialog id="addDialog">
+  <form method="dialog" id="addForm">
+    <h3>Add a site</h3>
+    <input id="addUrl" placeholder="Address, e.g. github.com" spellcheck="false" autocomplete="off" required>
+    <input id="addName" placeholder="Name (optional)" spellcheck="false" autocomplete="off">
+    <div class="err" id="addErr"></div>
+    <div class="row"><button type="button" class="secondary" id="addCancel">Cancel</button><button class="primary" style="background:var(--text);color:var(--bg)">Add</button></div>
+  </form>
+</dialog>
+<div id="toast"></div>
+<script>
+const D = 864e5;
+const DUR = [['1h', '1 h'], ['4h', '4 h'], ['today', 'Today'], ['week', 'Week'], ['month', 'Month'], ['forever', '∞']];
+let state = null;
+let dur = null;
+let editing = false;  // the distraction category list is open
+let toastTimer = 0;
+let dragId = null;
+
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const hm = (t) => new Date(t).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+const day = (t) => new Date(t).toLocaleDateString([], {month: 'short', day: 'numeric'});
+const midnight = () => { const d = new Date(); d.setHours(24, 0, 0, 0); return d.getTime(); };
+function untilText(u) {
+  if (u === null) return 'forever';
+  if (u === midnight()) return 'until midnight';
+  if (new Date(u).toDateString() === new Date().toDateString()) return 'until ' + hm(u);
+  if (u - Date.now() < 2 * D) return 'until tomorrow ' + hm(u);
+  return 'until ' + day(u);
+}
+function untilFor(id) {
+  const now = Date.now();
+  return {'1h': now + 36e5, '4h': now + 4 * 36e5, today: midnight(), week: now + 7 * D, month: now + 30 * D, forever: null}[id];
+}
+const outlasts = (a, b) => a === null || (b !== null && a > b);
+const ind = (b) => `<i class="ind ${b ? (b.until === null ? 'forever' : 'timed') : ''}"></i>`;
+const plus = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12M4 10h12"/></svg>';
+const cross = '<svg width="8" height="8" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.6"><path d="M2 2l6 6M8 2l-6 6"/></svg>';
+const icon = (url) => 'chrome://favicon2/?size=32&scaleFactor=2x&showFallbackMonogram=&pageUrl=' + encodeURIComponent(url);
+
+// The distraction set as services, so the widget speaks the page's language.
+function distraction() {
+  const on = new Set(state.distractions);
+  const services = [];
+  for (const c of state.categories) if (on.has(c.id)) services.push(...c.services);
+  for (const d of state.custom) services.push({name: d, domains: [d]});
+  const blocks = services.map((s) => {
+    const bs = s.domains.map((d) => state.blocks[d]).filter(Boolean);
+    return bs.length === s.domains.length ? bs.reduce((a, b) => (a.until === null ? b : b.until === null ? a : b.until < a.until ? b : a)) : null;
+  });
+  const blocked = blocks.filter(Boolean);
+  const first = blocked.length ? blocked.reduce((a, b) => (a.until === null ? b : b.until === null ? a : b.until < a.until ? b : a)) : null;
+  return {cats: on.size, services: services.length, blocked: blocked.length, first};
+}
+
+function renderApps() {
+  const apps = document.getElementById('apps');
+  const sites = state.desktop.map((s, i) => `
+    <a class="app" href="${esc(s.url)}" draggable="true" data-id="${esc(s.id)}" data-index="${i}" title="${esc(s.url)}">
+      <span class="tile"><img src="${esc(icon(s.url))}" alt=""></span>
+      <span class="label">${esc(s.title || new URL(s.url).hostname)}</span>
+      <button class="rm" data-rm="${esc(s.id)}" aria-label="Remove ${esc(s.title)}">${cross}</button>
+    </a>`).join('');
+  apps.innerHTML = sites + `
+    <button class="app add" id="add" style="border:0;background:none;font:inherit">
+      <span class="tile">${plus}</span><span class="label">Add site</span>
+    </button>` + (state.desktopReady && !state.desktop.length
+      ? '<p class="hint">Save a site here with ☆ in the address bar.</p>' : '');
+}
+
+function renderWidgets() {
+  const w = document.getElementById('widgets');
+  const order = state.widgets.length ? state.widgets : ['clock', 'distractions'];
+  w.innerHTML = order.map((id) => id === 'clock' ? clockWidget() : id === 'distractions' ? distractionWidget() : '').join('');
+}
+
+function clockWidget() {
+  const now = new Date();
+  return `<div class="widget clock" id="clock">
+    <div class="time">${now.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</div>
+    <div class="date">${now.toLocaleDateString([], {weekday: 'long', month: 'long', day: 'numeric'})}</div>
+  </div>`;
+}
+
+function distractionWidget() {
+  const d = distraction();
+  const all = d.services > 0 && d.blocked === d.services;
+  const status = all ? `<span class="status blocked">${ind(d.first)}Blocked ${untilText(d.first.until)}</span>`
+    : d.blocked ? `<span class="status blocked">${ind({until: 1})}${d.blocked} of ${d.services} blocked</span>`
+    : `<span class="status">${ind(null)}Open</span>`;
+  const cats = !editing ? '' : `<div class="cats">${state.categories.map((c) => `
+      <label><input type="checkbox" data-cat="${esc(c.id)}" ${state.distractions.includes(c.id) ? 'checked' : ''}>
+        <span class="nm">${esc(c.name)}</span><span class="ct">${c.services.length}</span></label>`).join('')}</div>`;
+  return `<div class="widget dist">
+    <div class="top"><h2>Distractions</h2>${status}</div>
+    <div class="sum">${d.cats} ${d.cats === 1 ? 'category' : 'categories'} · ${d.services} sites</div>
+    ${cats}
+    <div class="seg">${DUR.map(([id, label]) => `<button data-dur="${id}" class="${id === dur ? 'on' : ''}" aria-label="${id}">${label}</button>`).join('')}</div>
+    ${blockButton(d, all)}
+    <div class="links"><button class="link" id="edit">${editing ? 'Done' : 'Change what’s blocked'}</button><a class="link" href="chrome://mast">Edit blocklist</a></div>
+  </div>`;
+}
+
+// Blocks only extend. Once everything is blocked at least as long as the
+// chosen duration, the button says so instead of offering a no-op.
+function blockButton(d, all) {
+  if (!d.services) return '<button class="primary" disabled>Block distractions</button>';
+  if (!all) return '<button class="primary" id="blockAll">Block distractions</button>';
+  if (outlasts(untilFor(dur), d.first.until)) {
+    const label = DUR.find(([id]) => id === dur)[1];
+    return `<button class="primary" id="blockAll">Extend to ${dur === 'forever' ? 'forever' : label.toLowerCase()}</button>`;
+  }
+  return `<button class="primary held" disabled>Blocked ${untilText(d.first.until)}</button>`;
+}
+
+function render() { renderApps(); renderWidgets(); }
+
+function toast(text, undo) {
+  clearInterval(toastTimer);
+  const el = document.getElementById('toast');
+  const started = Date.now();
+  const paint = () => {
+    const left = Math.ceil((10e3 - (Date.now() - started)) / 1e3);
+    if (undo && left <= 0) { el.innerHTML = ''; clearInterval(toastTimer); return; }
+    el.innerHTML = `<div class="toast ${undo ? '' : 'plain'}">${esc(text)}${undo ? `<button id="undo">Undo<span class="secs">${left}</span></button>` : ''}</div>`;
+  };
+  paint();
+  toastTimer = setInterval(paint, 250);
+  if (!undo) setTimeout(() => { clearInterval(toastTimer); el.innerHTML = ''; }, 2600);
+}
+
+window.mastState = (s) => {
+  const first = !state;
+  state = s;
+  if (first) dur = s.lastDuration || 'today';
+  const r = s.result || {};
+  if (r.invalidSite) {
+    document.getElementById('addErr').textContent = 'That doesn’t look like a web address.';
+    return;
+  }
+  if (r.undone) toast('Undone.');
+  else if ('changed' in r) {
+    if (!r.changed) toast('Already blocked at least that long.');
+    else toast(`Blocked distractions ${untilText(r.until)}.`, true);
+  }
+  if (document.getElementById('addDialog').open && !r.invalidSite) document.getElementById('addDialog').close();
+  render();
+};
+
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('button, a');
+  if (!t || !state) return;
+  if (t.dataset.rm) {
+    e.preventDefault();
+    return chrome.send('desktopRemove', [t.dataset.rm]);
+  }
+  if (t.id === 'add') {
+    document.getElementById('addErr').textContent = '';
+    document.getElementById('addForm').reset();
+    return document.getElementById('addDialog').showModal();
+  }
+  if (t.id === 'addCancel') return document.getElementById('addDialog').close();
+  if (t.dataset.dur) { dur = t.dataset.dur; return renderWidgets(); }
+  if (t.id === 'edit') { editing = !editing; return renderWidgets(); }
+  if (t.id === 'blockAll') return chrome.send('blockDistractions', [dur]);
+  if (t.id === 'undo') {
+    clearInterval(toastTimer);
+    document.getElementById('toast').innerHTML = '';
+    return chrome.send('undo');
+  }
+});
+document.addEventListener('change', (e) => {
+  if (e.target.dataset.cat) chrome.send('setDistraction', [e.target.dataset.cat, e.target.checked]);
+});
+document.getElementById('addForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const url = document.getElementById('addUrl').value.trim();
+  if (url) chrome.send('desktopAdd', [url, document.getElementById('addName').value.trim()]);
+});
+
+// Drag a site to reorder the desktop.
+const apps = document.getElementById('apps');
+const clearDrop = () => apps.querySelectorAll('.drop-before').forEach((n) => n.classList.remove('drop-before'));
+apps.addEventListener('dragstart', (e) => {
+  const a = e.target.closest('.app[data-id]');
+  if (!a) return;
+  dragId = a.dataset.id;
+  a.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+});
+apps.addEventListener('dragend', (e) => { dragId = null; clearDrop(); e.target.closest('.app')?.classList.remove('dragging'); });
+apps.addEventListener('dragover', (e) => {
+  if (!dragId) return;
+  e.preventDefault();
+  clearDrop();
+  e.target.closest('.app')?.classList.add('drop-before');
+});
+apps.addEventListener('drop', (e) => {
+  if (!dragId) return;
+  e.preventDefault();
+  const target = e.target.closest('.app');
+  const from = state.desktop.findIndex((s) => s.id === dragId);
+  let to = state.desktop.length - 1;  // dropped on "Add site" or empty space: last
+  if (target && target.dataset.index !== undefined) {
+    to = Number(target.dataset.index);
+    if (to > from) to -= 1;  // dropped before a later icon: lands just ahead of it
+  }
+  clearDrop();
+  if (from >= 0 && to !== from) chrome.send('desktopMove', [dragId, to]);
+});
+
+// The clock ticks on the minute; state refreshes when the tab comes back.
+setInterval(() => { const c = document.getElementById('clock'); if (c) c.outerHTML = clockWidget(); }, 1e3 * 15);
+document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && chrome.send('getState'));
+chrome.send('getState');
+</script>
+</body>
+</html>

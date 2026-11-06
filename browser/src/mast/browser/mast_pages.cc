@@ -42,7 +42,7 @@ button { cursor:pointer }
 )MAST";
 
 constexpr char kBlockPage[] = R"MAST(<!doctype html>
-<html><head><meta charset="utf-8"><title>{{HOST}} is blocked</title><style>{{STYLE}}
+<html><head><meta charset="utf-8"><title>{{HOST}} is blocked</title>{{ICON}}<style>{{STYLE}}
 body { display:grid; place-content:center; min-height:100vh; padding:40px 32px 12vh }
 .card { width:min(520px,100%) }
 .status { font-weight:500 }
@@ -93,8 +93,18 @@ constexpr char kStartPage[] =
 #include "mast/browser/resources/start_html.inc"
     ;
 
+constexpr char kDesktopPage[] =
+#include "mast/browser/resources/desktop_html.inc"
+    ;
+
+// The Mast mark as the tab icon of Mast's own pages (32px, from the product
+// favicon). Chromium shows the default globe for them otherwise.
+constexpr char kIcon[] =
+    R"(<link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABmJLR0QA/wD/AP+gvaeTAAADkElEQVRYhb2XTWhcVRiGn3Puz0ySSWKGWA3iJEIwNEMq2h9TyaZpQ00FsYWuXNW2KV0EtHZRXOhKEIpURaFIi1shSJdCre67EFwk7cJNBSm4aE2bxDSZued1MTPJzczcmYljc1bf5ZzzPe/3d+AaqtbazMEx43TGYQ5LbkiiSxJISKJklm1idvXe5veKpHtO5pbDXcvduDsf55mKodnpVGH10RUZnZNk4w7bgFefjSSuLoXehfzcwvqGAM1OpwpP/v5RmEPVDv5H+MYe0i/L6WA6P7ewbgEKTxa/2EE4kia7/ln7HMCszRwcQ/z2FNNeDa+ci6KIV6xxOtMOPBgbJ9w/uV04kjxr3GnrDEfaiTx8fYreD6+QnnhrO3Ak4QxTVk65dtJemiVD7+ynpMaPtAwXIKdBK5Fpt+YAWI++9y/jD460Bi/Z3fY/wY1B1tuEVx4Vz6P/428xHZlW4Ehgtws3PVmyl38g8+4HNQKwHjbTyzPvXWoJLgm7LXh2F32ffY//4jAm3blxdksWgpDM4ROk8geawssCWoR39dD3yXfY3v4NWE0GYis781FTeCwDTWqOoefil9j+5zG+vwGv3KtZ1hIMjtBx4FBDuERZQJNu7zx+luDlPRg/2MIpNXD9DBhr6Tt5rukE2WZw+1yOzMnztXAojVqiAkN6dC/+QC4RvrUECSq7T11CcrWAioLkNkCFdbon32lQWuICauHeCy+RenWiJvqKgsQeqCQhTNE98WYivP4Yxr673j6FomJCeE1KUF6poRG83mziqNskOJ5P+o2jCdETc9KQj4oF0rtfSxz1xB4I8vshCBu5bvgObB4T6eF84qjX7wEg3L0XXNTIb0sCTJgiPbIncdQTn+Iwvw8TpBoHR2siwoFc/TLX9EBMpT8w2NRxSyUAguyuuvBKBpbq1cekOxo6jVZXkIRbXWkqwPh+XbjEY3P/+OiCDKM1zZHpwXR2116ilPrCX3/iihFYD+/ZgfJ+OQi0+U5JFJcWKT5arIYjMe87zE/IjcbhSESPF1H5Uv0RKtvFAtH9PxLnPCHy0rfjpnW4a5KiOLzu41QPnjBBrcAlRfLcdZu7cXde4uoOwxF8M3774R0LsBR6F5B+3kH4rcA9uAhgAfJzC+vL6eAY0teb5XhKaYevAvfg2L5fKUDs77iyfj86nLfGnXaGKTkNScq0A3diGXEPp5vy3PXx2w/vxHn/Ag7Iq6bq6GeTAAAAAElFTkSuQmCC">)";
+
 std::string Fill(std::string page) {
   base::ReplaceSubstringsAfterOffset(&page, 0, "{{STYLE}}", kStyle);
+  base::ReplaceSubstringsAfterOffset(&page, 0, "{{ICON}}", kIcon);
   return page;
 }
 
@@ -123,6 +133,10 @@ std::string StartPageHtml(bool as_new_tab) {
   base::ReplaceSubstringsAfterOffset(&page, 0, "{{TITLE}}",
                                      as_new_tab ? "New Tab" : "Mast");
   return page;
+}
+
+std::string DesktopPageHtml() {
+  return Fill(kDesktopPage);
 }
 
 }  // namespace mast

@@ -85,6 +85,13 @@ class MastBlocks {
   void RecordBlocked();
   int StoppedToday() const;
 
+  // "Distractions": the categories one button blocks (the new tab page's
+  // Distractions widget). Ids from blocklist.json, e.g. "social".
+  std::vector<std::string> DistractionCategories() const;
+  void SetDistraction(std::string_view category_id, bool on);
+  // Every domain in those categories, plus the user's own sites.
+  std::vector<std::string> DistractionDomains() const;
+
  private:
   struct Recent {
     base::Time at;

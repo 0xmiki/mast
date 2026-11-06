@@ -1,0 +1,17 @@
+# Copyright 2026 The Mast Authors
+# The Desktop bookmarks folder behind the new tab page, and the save-location
+# provider that sends new bookmarks (the star, Ctrl+D) there. Depends only on
+# components, so both //chrome/browser/bookmarks:impl and Mast's WebUI can use it.
+
+source_set("desktop") {
+  sources = [
+    "mast_desktop.cc",
+    "mast_desktop.h",
+  ]
+  deps = [
+    "//base",
+    "//components/bookmarks/browser",
+    "//components/power_bookmarks/core",
+    "//url",
+  ]
+}
