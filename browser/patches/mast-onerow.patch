@@ -174,3 +174,16 @@ diff -ruN a/chrome/browser/ui/views/tabs/common/horizontal_tab_style_views.cc b/
      float top_left_corner_radius = content_corner_radius;
      float top_right_corner_radius = content_corner_radius;
      float bottom_left_corner_radius = content_corner_radius;
+@@ -115,6 +118,12 @@
+                 GetLayoutConstant(LayoutConstant::kTabStripPadding) * scale;
+ 
+     float right = aligned_bounds.right() - extension_corner_radius;
++    // Mast: in one row the pill is centred, with an even gap above and below.
++    if (mast::IsOneRowWindow() && path_type != TabStyle::PathType::kHitTest) {
++      top = aligned_bounds.y() + mast::kOneRowTabPillInset * scale;
++      tab_height =
++          aligned_bounds.height() - 2 * mast::kOneRowTabPillInset * scale;
++    }
+     const int bottom = top + tab_height;
+ 
+     BrowserFrameView* const browser_frame_view =

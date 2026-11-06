@@ -293,12 +293,19 @@ edit(R, "chrome/browser/ui/views/frame/BUILD.gn", lambda t: add_dep(t, 'source_s
 
 # Tabs are pills: every tab shape (fill, border, clip) uses the detached rounded rect
 # Chromium already draws for hover and hit tests, instead of the swoop into the toolbar.
-edit(R, "chrome/browser/ui/views/tabs/common/horizontal_tab_style_views.cc", lambda t: once(once(t,
+edit(R, "chrome/browser/ui/views/tabs/common/horizontal_tab_style_views.cc", lambda t: once(once(once(t,
     '#include "chrome/browser/ui/views/tabs/common/horizontal_tab_style_views.h"\n',
     '#include "chrome/browser/ui/views/tabs/common/horizontal_tab_style_views.h"\n\n#include "mast/common/mast_features.h"\n'),
     '  if (path_type == TabStyle::PathType::kHighlight ||\n      path_type == TabStyle::PathType::kHitTest) {\n    float top_left_corner_radius',
     '  if (path_type == TabStyle::PathType::kHighlight ||\n      path_type == TabStyle::PathType::kHitTest ||\n'
-    '      mast::IsOneRowWindow()) {  // Mast: pill tabs.\n    float top_left_corner_radius'))
+    '      mast::IsOneRowWindow()) {  // Mast: pill tabs.\n    float top_left_corner_radius'),
+    '    float right = aligned_bounds.right() - extension_corner_radius;\n    const int bottom = top + tab_height;\n',
+    '    float right = aligned_bounds.right() - extension_corner_radius;\n'
+    '    // Mast: in one row the pill is centred, with an even gap above and below.\n'
+    '    if (mast::IsOneRowWindow() && path_type != TabStyle::PathType::kHitTest) {\n'
+    '      top = aligned_bounds.y() + mast::kOneRowTabPillInset * scale;\n'
+    '      tab_height =\n          aligned_bounds.height() - 2 * mast::kOneRowTabPillInset * scale;\n    }\n'
+    '    const int bottom = top + tab_height;\n'))
 edit(R, "chrome/browser/ui/views/tabs/common/BUILD.gn", lambda t: add_dep(t, 'source_set("impl") {', "//mast/common"))
 
 # The suggestion list opens wider than the narrow address bar, growing left.
