@@ -23,10 +23,10 @@
 namespace mast {
 
 void OnBrowserWindowReady(BrowserWindowInterface* browser) {
-  // The palette picked in Customize, before the window first paints. Later
+  // Customize's palette and backdrop, before the window first paints. Later
   // picks apply from the new tab page (mast_ui.cc).
   if (browser && browser->GetProfile()) {
-    ApplyPalette(browser->GetProfile()->GetPrefs()->GetString(kPalettePref));
+    ApplyTheme(browser->GetProfile()->GetPrefs());
   }
   if (!IsOneRowWindow() || !browser ||
       browser->GetType() != BrowserWindowInterface::TYPE_NORMAL) {

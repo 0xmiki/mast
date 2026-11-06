@@ -117,6 +117,64 @@ void AddMastChromeColorMixer(ui::ColorProvider* provider,
     // showed the darker region behind it as a line.
     mixer[kColorToolbarContentAreaSeparator] = {p.chrome};
   }
+
+  // On Customize's image (mast_wallpaper.h paints it behind the row), the row
+  // follows the design (C10): only the active tab is a pill, and it and the
+  // address field are translucent, so the picture shows through. Text and
+  // icons are strong enough to read on any picture: light on a dark image,
+  // dark on a light one (the user's Dark/Light pick). The address field stays a
+  // dark pill either way; its suggestions open below it in the same colour.
+  const palette::Backdrop backdrop = palette::CurrentBackdrop();
+  if (IsOneRowWindow() && backdrop != palette::Backdrop::kPalette) {
+    const bool light = backdrop == palette::Backdrop::kLightImage;
+    const SkColor fg = light ? SkColorSetRGB(0x14, 0x14, 0x14) : p.text;
+    const SkColor fg2 = light ? SkColorSetARGB(0xD9, 0x14, 0x14, 0x14)
+                              : SkColorSetARGB(0xD9, 0xF2, 0xF2, 0xF2);
+    const SkColor faint = light ? SkColorSetARGB(0x66, 0x00, 0x00, 0x00)
+                                : SkColorSetARGB(0x66, 0xFF, 0xFF, 0xFF);
+    // Inactive tabs paint no fill (they filled the frame colour, which read as
+    // dark pills on the picture).
+    mixer[kColorTabBackgroundInactiveFrameActive] = {SK_ColorTRANSPARENT};
+    mixer[kColorTabBackgroundInactiveFrameInactive] = {SK_ColorTRANSPARENT};
+    mixer[kColorTabBackgroundInactiveHoverFrameActive] = {
+        light ? SkColorSetARGB(0x33, 0xFF, 0xFF, 0xFF)
+              : SkColorSetARGB(0x14, 0xFF, 0xFF, 0xFF)};
+    mixer[kColorTabBackgroundInactiveHoverFrameInactive] = {
+        light ? SkColorSetARGB(0x33, 0xFF, 0xFF, 0xFF)
+              : SkColorSetARGB(0x14, 0xFF, 0xFF, 0xFF)};
+    const SkColor pill = light ? SkColorSetARGB(0x99, 0xFF, 0xFF, 0xFF)
+                               : SkColorSetARGB(0x26, 0xFF, 0xFF, 0xFF);
+    mixer[kColorTabBackgroundActiveFrameActive] = {pill};
+    mixer[kColorTabBackgroundActiveFrameInactive] = {pill};
+    mixer[kColorTabForegroundActiveFrameActive] = {fg};
+    mixer[kColorTabForegroundActiveFrameInactive] = {fg};
+    mixer[kColorTabForegroundInactiveFrameActive] = {fg2};
+    mixer[kColorTabForegroundInactiveFrameInactive] = {fg2};
+    // The + after the tabs: an icon, no disc (it grew one on the picture).
+    mixer[kColorNewTabButtonForegroundFrameActive] = {fg2};
+    mixer[kColorNewTabButtonForegroundFrameInactive] = {fg2};
+    mixer[kColorNewTabButtonCRForegroundFrameActive] = {fg2};
+    mixer[kColorNewTabButtonCRForegroundFrameInactive] = {fg2};
+    mixer[kColorNewTabButtonBackgroundFrameActive] = {SK_ColorTRANSPARENT};
+    mixer[kColorNewTabButtonBackgroundFrameInactive] = {SK_ColorTRANSPARENT};
+    mixer[kColorNewTabButtonCRBackgroundFrameActive] = {SK_ColorTRANSPARENT};
+    mixer[kColorNewTabButtonCRBackgroundFrameInactive] = {SK_ColorTRANSPARENT};
+    // Back, forward, the menu; disabled ones stay visible, just quieter.
+    mixer[kColorToolbarButtonIcon] = {fg2};
+    mixer[kColorToolbarButtonIconHovered] = {fg};
+    mixer[kColorToolbarButtonIconPressed] = {fg};
+    mixer[kColorToolbarButtonIconInactive] = {faint};
+    mixer[kColorToolbarButtonIconDisabled] = {faint};
+    // The window buttons pick their icon colour from this, and the toolbar's
+    // ink drops contrast with it; the row itself paints the picture.
+    if (light) {
+      mixer[kColorToolbar] = {SkColorSetRGB(0xE8, 0xE8, 0xE8)};
+    }
+    // The address field: the design's dark pill (#0a0a0a at 60%).
+    mixer[kColorLocationBarBackground] = {SkColorSetARGB(0x99, 0x0A, 0x0A, 0x0A)};
+    mixer[kColorLocationBarBackgroundHovered] = {
+        SkColorSetARGB(0xB3, 0x0A, 0x0A, 0x0A)};
+  }
 }
 
 }  // namespace mast

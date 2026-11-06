@@ -430,6 +430,16 @@ edit(R, "chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc
     '  views().multi_contents_view->SetShouldShowTopSeparator(\n'
     '      separator_info.multi_contents_separator && !mast::IsOneRowWindow());\n'))
 
+# On Customize's image the address field is translucent (mast_chrome_color_mixer.cc). Its
+# textfield copies the field's colour as its own background, which would paint a darker
+# rectangle inside the pill; with a translucent field it paints none.
+edit(T, "chrome/browser/ui/views/location_bar/location_bar_view.cc", lambda t: once(t,
+    '  omnibox_view_->SetBackgroundColor(background_color_);\n',
+    '  // Mast: no second (darker) layer inside a translucent field.\n'
+    '  omnibox_view_->SetBackgroundColor(\n'
+    '      SkColorGetA(background_color_) == SK_AlphaOPAQUE ? background_color_\n'
+    '                                                       : SK_ColorTRANSPARENT);\n'))
+
 # Customize's image behind the tab row (mast/browser/ui/mast_wallpaper.h). The two places
 # Chromium paints a theme's frame image: the frame view's GetFrameImage() (every platform's
 # frame tiles it behind the tabs and window buttons) and ThemedBackground (the toolbar,

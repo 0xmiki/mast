@@ -22,7 +22,8 @@ std::string StartPageHtml(bool as_new_tab);
 // and one button that blocks every distraction).
 // `wallpaper` is the Customize image's version (kWallpaperPref; 0 is none).
 // `wallpaper_top` is how far the image starts above the page (WallpaperTop()).
-std::string DesktopPageHtml(int wallpaper, int wallpaper_top);
+// `light_image` is the Customize tone (kWallpaperTonePref).
+std::string DesktopPageHtml(int wallpaper, int wallpaper_top, bool light_image);
 
 // The palette in use as CSS custom properties (":root{--bg:...}"), for
 // pages already open when the palette changes.

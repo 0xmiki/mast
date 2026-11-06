@@ -40,7 +40,7 @@ const mock = `<script>
     desktop: ${JSON.stringify(sites)}, desktopReady: true, widgets: ['clock', 'distractions'] };
   const palettes = ${JSON.stringify(palettes)};
   s.palettes = palettes.map(({ css, ...p }) => p);
-  s.theme = { palette: 'onyx', css: palettes[0].css, wallpaper: 0 };
+  s.theme = { palette: 'onyx', css: palettes[0].css, wallpaper: 0, tone: 'dark' };
   window.__wallUrl = '';
   if (location.hash === '#blocked') for (const c of cats) if (s.distractions.includes(c.id)) for (const v of c.services) for (const d of v.domains) s.blocks[d] = { since: Date.now() - H, until: midnight() };
   if (location.hash === '#empty') s.desktop = [];
@@ -65,7 +65,8 @@ const mock = `<script>
     }
     if (m === 'setPalette') { const p = palettes.find((x) => x.id === a[0]); if (p) s.theme = { ...s.theme, palette: p.id, css: p.css }; }
     // The browser writes the image to the profile folder; here it stays a data URL.
-    if (m === 'setWallpaper') { window.__wallUrl = 'data:image/jpeg;base64,' + a[0]; s.theme = { ...s.theme, wallpaper: Math.abs(s.theme.wallpaper) + 1 }; }
+    if (m === 'setWallpaper') { window.__wallUrl = 'data:image/jpeg;base64,' + a[0]; s.theme = { ...s.theme, wallpaper: Math.abs(s.theme.wallpaper) + 1, tone: a[1] || s.theme.tone }; }
+    if (m === 'setWallpaperTone') s.theme = { ...s.theme, tone: a[0] };
     if (m === 'clearWallpaper') s.theme = { ...s.theme, wallpaper: -Math.abs(s.theme.wallpaper) };
     if (m === 'addSite' && !s.custom.includes(a[0])) s.custom.push(a[0]);
     if (m === 'removeSite') s.custom = s.custom.filter((d) => d !== a[0]);
@@ -86,7 +87,7 @@ if (!/const icon = \(url\) => [^\n]*;/.test(html)) throw new Error('icon() not f
 const blocklist = fs.readFileSync(path.join(res, 'blocklist.html'), 'utf8');
 html = html.replace('{{STYLE}}', style).replace('{{ICON}}', '').replace('{{BLOCKLIST}}', () => blocklist).replace(/const icon = \(url\) => [^\n]*;/, letterIcon).replace('<script>', mock + '\n<script>')
   // The page serves its image as wallpaper-<version>.jpg; here it's a data URL.
-  .replace('{{WALLPAPER}}', '0').replace('{{WALLPAPER_TOP}}', '57').replaceAll(/wallpaper-\$\{\w+\}\.jpg/g, () => '${window.__wallUrl}');
+  .replace('{{WALLPAPER}}', '0').replace('{{WALLPAPER_TOP}}', '57').replace('{{WALLPAPER_TONE}}', '"dark"').replaceAll(/wallpaper-\$\{\w+\}\.jpg/g, () => '${window.__wallUrl}');
 if (html.includes('wallpaper-$')) throw new Error('a wallpaper URL was not mocked');
 // #bl opens the blocklist panel, #cz the Customize panel, for screenshots.
 html = html.replace('</body>', '<script>if (location.hash === "#cz") setTimeout(() => document.getElementById("customize").click(), 200);</script></body>');

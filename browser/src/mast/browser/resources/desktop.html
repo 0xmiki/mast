@@ -82,15 +82,31 @@ dialog.bl-panel .bl header { padding-right: 44px; }
    legible, and widgets and tiles go dark), and the browser's palette. */
 body.wall { background-color: var(--surface); background-image: linear-gradient(rgb(0 0 0/.22), rgb(0 0 0/.22)), var(--wall);
   background-size: 100% 100%, var(--wall-size, cover); background-position: 0 0, var(--wall-pos, center); background-repeat: no-repeat; background-attachment: fixed; }
-body.wall .widget { background: rgb(0 0 0/.58); box-shadow: inset 0 0 0 1px rgb(255 255 255/.06); }
-body.wall .tile { background: rgb(0 0 0/.5); box-shadow: inset 0 0 0 1px rgb(255 255 255/.08); }
-body.wall .add .tile { background: rgb(0 0 0/.3); box-shadow: inset 0 0 0 1px rgb(255 255 255/.35); color: var(--text-2); }
-body.wall .app .label, body.wall .hint { color: var(--text); text-shadow: 0 1px 3px rgb(0 0 0/.85); }
-body.wall .app:hover { background: rgb(0 0 0/.28); }
-.customize { position: fixed; right: 20px; bottom: 20px; display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px;
-  border: 0; border-radius: var(--r); background: var(--field); color: var(--text-2); font-size: 12px; font-weight: 500; }
-.customize:hover { background: var(--pressed); color: var(--text); }
-body.wall .customize { background: rgb(0 0 0/.58); color: var(--text); }
+/* On a picture (design C10): dark, translucent surfaces with hairlines, so
+   tiles, widgets and buttons hold up on any image; labels carry a soft
+   shadow. A light image (Customize: Light) flips them to light surfaces and
+   dark text. */
+body.wall .widget, body.wall .customize { background: rgb(12 12 12/.85); box-shadow: inset 0 0 0 1px rgb(255 255 255/.08); }
+body.wall .tile, body.wall .add .tile { background: rgb(10 10 10/.55); box-shadow: inset 0 0 0 1px rgb(255 255 255/.12); color: rgb(242 242 242/.85); }
+body.wall .add:hover .tile { box-shadow: inset 0 0 0 1px rgb(255 255 255/.24); color: #fff; }
+body.wall .app .label, body.wall .add .label, body.wall .hint { color: #ededed; text-shadow: 0 1px 3px rgb(0 0 0/.7); }
+body.wall .app:hover { background: rgb(255 255 255/.06); }
+body.wall .customize { color: #ededed; }
+body.wall .customize:hover { background: rgb(28 28 28/.9); }
+body.wall.light { background-image: var(--wall); background-size: var(--wall-size, cover); background-position: var(--wall-pos, center); }
+body.wall.light .widget, body.wall.light .customize { background: rgb(255 255 255/.82); box-shadow: inset 0 0 0 1px rgb(0 0 0/.06);
+  --text: #141414; --text-2: #4d4d4d; --text-3: #6e6e6e; --field: rgb(0 0 0/.06); --seg: rgb(0 0 0/.06); --pressed: #fff; --line: rgb(0 0 0/.08); color: var(--text); }
+body.wall.light .tile, body.wall.light .add .tile { background: rgb(255 255 255/.6); box-shadow: inset 0 0 0 1px rgb(0 0 0/.08); color: rgb(20 20 20/.8); }
+body.wall.light .add:hover .tile { box-shadow: inset 0 0 0 1px rgb(0 0 0/.2); color: #141414; }
+body.wall.light .app .label, body.wall.light .add .label, body.wall.light .hint { color: #141414; text-shadow: 0 1px 2px rgb(255 255 255/.6); }
+body.wall.light .app:hover { background: rgb(255 255 255/.25); }
+body.wall.light .customize:hover { background: #fff; }
+.customize:focus:not(:focus-visible) { outline: none; }
+.tone { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin-bottom: 8px; padding: 2px; border-radius: var(--r); background: var(--surface); }
+.tone button { height: 28px; border: 0; border-radius: 4px; background: none; color: var(--text-2); font-size: 12px; }
+.tone button:hover { color: var(--text); }
+.tone button.on { background: var(--pressed); color: var(--text); font-weight: 600; }
+.cz .sub { margin: 0 0 20px; color: var(--text-3); font-size: 12px; }
 dialog.cz { width: 400px; padding: 18px 20px 20px; }
 .cz header { display: flex; align-items: center; justify-content: space-between; margin: 0 -6px 14px 0; }
 .cz header h3 { margin: 0; }
@@ -138,6 +154,7 @@ dialog.cz { width: 400px; padding: 18px 20px 20px; }
   <header><h3>Customize</h3><button class="x" id="czClose" aria-label="Close"><svg width="12" height="12" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.4"><path d="M2 2l6 6M8 2l-6 6"/></svg></button></header>
   <h4>Background</h4>
   <div class="bgs" id="czBgs"></div>
+  <div id="czTone"></div>
   <h4>Colors</h4>
   <div class="sw" id="czSw"></div>
   <p class="note"><i class="ind"></i>Ember stays the same: it always means blocked.</p>
@@ -271,6 +288,7 @@ function toast(text, undo) {
 let wallpaper = {{WALLPAPER}};     // version; 0 is none
 let wallTop = {{WALLPAPER_TOP}};   // how far the picture starts above this page
 let czBusy = false;                // an upload is on its way
+let tone = {{WALLPAPER_TONE}};     // "dark" or "light": what the picture is
 // The picture is laid out like a desktop wallpaper: it covers the screen,
 // centred, starting at the top of the window, so the tab row (which the
 // browser paints from the same image, mast_wallpaper.cc) and this page show
@@ -300,6 +318,24 @@ function applyWallpaper(v) {
   }
 }
 applyWallpaper(wallpaper);
+function applyTone(t) {
+  tone = t === "light" ? "light" : "dark";
+  document.body.classList.toggle("light", tone === "light");
+}
+applyTone(tone);
+
+// Dark or light, from the picture's average brightness (Rec. 601 luma of a
+// 64 px thumbnail). The user can flip it in Customize.
+function guessTone(bmp) {
+  const c = document.createElement("canvas");
+  c.width = 64; c.height = Math.max(1, Math.round(64 * bmp.height / bmp.width));
+  const g = c.getContext("2d");
+  g.drawImage(bmp, 0, 0, c.width, c.height);
+  const d = g.getImageData(0, 0, c.width, c.height).data;
+  let sum = 0;
+  for (let i = 0; i < d.length; i += 4) sum += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+  return sum / (d.length / 4) / 255 > 0.58 ? "light" : "dark";
+}
 
 function renderCustomize() {
   if (!state || !document.getElementById('czDialog').open) return;
@@ -308,6 +344,12 @@ function renderCustomize() {
     `<button data-bg="none" class="${wallpaper ? '' : 'on'}" aria-pressed="${!wallpaper}">None</button>` +
     (wallpaper ? `<button data-bg="image" class="on" aria-pressed="true" aria-label="Your image" style="background-image:url(wallpaper-${wallpaper}.jpg)"></button>` : '') +
     `<button data-bg="upload" class="up" ${czBusy ? 'disabled' : ''}>${czBusy ? 'Saving…' : wallpaper ? 'Replace' : 'Upload image'}</button>`;
+  // Dark or Light only means something with a picture: it sets the text and
+  // icons on it (tab row included) to light or dark.
+  document.getElementById('czTone').innerHTML = !wallpaper ? '' : `<h4>Image</h4>
+    <div class="tone">${[['dark', 'Dark'], ['light', 'Light']].map(([id, label]) =>
+      `<button data-tone="${id}" class="${tone === id ? 'on' : ''}" aria-pressed="${tone === id}">${label}</button>`).join('')}</div>
+    <p class="sub">Light makes text and icons dark, for bright pictures.</p>`;
   document.getElementById('czSw').innerHTML = (state.palettes || []).map((p) => `
     <button data-palette="${esc(p.id)}" class="${p.id === t.palette ? 'on' : ''}" aria-pressed="${p.id === t.palette}">
       <i style="background:linear-gradient(135deg, ${p.surface} 50%, ${p.field} 50%)"></i>${esc(p.name)}</button>`).join('');
@@ -326,13 +368,15 @@ async function uploadWallpaper(file) {
     canvas.height = Math.round(bmp.height * scale);
     canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
     const url = canvas.toDataURL('image/jpeg', 0.86);
-    chrome.send('setWallpaper', [url.slice(url.indexOf(',') + 1)]);
+    chrome.send('setWallpaper', [url.slice(url.indexOf(',') + 1), guessTone(bmp)]);
   } catch (e) {
     czBusy = false;
     renderCustomize();
     toast('That image can’t be used. Try a JPEG or PNG.');
   }
 }
+// Closing the panel hands focus back to the button; no ring for that.
+document.getElementById('czDialog').addEventListener('close', () => document.getElementById('customize').blur());
 document.getElementById('czFile').addEventListener('change', (e) => {
   const file = e.target.files[0];
   e.target.value = '';
@@ -345,6 +389,7 @@ window.mastState = (s) => {
   state = s;
   if (first) dur = s.lastDuration || 'today';
   mastPalette(s.theme);
+  if (s.theme && s.theme.tone && s.theme.tone !== tone) applyTone(s.theme.tone);
   if (s.theme && s.theme.wallpaperTop && s.theme.wallpaperTop !== wallTop) { wallTop = s.theme.wallpaperTop; layoutWallpaper(); }
   if (s.theme && Math.max(0, s.theme.wallpaper) !== wallpaper) { czBusy = false; applyWallpaper(s.theme.wallpaper); }
   // The blocklist panel shows its own toasts for its own requests.
@@ -399,6 +444,7 @@ document.addEventListener('click', (e) => {
   if (t.dataset.bg === 'none') return wallpaper && chrome.send('clearWallpaper');
   if (t.dataset.bg === 'upload') return document.getElementById('czFile').click();
   if (t.dataset.palette) return chrome.send('setPalette', [t.dataset.palette]);
+  if (t.dataset.tone) { applyTone(t.dataset.tone); renderCustomize(); return chrome.send('setWallpaperTone', [t.dataset.tone]); }
 });
 document.addEventListener('change', (e) => {
   if (e.target.dataset.cat) chrome.send('setDistraction', [e.target.dataset.cat, e.target.checked]);

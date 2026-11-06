@@ -81,6 +81,28 @@ inline bool SetCurrent(std::string_view id) {
   return changed;
 }
 
+// What the one-row tab row sits on: the palette, or Customize's image. On an
+// image the row's pills turn translucent and its text and icons follow the
+// image's tone (the user picks Dark or Light; the page guesses on upload).
+// Process-wide like the palette.
+enum class Backdrop { kPalette, kDarkImage, kLightImage };
+
+inline Backdrop& CurrentBackdropRef() {
+  static Backdrop backdrop = Backdrop::kPalette;
+  return backdrop;
+}
+
+inline Backdrop CurrentBackdrop() {
+  return CurrentBackdropRef();
+}
+
+// Returns whether it changed (the caller rebuilds colours, mast_theme.h).
+inline bool SetBackdrop(Backdrop backdrop) {
+  const bool changed = backdrop != CurrentBackdropRef();
+  CurrentBackdropRef() = backdrop;
+  return changed;
+}
+
 // The signal colour: only for blocking and the state of being blocked. The
 // same in every palette.
 // Tone 70: lighter and softer than a saturated orange, so it doesn't glow on

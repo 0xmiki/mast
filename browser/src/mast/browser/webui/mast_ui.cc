@@ -203,6 +203,7 @@ class MastHandler : public content::WebUIMessageHandler,
     On("setPalette", &MastHandler::HandleSetPalette);
     On("setWallpaper", &MastHandler::HandleSetWallpaper);
     On("clearWallpaper", &MastHandler::HandleClearWallpaper);
+    On("setWallpaperTone", &MastHandler::HandleSetWallpaperTone);
   }
 
   void OnJavascriptAllowed() override {
@@ -354,12 +355,27 @@ class MastHandler : public content::WebUIMessageHandler,
       return;
     }
     profile_->GetPrefs()->SetString(kPalettePref, id);
-    ApplyPalette(id);
+    ApplyTheme(profile_->GetPrefs());
     SendState();
   }
 
-  // ["setWallpaper", base64 JPEG]
+  // ["setWallpaperTone", "dark" | "light"]: whether the image is dark or
+  // light, so the tab row's text and icons (and the page's) stay readable.
+  void HandleSetWallpaperTone(const base::ListValue& args) {
+    SetTone(StringArg(args));
+    ApplyTheme(profile_->GetPrefs());
+    SendState();
+  }
+
+  void SetTone(const std::string& tone) {
+    if (tone == "dark" || tone == "light") {
+      profile_->GetPrefs()->SetString(kWallpaperTonePref, tone);
+    }
+  }
+
+  // ["setWallpaper", base64 JPEG, "dark" | "light" (the page's guess)]
   void HandleSetWallpaper(const base::ListValue& args) {
+    SetTone(StringArg(args, 1));
     std::optional<std::vector<uint8_t>> jpeg =
         base::Base64Decode(StringArg(args));
     if (!jpeg || jpeg->empty() || jpeg->size() > kMaxWallpaperBytes) {
@@ -384,7 +400,9 @@ class MastHandler : public content::WebUIMessageHandler,
     PrefService* prefs = profile_->GetPrefs();
     prefs->SetInteger(kWallpaperPref,
                       std::abs(prefs->GetInteger(kWallpaperPref)) + 1);
-    RepaintBrowser();
+    if (!ApplyTheme(prefs)) {
+      RepaintBrowser();  // same colours, new picture
+    }
     SendState();
   }
 
@@ -392,7 +410,9 @@ class MastHandler : public content::WebUIMessageHandler,
     PrefService* prefs = profile_->GetPrefs();
     prefs->SetInteger(kWallpaperPref,
                       -std::abs(prefs->GetInteger(kWallpaperPref)));
-    RepaintBrowser();
+    if (!ApplyTheme(prefs)) {
+      RepaintBrowser();
+    }
     base::ThreadPool::PostTask(
         FROM_HERE, kFileTraits,
         base::BindOnce(base::IgnoreResult(&base::DeleteFile),
@@ -450,7 +470,9 @@ class MastHandler : public content::WebUIMessageHandler,
                   .Set("css", PaletteCss())
                   .Set("wallpaper", std::max(0, profile_->GetPrefs()->GetInteger(
                                                     kWallpaperPref)))
-                  .Set("wallpaperTop", WallpaperTop()));
+                  .Set("wallpaperTop", WallpaperTop())
+                  .Set("tone", profile_->GetPrefs()->GetString(
+                                   kWallpaperTonePref)));
     state.Set("palettes", PalettesValue());
     state.Set("result", std::move(result));
     CallJavascriptFunction("mastState", base::Value(std::move(state)));
@@ -516,7 +538,8 @@ MastUI::MastUI(content::WebUI* web_ui, std::string_view host)
             std::move(callback).Run(base::MakeRefCounted<base::RefCountedString>(
                 as_new_tab ? DesktopPageHtml(std::max(
                                  0, prefs->GetInteger(kWallpaperPref)),
-                                 WallpaperTop())
+                                 WallpaperTop(),
+                                 prefs->GetString(kWallpaperTonePref) == "light")
                            : StartPageHtml(false)));
           },
           as_new_tab, base::Unretained(profile->GetPrefs()),

@@ -265,6 +265,12 @@ shot("22-mast-scheme", settle=2.5)
 # Settings follows the palette too (its page and cards).
 p.go("chrome://settings/appearance", 4)
 shot("23-settings-ink")
+# A light picture: dark text and icons, light pills and tiles.
+p.go("chrome://newtab")
+p.js("chrome.send('setWallpaperTone', ['light'])")
+time.sleep(1)
+p.go("chrome://newtab")
+shot("24-wallpaper-light", settle=2)
 p.go("chrome://newtab")
 p.js("chrome.send('setPalette', ['onyx']); chrome.send('clearWallpaper')")
 time.sleep(1)

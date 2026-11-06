@@ -18,6 +18,7 @@
 #include "components/prefs/pref_service.h"
 #include "mast/browser/mast_prefs.h"
 #include "mast/common/mast_features.h"
+#include "mast/ui/color/mast_palette.h"
 #include "third_party/skia/include/core/SkBitmap.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "ui/display/display.h"
@@ -40,7 +41,8 @@ namespace {
 // with room for anything else Chromium paints with the theme image under it.
 constexpr int kSliceHeight = 320;
 
-// The page's wash over the image (rgb(0 0 0 / .22) in desktop.html).
+// The page's wash over a dark image (rgb(0 0 0 / .22) in desktop.html); a
+// light image has none, so it stays light.
 constexpr SkAlpha kWash = 56;
 
 struct Wallpaper {
@@ -48,6 +50,7 @@ struct Wallpaper {
   int version = 0;
   SkBitmap bitmap;     // decoded, full size; empty while loading
   gfx::Size screen;    // what `slice` was made for
+  bool light = false;  // ... and for which tone
   gfx::ImageSkia slice;
 };
 
@@ -60,24 +63,33 @@ Wallpaper& Current() {
 // factor from the full-size bitmap (sharp on HiDPI), with the wash on top.
 class SliceSource : public gfx::CanvasImageSource {
  public:
-  SliceSource(gfx::ImageSkia image, gfx::Rect source, gfx::Size size)
+  SliceSource(gfx::ImageSkia image,
+              gfx::Rect source,
+              gfx::Size size,
+              SkAlpha wash)
       : gfx::CanvasImageSource(size),
         image_(std::move(image)),
-        source_(source) {}
+        source_(source),
+        wash_(wash) {}
 
   void Draw(gfx::Canvas* canvas) override {
     canvas->DrawImageInt(image_, source_.x(), source_.y(), source_.width(),
                          source_.height(), 0, 0, size().width(),
                          size().height(), /*filter=*/true);
-    canvas->FillRect(gfx::Rect(size()), SkColorSetA(SK_ColorBLACK, kWash));
+    if (wash_) {
+      canvas->FillRect(gfx::Rect(size()), SkColorSetA(SK_ColorBLACK, wash_));
+    }
   }
 
  private:
   const gfx::ImageSkia image_;
   const gfx::Rect source_;
+  const SkAlpha wash_;
 };
 
-gfx::ImageSkia MakeSlice(const SkBitmap& bitmap, const gfx::Size& screen) {
+gfx::ImageSkia MakeSlice(const SkBitmap& bitmap,
+                         const gfx::Size& screen,
+                         bool light) {
   const double iw = bitmap.width(), ih = bitmap.height();
   const double sw = screen.width(), sh = screen.height();
   // CSS background-size: cover, centred (desktop.html does the same sums).
@@ -88,7 +100,7 @@ gfx::ImageSkia MakeSlice(const SkBitmap& bitmap, const gfx::Size& screen) {
                          static_cast<int>(sw / k), static_cast<int>(height / k));
   return gfx::CanvasImageSource::MakeImageSkia<SliceSource>(
       gfx::ImageSkia::CreateFrom1xBitmap(bitmap), source,
-      gfx::Size(screen.width(), height));
+      gfx::Size(screen.width(), height), light ? SkAlpha{0} : kWash);
 }
 
 SkBitmap ReadAndDecode(const base::FilePath& path) {
@@ -151,9 +163,12 @@ gfx::ImageSkia WallpaperFrameImage(const BrowserView* browser_view) {
   if (screen.IsEmpty()) {
     return gfx::ImageSkia();
   }
-  if (w.slice.isNull() || w.screen != screen) {
+  const bool light =
+      palette::CurrentBackdrop() == palette::Backdrop::kLightImage;
+  if (w.slice.isNull() || w.screen != screen || w.light != light) {
     w.screen = screen;
-    w.slice = MakeSlice(w.bitmap, screen);
+    w.light = light;
+    w.slice = MakeSlice(w.bitmap, screen, light);
   }
   return w.slice;
 }

@@ -22,6 +22,7 @@ void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry) {
   registry->RegisterListPref(kDesktopWidgetsPref, std::move(widgets));
   registry->RegisterStringPref(kPalettePref, "onyx");
   registry->RegisterIntegerPref(kWallpaperPref, 0);
+  registry->RegisterStringPref(kWallpaperTonePref, "dark");
 }
 
 }  // namespace mast

@@ -83,6 +83,18 @@ diff -ruN a/chrome/browser/ui/views/location_bar/location_bar_view.cc b/chrome/b
      views::InstallPillHighlightPathGenerator(this);
  
  #if BUILDFLAG(OS_LEVEL_GEOLOCATION_PERMISSION_SUPPORTED)
+@@ -1443,7 +1446,10 @@
+ 
+   // Keep the views::Textfield in sync. It needs an opaque background to
+   // correctly enable subpixel AA.
+-  omnibox_view_->SetBackgroundColor(background_color_);
++  // Mast: no second (darker) layer inside a translucent field.
++  omnibox_view_->SetBackgroundColor(
++      SkColorGetA(background_color_) == SK_AlphaOPAQUE ? background_color_
++                                                       : SK_ColorTRANSPARENT);
+ 
+   // The divider between indicators and request chips should have the same color
+   // as the omnibox.
 diff -ruN a/ui/base/ui_base_features.cc b/ui/base/ui_base_features.cc
 --- a/ui/base/ui_base_features.cc
 +++ b/ui/base/ui_base_features.cc
