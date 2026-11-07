@@ -72,6 +72,15 @@ void AddSiteRow(ui::ColorMixer& mixer, const site_color::Row& r) {
   mixer[kColorPageInfoForeground] = {r.text2};
   mixer[kColorPageInfoSubtitleForeground] = {r.text2};
   mixer[kColorLocationBarClearAllButtonIcon] = {r.text2};
+  // The site-settings chip at the start of the field (LocationIconView): a
+  // step further from the field than the field is from the row.
+  mixer[kColorOmniboxIconBackground] = {r.raised};
+  mixer[kColorOmniboxIconBackgroundTonal] = {r.raised};
+  mixer[kColorOmniboxIconForeground] = {r.text2};
+  mixer[kColorOmniboxIconForegroundTonal] = {r.text2};
+  mixer[kColorOmniboxIconHover] = {SkColorSetA(r.text, 0x14)};
+  mixer[kColorOmniboxIconPressed] = {SkColorSetA(r.text, 0x24)};
+  mixer[kColorOmniboxActionIconHover] = {SkColorSetA(r.text, 0x14)};
   if (!r.light) {
     return;  // a dark row: the palette's dark suggestions suit it
   }
@@ -91,7 +100,7 @@ void AddSiteRow(ui::ColorMixer& mixer, const site_color::Row& r) {
         kColorOmniboxResultsUrlSelected, kColorOmniboxResultsIcon,
         kColorOmniboxResultsIconSelected, kColorOmniboxResultsIconHovered,
         kColorOmniboxResultsButtonIcon, kColorOmniboxResultsButtonIconSelected,
-        kColorOmniboxIconForeground, kColorOmniboxKeywordSeparator}) {
+        kColorOmniboxKeywordSeparator}) {
     mixer[id] = {r.text2};
   }
 }
