@@ -90,13 +90,16 @@ dialog.bl-panel .bl header { padding-right: 44px; }
 /* Customize's picture: its own layer, so it fades in once decoded instead of
    popping in a frame after the page (Chromium's NTP fades its background the
    same way). Laid out like the tab row's copy (mast_wallpaper.cc). */
-#wall { position: fixed; inset: 0; z-index: -1; opacity: 0; pointer-events: none; background-repeat: no-repeat;
+/* The reveal is a curtain: a soft edge sweeps from the tab row (which already
+   shows the picture) down to the bottom, so the picture flows into the page. */
+#wall { position: fixed; inset: 0; z-index: -1; pointer-events: none; background-repeat: no-repeat;
+  mask-image: linear-gradient(#000 0 46%, transparent 54%); mask-size: 100% 220%; mask-repeat: no-repeat; mask-position: 0 100%;
   background-image: linear-gradient(rgb(0 0 0/.22), rgb(0 0 0/.22)), var(--wall);
   background-size: 100% 100%, var(--wall-size, cover); background-position: 0 0, var(--wall-pos, center); }
 /* The body must not paint over the layer (html keeps the page colour). */
 body.wall { background: transparent; }
-#wall.shown { opacity: 1; transition: opacity .22s ease-out; }
-#wall.instant { transition: none; }
+#wall.shown { mask-position: 0 0; transition: mask-position .55s cubic-bezier(.25, .8, .25, 1); }
+@media (prefers-reduced-motion: reduce) { #wall.shown { transition: none; } }
 body.light #wall { background-image: var(--wall); background-size: var(--wall-size, cover); background-position: var(--wall-pos, center); }
 /* On a picture, icons stand on it (labels carry a soft shadow), and widgets
    are translucent like the active tab's pill, so the picture comes through
@@ -317,12 +320,14 @@ let tone = {{WALLPAPER_TONE}};     // "dark" or "light": what the picture is
 // one continuous picture.
 const wallImg = new Image();
 const wallEl = document.getElementById("wall");
-// Fade the picture in once it is decoded: no frame of half-drawn image. A
-// picture already in memory (most new tabs) shows at once, without a fade.
-wallImg.onload = () => {
+// Reveal the picture once it is decoded (no frame of half-drawn image): one
+// frame in its hidden state, then the curtain sweeps down.
+function revealWall() {
   layoutWallpaper();
-  wallImg.decode().catch(() => {}).then(() => requestAnimationFrame(() => wallEl.classList.add("shown")));
-};
+  wallImg.decode().catch(() => {}).then(() =>
+    requestAnimationFrame(() => requestAnimationFrame(() => wallEl.classList.add("shown"))));
+}
+wallImg.onload = revealWall;
 function layoutWallpaper() {
   const iw = wallImg.naturalWidth, ih = wallImg.naturalHeight;
   if (!wallpaper || !iw) return;
@@ -340,14 +345,11 @@ function applyWallpaper(v) {
   document.body.classList.toggle('wall', v > 0);
   const url = `wallpaper-${v}.jpg`;
   if (v > 0 && wallImg.getAttribute("src") === url) return;
-  wallEl.classList.remove("shown", "instant");
+  wallEl.classList.remove("shown");
   if (v > 0) {
     document.body.style.setProperty('--wall', `url(${url})`);
     wallImg.src = url;
-    if (wallImg.complete && wallImg.naturalWidth) {
-      layoutWallpaper();
-      wallEl.classList.add("instant", "shown");
-    }
+    if (wallImg.complete && wallImg.naturalWidth) revealWall();  // already decoded (a second call is harmless)
   } else {
     document.body.style.removeProperty('--wall');
   }
