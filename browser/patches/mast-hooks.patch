@@ -411,10 +411,30 @@ diff -ruN a/chrome/browser/ui/views/page_info/page_info_main_view.cc b/chrome/br
    int link_text_id = 0;
    int tooltip_text_id = 0;
    if (ui_delegate_->ShouldShowSiteSettings(&link_text_id, &tooltip_text_id)) {
+diff -ruN a/chrome/browser/ui/views/tabs/tab/BUILD.gn b/chrome/browser/ui/views/tabs/tab/BUILD.gn
+--- a/chrome/browser/ui/views/tabs/tab/BUILD.gn
++++ b/chrome/browser/ui/views/tabs/tab/BUILD.gn
+@@ -48,6 +48,7 @@
+   ]
+ 
+   deps = [
++    "//mast/common",
+     ":tab",
+     "//chrome/app/vector_icons",
+     "//chrome/browser:browser_process",
 diff -ruN a/chrome/browser/ui/views/tabs/tab/tab_icon.cc b/chrome/browser/ui/views/tabs/tab/tab_icon.cc
 --- a/chrome/browser/ui/views/tabs/tab/tab_icon.cc
 +++ b/chrome/browser/ui/views/tabs/tab/tab_icon.cc
-@@ -454,8 +454,8 @@
+@@ -22,6 +22,8 @@
+ #include "chrome/browser/ui/tabs/tab_favicon_theming.h"
+ #include "chrome/browser/ui/user_education/browser_user_education_interface.h"
+ #include "chrome/browser/ui/views/dotted_icon.h"
++#include "mast/common/mast_features.h"
++#include "ui/gfx/image/image_skia_operations.h"
+ #include "components/feature_engagement/public/feature_constants.h"
+ #include "components/grit/components_scaled_resources.h"
+ #include "components/performance_manager/public/user_tuning/prefs.h"
+@@ -454,8 +456,8 @@
  void TabIcon::SetIcon(const ui::ImageModel& icon, bool should_themify_favicon) {
    // Detect when updating to the same icon. This avoids re-theming and
    // re-painting.
@@ -425,6 +445,22 @@ diff -ruN a/chrome/browser/ui/views/tabs/tab/tab_icon.cc b/chrome/browser/ui/vie
    }
  
    favicon_ = icon;
+@@ -587,7 +589,14 @@
+     return;
+   }
+ 
+-  if (!GetNonDefaultFavicon() || should_themify_favicon_) {
++  if (mast::IsOneRowWindow() &&
++      (!GetNonDefaultFavicon() || should_themify_favicon_)) {
++    themed_favicon_ = gfx::ImageSkiaOperations::CreateColorMask(
++        favicon_.Rasterize(GetColorProvider()),
++        GetColorProvider()->GetColor(
++            is_active_tab_ ? kColorTabForegroundActiveFrameActive
++                           : kColorTabForegroundInactiveFrameActive));
++  } else if (!GetNonDefaultFavicon() || should_themify_favicon_) {
+     themed_favicon_ = tabs::ThemeFaviconForTab(
+         favicon_.Rasterize(GetColorProvider()), *GetColorProvider());
+   } else if (is_monochrome_favicon_) {
 diff -ruN a/chrome/browser/ui/views/toolbar/toolbar_view.cc b/chrome/browser/ui/views/toolbar/toolbar_view.cc
 --- a/chrome/browser/ui/views/toolbar/toolbar_view.cc
 +++ b/chrome/browser/ui/views/toolbar/toolbar_view.cc

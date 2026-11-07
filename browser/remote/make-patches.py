@@ -262,6 +262,27 @@ edit(H, "chrome/browser/ui/tab_ui_helper.cc", lambda t: once(t,
     'bool TabUIHelper::ShouldThemifyFavicon() {\n'
     '  // Mast: a new tab\'s sails follow the tab text from the first frame.\n'
     '  if (IsNTP(tab().GetContents()->GetVisibleURL())) {\n    return true;\n  }\n'))
+# ...and in the one-row window a browser page's icon takes its own tab's text colour: bright
+# on the active tab, quieter on the others, like the title next to it. (Recolouring with
+# one colour for every tab left the active tab's sails grey beside its white title.)
+edit(H, "chrome/browser/ui/views/tabs/tab/tab_icon.cc", lambda t: once(once(t,
+    '#include "chrome/browser/ui/views/dotted_icon.h"\n',
+    '#include "chrome/browser/ui/views/dotted_icon.h"\n#include "mast/common/mast_features.h"\n'
+    '#include "ui/gfx/image/image_skia_operations.h"\n'),
+    '  if (!GetNonDefaultFavicon() || should_themify_favicon_) {\n'
+    '    themed_favicon_ = tabs::ThemeFaviconForTab(\n'
+    '        favicon_.Rasterize(GetColorProvider()), *GetColorProvider());\n',
+    '  if (mast::IsOneRowWindow() &&\n'
+    '      (!GetNonDefaultFavicon() || should_themify_favicon_)) {\n'
+    '    themed_favicon_ = gfx::ImageSkiaOperations::CreateColorMask(\n'
+    '        favicon_.Rasterize(GetColorProvider()),\n'
+    '        GetColorProvider()->GetColor(\n'
+    '            is_active_tab_ ? kColorTabForegroundActiveFrameActive\n'
+    '                           : kColorTabForegroundInactiveFrameActive));\n'
+    '  } else if (!GetNonDefaultFavicon() || should_themify_favicon_) {\n'
+    '    themed_favicon_ = tabs::ThemeFaviconForTab(\n'
+    '        favicon_.Rasterize(GetColorProvider()), *GetColorProvider());\n'))
+edit(H, "chrome/browser/ui/views/tabs/tab/BUILD.gn", lambda t: add_dep(t, 'source_set("impl") {', "//mast/common"))
 edit(H, "chrome/browser/ui/BUILD.gn", lambda t: add_dep(t, '  source_set("tab_ui_helper") {', "//chrome/app/theme:theme_resources"))
 
 # Opening a tab (Ctrl+T, +) asks Chromium's incognito-only chrome://newtab config whether it
