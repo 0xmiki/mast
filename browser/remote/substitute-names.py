@@ -13,19 +13,21 @@ import sys
 
 SRC = sys.argv[1]
 DRY = "--dry-run" in sys.argv
-ROOTS = ("chrome", "components", "ui")
+ROOTS = ("chrome", "components", "ui", "extensions")
 SKIP = re.compile(r"/(chromeos|ash|remoting|android|ios|fuchsia|test|tests|testdata|"
                   r"webview|cast_receiver|lacros)(/|$)")
 
 # Order matters. Credits to Chromium (required by its licence) are protected.
 PROTECT = [
     "Chromium open source project", "Chromium project",
-    "Chrome Web Store", "Chrome Remote Desktop", "Chrome OS", "ChromeOS", "Chromebook",
+    "Chrome Remote Desktop", "Chrome OS", "ChromeOS", "Chromebook",
     "Chromecast", "Chrome Enterprise", "Chrome Browser Cloud", "Chrome Sync",
     "Google Chrome Frame",
 ]
 RULES = [
     (re.compile(r"The Chromium Authors"), "The Mast Authors"),
+    # Google's store, named the way Brave names it (it isn't Mast's store).
+    (re.compile(r"\bChrome Web Store\b"), "Web Store"),
     (re.compile(r"\bGoogle Chrome\b"), "Mast"),
     (re.compile(r"\bChromium\b"), "Mast"),
     (re.compile(r"\bChrome\b(?![.:/_-])"), "Mast"),

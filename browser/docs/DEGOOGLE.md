@@ -155,7 +155,7 @@ anything we choose deliberately. It is 72 UI flags we would otherwise have to re
 | Crash reports | `disable-crash-reporter` | Drop that patch like Helium does and point Crashpad at a Mast crash server, with opt-in consent. A shipped product needs crash reports. |
 | Component updates (CRLSets, CT log list) | Off | **Re-enable through a Mast proxy** the way Helium does. Without them, certificate revocation goes stale. |
 | Safe Browsing | Removed | Accept the loss (it needs a Google API key anyway). Revisit if we want a proxy like Brave's. |
-| Chrome Web Store | Off | Phase 2: proxy installs and updates like Helium, or ship without extensions at first. Mast's blocking doesn't depend on extensions. |
+| Chrome Web Store | Off | **On, direct to Google (decided 2026-11-07).** Browse, install and update like Brave; named "Web Store". A Helium-style proxy for installs and updates comes later, with Mast's own servers. |
 | Sign-in / sync | Off | Off. |
 | Default search | "No Search" | Choose a non-Google default in `prepopulated_engines.json` (e.g. DuckDuckGo). "No Search" is a poor first run. |
 | Widevine | `enable_widevine=true`, but the component updater is blocked, so no CDM | Irrelevant to Mast (as CHROMIUM.md already says). |
@@ -232,6 +232,18 @@ What's built:
 - **`mast-ungoogled.patch`** restores `SearchTermsData::GoogleBaseURLValue()` to
   `https://www.google.com/`. Substitution had rewritten `kGoogleHomepageURL`, which silently
   broke search and suggest. Lens / search-by-image stays substituted, so it's off.
+- **`mast-webstore.patch`** brings back the Chrome Web Store (as "Web Store").
+  - It undoes `disable-webstore-urls.patch` with `patch -R` against the base (the `unpatch()` helper
+    in `make-patches.py`), so the rest of ungoogled stays. That restores update checks, the default
+    update URL, the store's dedicated process and content verification.
+  - It restores the store's real URLs: the store, CRX downloads and updates
+    (`clients2.google.com/service/update2/crx`) and the store API, plus the install API's `matches`
+    in `_api_features.json` and the extensions page and theme links.
+  - Store links lose their `utm_source` tag.
+  - **Privacy:** installs and update checks go to Google (extension IDs and versions, every few
+    hours). Usage pings stay off: the downloader's ping domain is still the substituted one.
+  - `tools/base-file.mjs` now applies domain substitution too, so anchors on (substituted) URLs
+    check true locally.
 - **Build flags.** `flags.gn` is merged under Mast's `remote/args.gn`; Mast wins on conflicts.
 - **Guards.**
   - `mast/` and the blocklist are never substituted.

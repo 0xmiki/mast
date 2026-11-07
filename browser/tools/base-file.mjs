@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Reproduce files of the builder's base tree locally, without a checkout:
 // Chromium at chromium_version.txt + ungoogled-chromium's patches (series order, minus
-// patches/ungoogled-drop.list, plus patches/ungoogled-extra.list), for just these paths.
-// Domain substitution is not applied (keep anchors away from URLs).
+// patches/ungoogled-drop.list, plus patches/ungoogled-extra.list), then ungoogled's domain
+// substitution (minus patches/substitution-exclude.list), for just these paths. Same steps as
+// remote/ungoogle.sh, so anchors that touch (substituted) URLs check true locally.
 //
 //   node tools/base-file.mjs chrome/browser/prefs/browser_prefs.cc ...
 //   -> prints the local path of each file (cached under ~/.cache/mast/base/<version>/)
@@ -18,7 +19,7 @@ const root = path.resolve(here, '..');
 const version = fs.readFileSync(path.join(root, 'chromium_version.txt'), 'utf8').trim();
 const ugTag = fs.readFileSync(path.join(root, 'ungoogled_version.txt'), 'utf8').trim();
 const cache = path.join(os.homedir(), '.cache/mast');
-const baseDir = path.join(cache, 'base', `${version}+${ugTag}`);
+const baseDir = path.join(cache, 'base', `${version}+${ugTag}-sub`);
 const ugDir = path.join(cache, 'ungoogled', ugTag);
 
 const list = (f) => fs.readFileSync(path.join(root, 'patches', f), 'utf8')
@@ -65,6 +66,31 @@ async function ungoogledSeries() {
     .filter((n) => !n.startsWith('extra/') || extra.has(path.basename(n)));
 }
 
+// ungoogled-chromium's domain substitution: domain_regex.list (Python regexes, applied in
+// order to every file in domain_substitution.list, minus Mast's exclusions, which are
+// substring matches like the grep -F in remote/ungoogle.sh).
+let substitution;
+async function domainSubstitution() {
+  if (substitution) return substitution;
+  const raw = `https://raw.githubusercontent.com/ungoogled-software/ungoogled-chromium/${ugTag}/`;
+  const cached = async (name) => {
+    const p = path.join(ugDir, name);
+    if (!fs.existsSync(p)) {
+      fs.mkdirSync(ugDir, { recursive: true });
+      fs.writeFileSync(p, await (await get(raw + name)).text());
+    }
+    return fs.readFileSync(p, 'utf8');
+  };
+  const exclude = list('substitution-exclude.list');
+  const files = new Set((await cached('domain_substitution.list')).split('\n').filter(Boolean)
+    .filter((l) => !exclude.some((e) => l.includes(e))));
+  const rules = (await cached('domain_regex.list')).split('\n').filter(Boolean).map((l) => {
+    const i = l.indexOf('#');
+    return [new RegExp(l.slice(0, i), 'g'), l.slice(i + 1).replace(/\\g<(\d+)>/g, '$$1')];
+  });
+  return (substitution = { files, rules });
+}
+
 // The part of a unified diff that changes `file`.
 function sectionFor(patchText, file) {
   const parts = patchText.split(/^(?=diff |--- a\/)/m);
@@ -83,6 +109,13 @@ async function baseFile(file) {
     if (!section) continue;
     execFileSync('patch', ['--silent', '--forward', '-p1', '-d', baseDir], { input: section });
     process.stderr.write(`  ${file}: applied ${name}\n`);
+  }
+  const { files, rules } = await domainSubstitution();
+  if (files.has(file)) {
+    let text = fs.readFileSync(out, 'utf8');
+    for (const [re, to] of rules) text = text.replace(re, to);
+    fs.writeFileSync(out, text);
+    process.stderr.write(`  ${file}: domain substitution\n`);
   }
   return out;
 }

@@ -5,7 +5,7 @@ Run on the builder: python3 ~/mast/remote/make-patches.py  -> /root/pw/*.patch
 Each edit asserts its anchor is found exactly once, so a Chromium upgrade that
 moves code fails loudly here instead of silently producing a broken patch.
 """
-import os, re, shutil, subprocess
+import os, re, shutil, subprocess, tempfile
 
 SRC = "/root/chromium/src"
 WORK = os.environ.get("MAST_PATCH_WORK", "/root/pw")
@@ -27,6 +27,43 @@ def pristine(path):
 def once(text, old, new):
     n = text.count(old)
     assert n == 1, f"anchor found {n}x: {old[:70]!r}"
+    return text.replace(old, new)
+
+
+UG_TAG = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
+                           "ungoogled_version.txt")).read().strip()
+
+
+def ungoogled_patch(name):
+    """One of ungoogled-chromium's patches: base-file.mjs's cache locally, the checkout on
+    the builder."""
+    for p in (os.path.expanduser(f"~/.cache/mast/ungoogled/{UG_TAG}/p/{name}"),
+              f"/root/ungoogled/patches/{name}"):
+        if os.path.exists(p):
+            return open(p).read()
+    raise FileNotFoundError(name)
+
+
+def unpatch(text, path, name):
+    """`text` with ungoogled patch `name`'s change to `path` undone (patch -R), so Mast can
+    keep the rest of ungoogled while restoring one feature it removed. Fails loudly if the
+    patch no longer reverses cleanly (an ungoogled or Chromium update moved it)."""
+    sections = re.split(r"(?m)^(?=--- a/)", ungoogled_patch(name))
+    section = "".join(s for s in sections if s.startswith(f"--- a/{path}\n"))
+    assert section, f"{name} doesn't change {path}"
+    with tempfile.TemporaryDirectory() as d:
+        f = os.path.join(d, "file")
+        open(f, "w").write(text)
+        r = subprocess.run(["patch", "-R", "-s", "-F0", "--no-backup-if-mismatch", "-r", "-", f],
+                           input=section, text=True, capture_output=True)
+        assert r.returncode == 0, f"can't undo {name} in {path}: {r.stdout}{r.stderr}"
+        return open(f).read()
+
+
+def exactly(text, old, new, n):
+    """Like once(), for an anchor that must appear exactly n times (all replaced)."""
+    c = text.count(old)
+    assert c == n, f"anchor found {c}x (want {n}): {old[:70]!r}"
     return text.replace(old, new)
 
 
@@ -633,6 +670,51 @@ edit(U, "components/search_engines/search_terms_data.cc", lambda t: once(t,
 edit(U, "chrome/browser/preloading/preloading_prefs.cc", lambda t: once(t,
     '      static_cast<int>(NetworkPredictionOptions::kDefault),\n',
     '      static_cast<int>(NetworkPredictionOptions::kDisabled),  // Mast\n'))
+
+# ---------------------------------------------------------------- web store
+# The Chrome Web Store works, like Brave ("Web Store"): browse, install, and extensions
+# update. ungoogled-chromium cuts the store off twice: domain substitution makes its URLs
+# dead *.qjz9zk hosts, and disable-webstore-urls.patch stops update checks and store
+# recognition. Mast undoes that one patch (keeping the rest of ungoogled) and restores the
+# store's real URLs; Mast's patches apply after substitution, so these stay real.
+# Privacy: installs and update checks go to Google (extension IDs and versions, every few
+# hours). Usage pings stay off: the downloader's ping domain is still the substituted one.
+W = "mast-webstore.patch"
+DWU = "core/ungoogled-chromium/disable-webstore-urls.patch"
+
+for path in ("chrome/browser/extensions/chrome_content_browser_client_extensions_part.cc",
+             "chrome/browser/extensions/chrome_content_verifier_delegate.cc",
+             "chrome/browser/extensions/extension_migrator.cc",
+             "chrome/browser/extensions/extension_migrator.h",
+             "extensions/browser/updater/extension_downloader.cc"):
+    edit(W, path, lambda t, path=path: unpatch(t, path, DWU))
+
+edit(W, "extensions/common/extension_urls.cc", lambda t: once(once(once(once(once(
+    unpatch(t, "extensions/common/extension_urls.cc", DWU),
+    'const char kChromeWebstoreBaseURL[] = "https://chrome.9oo91e.qjz9zk/webstore";\n',
+    'const char kChromeWebstoreBaseURL[] = "https://chrome.google.com/webstore";\n'),
+    'const char kNewChromeWebstoreBaseURL[] = "https://chromewebstore.9oo91e.qjz9zk/";\n',
+    'const char kNewChromeWebstoreBaseURL[] = "https://chromewebstore.google.com/";\n'),
+    '    "https://clients2.9oo91e.qjz9zk/service/update2/crx";\n',
+    '    "https://clients2.google.com/service/update2/crx";\n'),
+    'const char kChromeWebstoreApiURL[] = "https://chromewebstore.9oo91eapis.qjz9zk/";\n',
+    'const char kChromeWebstoreApiURL[] = "https://chromewebstore.googleapis.com/";\n'),
+    # Store links carry no utm_source tag (which menu or page you came from).
+    '  return net::AppendQueryParameter(url, "utm_source", utm_source_value);\n',
+    '  return url;  // Mast: no tracking tag on store links\n'))
+# The store's pages may use the install API (webstorePrivate) and management again.
+edit(W, "extensions/common/api/_api_features.json", lambda t: exactly(t,
+    '    "matches": ["https://chromewebstore.9oo91e.qjz9zk/*"]\n',
+    '    "matches": ["https://chromewebstore.google.com/*"]\n', 2))
+edit(W, "chrome/browser/resources/webstore_app/manifest.json", lambda t: exactly(t,
+    'https://chrome.9oo91e.qjz9zk/webstore', 'https://chrome.google.com/webstore', 2))
+# Links: the extensions page's "Web Store" (empty state) and Settings' current-theme link.
+edit(W, "chrome/app/extensions_strings.grdp", lambda t: once(t,
+    'href="https://chrome.9oo91e.qjz9zk/webstore/category/extensions"',
+    'href="https://chromewebstore.google.com/category/extensions"'))
+edit(W, "chrome/browser/resources/settings/appearance_page/appearance_page.ts", lambda t: once(t,
+    "this.themeUrl_ = 'https://chrome.9oo91e.qjz9zk/webstore/detail/' + themeId;",
+    "this.themeUrl_ = 'https://chromewebstore.google.com/detail/' + themeId;"))
 
 for patch in PATCHES:
     out = subprocess.run(["diff", "-ruN", "a", "b"], cwd=os.path.join(WORK, patch + ".d"),
