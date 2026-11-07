@@ -6,7 +6,9 @@
 #include <optional>
 
 #include "content/public/browser/navigation_handle.h"
+#include "content/public/browser/web_contents.h"
 #include "mast/browser/mast_blocklist.h"
+#include "mast/browser/mast_page_backdrop.h"
 #include "mast/browser/mast_pages.h"
 #include "mast/browser/mast_blocks.h"
 #include "net/base/net_errors.h"
@@ -53,7 +55,10 @@ MastNavigationThrottle::Check() {
     blocks.RecordBlocked();
   }
   return ThrottleCheckResult(CANCEL, net::ERR_BLOCKED_BY_CLIENT,
-                             BlockPageHtml(NormalizeHost(url.host()), *match));
+                             BlockPageHtml(NormalizeHost(url.host()), *match,
+                                           GetPageBackdrop(navigation_handle()
+                                                               ->GetWebContents()
+                                                               ->GetBrowserContext())));
 }
 
 }  // namespace mast

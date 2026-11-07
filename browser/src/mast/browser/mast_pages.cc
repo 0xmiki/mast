@@ -8,6 +8,7 @@
 #include "base/strings/stringprintf.h"
 #include "mast/browser/mast_blocklist.h"
 #include "mast/browser/mast_blocks.h"
+#include "mast/browser/mast_page_backdrop.h"
 #include "mast/ui/color/mast_palette.h"
 
 namespace mast {
@@ -47,22 +48,39 @@ button { cursor:pointer }
 
 constexpr char kBlockPage[] = R"MAST(<!doctype html>
 <html><head><meta charset="utf-8"><title>{{HOST}} is blocked</title>{{ICON}}<style>{{STYLE}}
-body { display:grid; place-content:center; min-height:100vh; padding:40px 32px 12vh }
-.card { width:min(520px,100%) }
-.status { font-weight:500 }
-h1 { margin:10px 0 6px; font-size:40px; font-weight:600; letter-spacing:-.025em; line-height:1.1; overflow-wrap:anywhere }
-dl { display:grid; grid-template-columns:auto 1fr; gap:6px 24px; margin:24px 0 28px; padding:16px 0;
-  border-top:1px solid var(--line); border-bottom:1px solid var(--line) }
-dt { color:var(--text-3) } dd { margin:0 } dd.signal { color:var(--signal) }
-</style></head><body><main class="card">
-<span class="status blocked"><i class="ind" id="ind"></i><span id="state"></span></span>
+/* The blocked page (design C21): the site, when it opens again, and a way
+   back. On Customize's picture it shows the picture (laid out like the new
+   tab page's, so it runs on from the tab row) with a soft glow behind the
+   text. */
+body { display:grid; place-content:center; min-height:100vh; padding:40px 32px 10vh; text-align:center }
+.card { display:flex; flex-direction:column; align-items:center; gap:18px; max-width:min(720px,100%) }
+h1 { margin:0; font-size:56px; font-weight:600; letter-spacing:-.025em; line-height:1.1; overflow-wrap:anywhere }
+.st { display:flex; flex-direction:column; align-items:center; gap:8px }
+.st .line { display:flex; align-items:center; gap:10px; font-size:16px; font-weight:600 }
+.st .dot { width:8px; height:8px; flex:none; border-radius:50%; background:var(--signal) }
+.st .left { color:var(--text-2); font-size:14px; font-variant-numeric:tabular-nums }
+.back { margin-top:12px; padding:4px 6px; border:0; background:none; color:var(--text-2); font-size:13px; font-weight:500 }
+.back:hover { color:var(--text) }
+#wall { position:fixed; inset:0; z-index:-1; pointer-events:none; background-repeat:no-repeat;
+  background-image: radial-gradient(62% 75% at 50% 47%, rgb(0 0 0/.65), rgb(0 0 0/.35) 45%, transparent),
+    linear-gradient(rgb(0 0 0/.22), rgb(0 0 0/.22)), var(--wall);
+  background-size: 100% 100%, 100% 100%, var(--wall-size, cover);
+  background-position: 0 0, 0 0, var(--wall-pos, center) }
+body.wall { background:transparent; color:#f2f2f2; --text:#f2f2f2; --text-2:rgb(242 242 242/.75) }
+body.wall h1, body.wall .st, body.wall .back { text-shadow:0 1px 6px rgb(0 0 0/.5) }
+body.wall.light { color:#141414; --text:#141414; --text-2:#3d3d3d }
+body.wall.light #wall { background-image: radial-gradient(62% 75% at 50% 47%, rgb(255 255 255/.6), rgb(255 255 255/.3) 45%, transparent), var(--wall);
+  background-size: 100% 100%, var(--wall-size, cover); background-position: 0 0, var(--wall-pos, center) }
+body.wall.light h1, body.wall.light .st, body.wall.light .back { text-shadow:0 1px 4px rgb(255 255 255/.55) }
+</style></head><body class="{{BODY_CLASS}}"><div id="wall" aria-hidden="true"></div><main class="card">
 <h1>{{HOST}}</h1>
-<dl><dt>List</dt><dd>{{LIST}}</dd><dt>Since</dt><dd id="since"></dd><dt>Ends</dt><dd id="ends"></dd></dl>
-<button class="secondary" id="back" onclick="history.back()"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 8H3M7 4L3 8l4 4"/></svg> Back</button>
+<div class="st" role="status"><div class="line"><i class="dot"></i><span id="state"></span></div><div class="left" id="left"></div></div>
+<button class="back" id="back" onclick="history.back()">&larr; Back</button>
 </main><script>
-const since = {{SINCE}}, until = {{UNTIL}};
+const until = {{UNTIL}};
+const wall = {{WALL}}, wallTop = {{WALL_TOP}};
 const D = 864e5;
-const hm = (t) => new Date(t).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+const hm = (t) => new Date(t).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
 const day = (t) => new Date(t).toLocaleDateString([], {month: 'short', day: 'numeric'});
 const midnight = () => { const d = new Date(); d.setHours(24, 0, 0, 0); return d.getTime(); };
 function untilText(u) {
@@ -71,24 +89,37 @@ function untilText(u) {
   if (u - Date.now() < 2 * D) return 'until tomorrow ' + hm(u);
   return 'until ' + day(u);
 }
-function left(u) {
-  const ms = u - Date.now();
-  if (ms >= 2 * D) return Math.floor(ms / D) + ' days left';
-  const h = Math.floor(ms / 36e5), m = Math.max(1, Math.ceil((ms % 36e5) / 6e4));
-  return (h ? h + ' h ' : '') + m + ' min left';
+// "59:12 left" or "5:47:12 left" under a day, "6 days, 23 h left" beyond.
+function leftText(u) {
+  const ms = Math.max(0, u - Date.now());
+  const days = Math.floor(ms / D), h = Math.floor((ms % D) / 36e5);
+  if (days) return days + (days === 1 ? ' day, ' : ' days, ') + h + ' h left';
+  const m = Math.floor((ms % 36e5) / 6e4), s = Math.floor((ms % 6e4) / 1e3);
+  const mm = String(m).padStart(h ? 2 : 1, '0'), ss = String(s).padStart(2, '0');
+  return (h ? h + ':' + mm : mm) + ':' + ss + ' left';
 }
 function paint() {
   const forever = until === null;
-  document.getElementById('ind').className = 'ind ' + (forever ? 'forever' : 'timed');
   document.getElementById('state').textContent = forever ? 'Blocked forever' : 'Blocked ' + untilText(until);
-  document.getElementById('since').textContent = day(since) + ', ' + hm(since);
-  const ends = document.getElementById('ends');
-  ends.textContent = forever ? 'Never' : untilText(until).replace(/^until /, '').replace(/^./, (c) => c.toUpperCase()) + ' · ' + left(until);
-  ends.className = forever ? 'signal' : '';
+  document.getElementById('left').textContent = forever ? '' : leftText(until);
   if (!forever && Date.now() >= until) location.reload();
 }
+if (wall) {
+  // As on the new tab page: the picture covers the screen as seen from its
+  // top-left, which is wallTop above this page.
+  const img = new Image();
+  img.onload = () => {
+    const sw = screen.width, sh = screen.height + wallTop;
+    const k = Math.max(sw / img.naturalWidth, sh / img.naturalHeight);
+    const w = img.naturalWidth * k, h = img.naturalHeight * k, s = document.body.style;
+    s.setProperty('--wall', 'url(' + wall + ')');
+    s.setProperty('--wall-size', w + 'px ' + h + 'px');
+    s.setProperty('--wall-pos', (sw - w) / 2 + 'px ' + ((sh - h) / 2 - wallTop) + 'px');
+  };
+  img.src = wall;
+}
 if (history.length < 2) document.getElementById('back').style.display = 'none';
-paint(); setInterval(paint, 15000);
+paint(); setInterval(paint, 1000);
 </script></body></html>)MAST";
 
 // resources/start.html, embedded at build time (remote/embed-pages.py writes the
@@ -128,21 +159,27 @@ std::string Fill(std::string page) {
 
 }  // namespace
 
-std::string BlockPageHtml(std::string_view host, const BlockMatch& match) {
+std::string BlockPageHtml(std::string_view host,
+                          const BlockMatch& match,
+                          const PageBackdrop& backdrop) {
   std::string page = Fill(kBlockPage);
-  std::string list = CategoryNameOf(match.domain);
+  const bool wall = !backdrop.data_url.empty();
   base::ReplaceSubstringsAfterOffset(&page, 0, "{{HOST}}",
                                      base::EscapeForHTML(host));
   base::ReplaceSubstringsAfterOffset(
-      &page, 0, "{{LIST}}", base::EscapeForHTML(list.empty() ? "Your sites" : list));
-  base::ReplaceSubstringsAfterOffset(
-      &page, 0, "{{SINCE}}",
-      base::NumberToString(match.block.since.InMillisecondsSinceUnixEpoch()));
+      &page, 0, "{{BODY_CLASS}}",
+      wall ? (backdrop.light ? "wall light" : "wall") : "");
+  base::ReplaceSubstringsAfterOffset(&page, 0, "{{WALL_TOP}}",
+                                     base::NumberToString(backdrop.top));
   base::ReplaceSubstringsAfterOffset(
       &page, 0, "{{UNTIL}}",
       match.block.until
           ? base::NumberToString(match.block.until->InMillisecondsSinceUnixEpoch())
           : std::string("null"));
+  // Last: the picture is the one large value (a base64 data: URL; no quotes
+  // or braces in it).
+  base::ReplaceSubstringsAfterOffset(
+      &page, 0, "{{WALL}}", wall ? "\"" + backdrop.data_url + "\"" : "null");
   return page;
 }
 

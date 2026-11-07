@@ -10,9 +10,13 @@
 namespace mast {
 
 struct BlockMatch;
+struct PageBackdrop;
 
 // The block page shown in place of a blocked site.
-std::string BlockPageHtml(std::string_view host, const BlockMatch& match);
+// `backdrop` is Customize's picture, if there is one (mast_page_backdrop.h).
+std::string BlockPageHtml(std::string_view host,
+                          const BlockMatch& match,
+                          const PageBackdrop& backdrop);
 
 // chrome://mast: the blocklist, every category and site.
 // `as_new_tab` titles it "New Tab" so tabs and history read naturally.

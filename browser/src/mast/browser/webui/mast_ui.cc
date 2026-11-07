@@ -44,6 +44,7 @@
 #include "mast/browser/desktop/mast_desktop.h"
 #include "mast/browser/mast_blocklist.h"
 #include "mast/browser/mast_blocks.h"
+#include "mast/browser/mast_page_backdrop.h"
 #include "mast/browser/mast_pages.h"
 #include "mast/browser/mast_prefs.h"
 #include "mast/browser/mast_theme.h"
@@ -437,6 +438,9 @@ class MastHandler : public content::WebUIMessageHandler,
 
   void SendState(base::DictValue result = {}) {
     AllowJavascript();
+    // Warm the blocked page's copy of the picture (it is read off the UI
+    // thread, so a blocked page finds it ready).
+    GetPageBackdrop(profile_);
     MastBlocks& blocks = MastBlocks::Get();
     base::DictValue active;
     for (const auto& [domain, block] : blocks.Active()) {
