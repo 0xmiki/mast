@@ -1,10 +1,11 @@
 diff -ruN a/chrome/browser/ui/browser_window/internal/BUILD.gn b/chrome/browser/ui/browser_window/internal/BUILD.gn
 --- a/chrome/browser/ui/browser_window/internal/BUILD.gn
 +++ b/chrome/browser/ui/browser_window/internal/BUILD.gn
-@@ -13,6 +13,10 @@
+@@ -13,6 +13,11 @@
      "profile_browser_collection.cc",
    ]
    deps = [
++    "//components/viz/common",
 +    "//skia",
 +    "//content/public/browser",
 +    "//components/prefs",
@@ -12,7 +13,7 @@ diff -ruN a/chrome/browser/ui/browser_window/internal/BUILD.gn b/chrome/browser/
      "//base",
      "//chrome/browser:browser_process",
      "//chrome/browser:global_features",
-@@ -66,6 +70,10 @@
+@@ -66,6 +71,10 @@
        "create_browser_window_non_android.cc",
        "desktop_browser_window_capabilities.cc",
        "embedder_browser_window_features.cc",
