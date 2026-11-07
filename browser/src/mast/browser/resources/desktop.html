@@ -9,7 +9,7 @@
    grid that fills columns from the top left like a desktop's; they are a
    bookmarks folder. Widgets sit in a column on the right. */
 body { background: var(--surface); }
-.desk { display: grid; grid-template-columns: 1fr 280px; gap: 48px; min-height: 100vh; padding: 40px 48px; }
+.desk { display: grid; grid-template-columns: 1fr; gap: 48px; min-height: 100vh; padding: 40px 48px; }
 .apps { display: grid; grid-auto-flow: column; grid-template-rows: repeat(auto-fill, 92px); grid-auto-columns: 84px; gap: 2px 4px;
   align-content: start; justify-content: start; height: calc(100vh - 80px); }
 .app { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; width: 84px; height: 92px; padding: 8px 4px;
@@ -35,22 +35,24 @@ body { background: var(--surface); }
 .customize { position: fixed; right: 48px; bottom: 24px; display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px;
   border: 0; border-radius: var(--r); background: var(--field); color: var(--text-2); font-size: 12px; font-weight: 500; }
 .customize:hover { background: var(--pressed); color: var(--text); }
-/* Widgets are flat (design C17/C18a): no panels, right-aligned to the
-   desktop's edge like a desktop clock; space between groups separates them. */
-.widgets { display: flex; flex-direction: column; align-items: flex-end; gap: 44px; padding-top: 2px; text-align: right; }
-.widget { display: flex; flex-direction: column; align-items: flex-end; }
-.clock { gap: 2px; }
-.clock .time { font-size: 64px; font-weight: 300; letter-spacing: -2px; line-height: 1.1; white-space: nowrap; }
-.clock .ampm { margin-left: 6px; font-size: 20px; letter-spacing: 0; }
-.clock .date { color: var(--text-2); font-size: 14px; }
-.dist { gap: 12px; width: 100%; }
-.seg { display: flex; justify-content: flex-end; gap: 16px; }
-.seg button { height: 24px; padding: 0; border: 0; background: none; color: var(--text-2); font-size: 12px; white-space: nowrap; }
+/* Blocking lives in a dock at the bottom centre (design C20), flat on the
+   desktop; its toast (Undo) appears just above it. Once everything is blocked
+   the dock is only a status line with a countdown. */
+.dock { position: fixed; left: 50%; bottom: 56px; z-index: 5; transform: translateX(-50%); display: flex; flex-direction: column;
+  align-items: center; gap: 18px; width: 440px; max-width: calc(100vw - 32px); }
+.widgets { display: flex; flex-direction: column; align-items: center; width: 100%; text-align: center; }
+.widget { display: flex; flex-direction: column; align-items: center; }
+.dist { gap: 16px; width: 100%; }
+.seg { display: flex; justify-content: center; gap: 24px; }
+.seg button { height: 36px; padding: 0; border: 0; background: none; color: var(--text-2); font-size: 15px; white-space: nowrap; }
 .seg button:hover { color: var(--text); }
 .seg button.on { color: var(--text); font-weight: 700; }
 .dist .primary { height: 32px; padding: 0 16px; }
-.dist .primary.held { background: none; color: var(--signal); box-shadow: inset 0 0 0 1.5px var(--signal); cursor: default; }
-.links { display: flex; justify-content: flex-end; gap: 18px; }
+.links { display: flex; justify-content: center; gap: 18px; }
+.blocked-status { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.blocked-status .line { display: flex; align-items: center; gap: 10px; color: var(--text); font-size: 16px; font-weight: 600; }
+.blocked-status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--signal); flex: none; }
+.blocked-status .left { color: var(--text-2); font-size: 14px; font-variant-numeric: tabular-nums; }
 .link { padding: 0; border: 0; background: none; color: var(--text-2); font-size: 12px; font-weight: 500; text-decoration: none; }
 .link:hover { color: var(--text); }
 .cats { display: flex; flex-direction: column; align-self: stretch; margin: -4px -8px 0; text-align: left; }
@@ -69,12 +71,11 @@ dialog input { width: 100%; height: 34px; margin-bottom: 8px; padding: 0 10px; b
 dialog input:focus { box-shadow: inset 0 0 0 1px var(--text-3); }
 dialog .err { min-height: 18px; color: var(--signal); font-size: 12px; }
 dialog .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
-.toast { position: fixed; left: 50%; bottom: 24px; z-index: 30; transform: translateX(-50%); display: flex; align-items: center;
+.toast { display: flex; align-items: center;
   gap: 14px; padding: 10px 10px 10px 16px; border-radius: 10px; background: var(--field); box-shadow: var(--shadow); white-space: nowrap; }
 .toast.plain { padding-right: 16px; }
 .toast button { height: 28px; padding: 0 12px; border: 0; border-radius: 4px; background: var(--pressed); font-weight: 500; }
 .toast .secs { margin-left: 4px; color: var(--text-3); }
-@media (max-width: 760px) { .desk { grid-template-columns: 1fr; } .widgets { order: -1; } }
 /* "Edit blocklist": the full list in a panel over the desktop. */
 dialog.bl-panel { width: min(760px, 94vw); height: min(86vh, 920px); padding: 0; border-radius: 12px; overflow: auto;
   background: var(--surface); box-shadow: 0 24px 64px rgb(0 0 0/.6), 0 0 0 1px var(--line); --bl-bg: var(--surface); }
@@ -120,8 +121,6 @@ body.wall.light .app .label, body.wall.light .add .label, body.wall.light .hint 
 body.wall.light .add .tile { color: #141414; filter: none; }
 body.wall.light .app:hover { background: rgb(255 255 255/.3); box-shadow: inset 0 0 0 1px rgb(0 0 0/.08); }
 body.wall.light .customize:hover { background: rgb(255 255 255/.7); }
-/* Ember as text needs a deeper tone on light glass (the filled button keeps it). */
-body.wall.light .dist .primary.held { color: #b4441a; box-shadow: inset 0 0 0 1.5px #b4441a; }
 .customize:focus:not(:focus-visible) { outline: none; }
 .tone { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin-bottom: 8px; padding: 2px; border-radius: var(--r); background: var(--surface); }
 .tone button { height: 28px; border: 0; border-radius: 4px; background: none; color: var(--text-2); font-size: 12px; }
@@ -156,8 +155,8 @@ dialog.cz { width: 400px; padding: 18px 20px 20px; }
 <div id="wall" aria-hidden="true"></div>
 <main class="desk">
   <section class="apps" id="apps" aria-label="Saved sites"></section>
-  <aside class="widgets" id="widgets"></aside>
 </main>
+<div class="dock"><div id="toast" aria-live="polite"></div><aside class="widgets" id="widgets"></aside></div>
 <dialog id="addDialog">
   <form method="dialog" id="addForm">
     <h3>Add a site</h3>
@@ -182,7 +181,6 @@ dialog.cz { width: 400px; padding: 18px 20px 20px; }
   <p class="note"><i class="ind"></i>Ember stays the same: it always means blocked.</p>
   <input type="file" id="czFile" accept="image/*" hidden>
 </dialog>
-<div id="toast"></div>
 {{BLOCKLIST}}
 <script>
 const D = 864e5;
@@ -246,27 +244,21 @@ function renderApps() {
 
 function renderWidgets() {
   const w = document.getElementById('widgets');
-  const order = state.widgets.length ? state.widgets : ['clock', 'distractions'];
-  w.innerHTML = order.map((id) => id === 'clock' ? clockWidget() : id === 'distractions' ? distractionWidget() : '').join('');
-}
-
-// The time on one line; a 12-hour locale's AM/PM sits small beside it.
-function clockTime(d) {
-  return new Intl.DateTimeFormat([], {hour: 'numeric', minute: '2-digit'}).formatToParts(d)
-    .map((p) => p.type === 'dayPeriod' ? `<span class="ampm">${esc(p.value)}</span>` : p.type === 'literal' && /^\s+$/.test(p.value) ? '' : esc(p.value)).join('');
-}
-
-function clockWidget() {
-  const now = new Date();
-  return `<div class="widget clock" id="clock">
-    <div class="time">${clockTime(now)}</div>
-    <div class="date">${now.toLocaleDateString([], {weekday: 'long', month: 'long', day: 'numeric'})}</div>
-  </div>`;
+  // One widget for now: blocking (the clock was dropped in design C20).
+  w.innerHTML = distractionWidget();
 }
 
 function distractionWidget() {
   const d = distraction();
   const all = d.services > 0 && d.blocked === d.services;
+  // Blocked: the status and a countdown are all there is (no controls).
+  if (all) {
+    const forever = d.first.until === null;
+    return `<div class="widget dist" aria-label="Distractions"><div class="blocked-status" role="status">
+      <div class="line"><i class="dot"></i>Distractions blocked ${untilText(d.first.until)}</div>
+      ${forever ? '' : `<div class="left" id="left" data-until="${d.first.until}">${leftText(d.first.until)}</div>`}
+    </div></div>`;
+  }
   const cats = !editing ? '' : `<div class="cats">${state.categories.map((c) => `
       <label><input type="checkbox" data-cat="${esc(c.id)}" ${state.distractions.includes(c.id) ? 'checked' : ''}>
         <span class="nm">${esc(c.name)}</span><span class="ct">${c.services.length}</span></label>`).join('')}</div>`;
@@ -275,21 +267,23 @@ function distractionWidget() {
   return `<div class="widget dist" aria-label="Distractions">
     ${cats}
     <div class="seg">${DUR.map(([id, label]) => `<button data-dur="${id}" class="${id === dur ? 'on' : ''}" aria-label="${id}">${label}</button>`).join('')}</div>
-    ${blockButton(d, all)}
+    ${blockButton(d)}
     <div class="links"><button class="link" id="edit">${editing ? 'Done' : 'Change what’s blocked'}</button><button class="link" id="editList">Edit blocklist</button></div>
   </div>`;
 }
 
-// Blocks only extend. Once everything is blocked at least as long as the
-// chosen duration, the button says so instead of offering a no-op.
-function blockButton(d, all) {
-  if (!d.services) return '<button class="primary" disabled>Block distractions</button>';
-  if (!all) return '<button class="primary" id="blockAll">Block distractions</button>';
-  if (outlasts(untilFor(dur), d.first.until)) {
-    const label = DUR.find(([id]) => id === dur)[1];
-    return `<button class="primary" id="blockAll">Extend to ${dur === 'forever' ? 'forever' : label.toLowerCase()}</button>`;
-  }
-  return `<button class="primary held" disabled>Blocked ${untilText(d.first.until)}</button>`;
+function blockButton(d) {
+  return d.services ? '<button class="primary" id="blockAll">Block distractions</button>'
+    : '<button class="primary" disabled>Block distractions</button>';
+}
+
+// "5:47:12 left" under a day, "6 days, 23 h left" beyond.
+function leftText(until) {
+  const ms = Math.max(0, until - Date.now());
+  const days = Math.floor(ms / D), h = Math.floor((ms % D) / 36e5);
+  if (days) return `${days} ${days === 1 ? 'day' : 'days'}, ${h} h left`;
+  const m = Math.floor((ms % 36e5) / 6e4), sec = Math.floor((ms % 6e4) / 1e3);
+  return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')} left`;
 }
 
 function render() { renderApps(); renderWidgets(); }
@@ -523,8 +517,16 @@ apps.addEventListener('drop', (e) => {
   if (from >= 0 && to !== from) chrome.send('desktopMove', [dragId, to]);
 });
 
-// The clock ticks on the minute; state refreshes when the tab comes back.
-setInterval(() => { const c = document.getElementById('clock'); if (c) c.outerHTML = clockWidget(); }, 1e3 * 15);
+// The countdown ticks every second; when the block ends the page asks for
+// fresh state (the dock goes back to the durations and the button). State also
+// refreshes when the tab comes back.
+setInterval(() => {
+  const el = document.getElementById('left');
+  if (!el) return;
+  const until = Number(el.dataset.until);
+  if (Date.now() >= until) chrome.send('getState');
+  else el.textContent = leftText(until);
+}, 1e3);
 document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && chrome.send('getState'));
 chrome.send('getState');
 </script>
