@@ -284,7 +284,7 @@ shot("24-wallpaper-light", settle=2)
 # Tab bar on websites (design C23): the Customize section, then each choice on websites.
 # "Theme": the palette on a site, the picture stays on the new tab. "Match site": a light
 # site (light row, dark text, a light address field and suggestions), a dark one, and one
-# more; the colour comes from the top of the page a moment after it paints.
+# more (not Wikipedia: scene 15 may have blocked it); the colour comes from the top of the page a moment after it paints.
 p.js("chrome.send('setWallpaperTone', ['dark'])")
 time.sleep(1)
 p.go("chrome://newtab")
@@ -292,15 +292,15 @@ p.js("document.getElementById('customize').click()")
 shot("33-customize-tab-bar")
 p.js("chrome.send('setTabBar', ['theme'])")
 time.sleep(0.5)
-p.go("https://en.wikipedia.org/wiki/Dieter_Rams", 5)
+p.go("https://example.com/", 4)
 shot("34-theme-site", settle=1.5)
 p.go("chrome://newtab")
 p.js("chrome.send('setTabBar', ['site'])")
 time.sleep(0.5)
-p.go("https://en.wikipedia.org/wiki/Dieter_Rams", 5)
-shot("35-site-wikipedia", settle=3)
-native_dump("35-site-wikipedia")
-keys("ctrl+l", text="dieter")
+p.go("https://example.com/", 4)
+shot("35-site-example", settle=3)
+native_dump("35-site-example")
+keys("ctrl+l", text="example")
 shot("36-site-omnibox", settle=1.5)
 keys("Escape", "Escape")
 p.go("https://github.com/", 6)
@@ -331,7 +331,7 @@ keys("ctrl+t")
 time.sleep(1)
 subprocess.run(["xdotool", "mousemove", "120", "20", "click", "3"])
 time.sleep(1)
-keys("Down", "Down", "Return")  # "Add tab to new group"
+native_dump("29-tab-menu", click=(None, "Add tab to new group"))  # the menu's order changes between versions
 time.sleep(1.5)
 keys(text="hi")
 keys("Return")
