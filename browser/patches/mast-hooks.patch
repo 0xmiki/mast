@@ -278,23 +278,31 @@ diff -ruN a/chrome/browser/ui/tab_ui_helper.cc b/chrome/browser/ui/tab_ui_helper
  #include "components/favicon/content/content_favicon_util.h"
  #include "components/security_interstitials/content/security_interstitial_tab_helper.h"
  #include "components/tabs/public/tab_interface.h"
-@@ -154,6 +155,10 @@
+@@ -154,6 +155,14 @@
  }
  
  bool TabUIHelper::ShouldThemifyFavicon() {
-+  // Mast: a new tab's sails follow the tab text from the first frame.
-+  if (IsNTP(tab().GetContents()->GetVisibleURL())) {
++  // Mast: a new tab's sails follow the tab text from the first frame, and
++  // error pages' sails too.
++  const content::NavigationEntry* mast_entry =
++      tab().GetContents()->GetController().GetLastCommittedEntry();
++  if (IsNTP(tab().GetContents()->GetVisibleURL()) ||
++      (mast_entry && mast_entry->GetPageType() == content::PAGE_TYPE_ERROR)) {
 +    return true;
 +  }
    content::NavigationEntry* const entry =
        tab().GetContents()->GetController().GetLastCommittedEntry();
    return entry && favicon::ShouldThemifyFaviconForEntry(entry);
-@@ -231,6 +236,10 @@
+@@ -231,6 +240,14 @@
    const favicon::FaviconDriver* const favicon_driver =
        favicon::ContentFaviconDriver::FromWebContents(web_contents());
    if (!favicon_driver || !favicon_driver->FaviconIsValid()) {
-+    // Mast: a new tab shows the new-tab icon while it loads, not the globe.
-+    if (IsNTP(web_contents()->GetVisibleURL())) {
++    // Mast: a new tab shows the new-tab icon while it loads, not the globe;
++    // so do error pages (Mast's blocked page, sites that can't be reached).
++    const content::NavigationEntry* mast_entry =
++        web_contents()->GetController().GetLastCommittedEntry();
++    if (IsNTP(web_contents()->GetVisibleURL()) ||
++        (mast_entry && mast_entry->GetPageType() == content::PAGE_TYPE_ERROR)) {
 +      return ui::ImageModel::FromResourceId(IDR_NTP_FAVICON);
 +    }
      // Cache the model so repeated calls return an equal ImageModel; TabData
