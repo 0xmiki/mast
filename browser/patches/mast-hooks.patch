@@ -278,7 +278,18 @@ diff -ruN a/chrome/browser/ui/tab_ui_helper.cc b/chrome/browser/ui/tab_ui_helper
  #include "components/favicon/content/content_favicon_util.h"
  #include "components/security_interstitials/content/security_interstitial_tab_helper.h"
  #include "components/tabs/public/tab_interface.h"
-@@ -231,6 +232,10 @@
+@@ -154,6 +155,10 @@
+ }
+ 
+ bool TabUIHelper::ShouldThemifyFavicon() {
++  // Mast: a new tab's sails follow the tab text from the first frame.
++  if (IsNTP(tab().GetContents()->GetVisibleURL())) {
++    return true;
++  }
+   content::NavigationEntry* const entry =
+       tab().GetContents()->GetController().GetLastCommittedEntry();
+   return entry && favicon::ShouldThemifyFaviconForEntry(entry);
+@@ -231,6 +236,10 @@
    const favicon::FaviconDriver* const favicon_driver =
        favicon::ContentFaviconDriver::FromWebContents(web_contents());
    if (!favicon_driver || !favicon_driver->FaviconIsValid()) {
@@ -400,6 +411,20 @@ diff -ruN a/chrome/browser/ui/views/page_info/page_info_main_view.cc b/chrome/br
    int link_text_id = 0;
    int tooltip_text_id = 0;
    if (ui_delegate_->ShouldShowSiteSettings(&link_text_id, &tooltip_text_id)) {
+diff -ruN a/chrome/browser/ui/views/tabs/tab/tab_icon.cc b/chrome/browser/ui/views/tabs/tab/tab_icon.cc
+--- a/chrome/browser/ui/views/tabs/tab/tab_icon.cc
++++ b/chrome/browser/ui/views/tabs/tab/tab_icon.cc
+@@ -454,8 +454,8 @@
+ void TabIcon::SetIcon(const ui::ImageModel& icon, bool should_themify_favicon) {
+   // Detect when updating to the same icon. This avoids re-theming and
+   // re-painting.
+-  if (favicon_ == icon) {
+-    return;
++  if (favicon_ == icon && should_themify_favicon_ == should_themify_favicon) {
++    return;  // Mast: a themify change alone re-themes
+   }
+ 
+   favicon_ = icon;
 diff -ruN a/chrome/browser/ui/views/toolbar/toolbar_view.cc b/chrome/browser/ui/views/toolbar/toolbar_view.cc
 --- a/chrome/browser/ui/views/toolbar/toolbar_view.cc
 +++ b/chrome/browser/ui/views/toolbar/toolbar_view.cc
@@ -462,6 +487,20 @@ diff -ruN a/chrome/browser/ui/webui/chrome_web_ui_configs.cc b/chrome/browser/ui
  #endif  // BUILDFLAG(ENABLE_WEBUI_NTP)
    map.AddWebUIConfig(std::make_unique<NewTabUIConfig>());
    map.AddWebUIConfig(std::make_unique<OmniboxEverywhereUIConfig>());
+diff -ruN a/chrome/browser/ui/webui/ntp/new_tab_ui.cc b/chrome/browser/ui/webui/ntp/new_tab_ui.cc
+--- a/chrome/browser/ui/webui/ntp/new_tab_ui.cc
++++ b/chrome/browser/ui/webui/ntp/new_tab_ui.cc
+@@ -51,8 +51,8 @@
+   // NTPResourceCache::GetNewTabHTML!
+   switch (NTPResourceCache::GetWindowType(profile)) {
+     case NTPResourceCache::NORMAL:
+-      LOG(ERROR) << "Requested load of chrome://newtab/ for incorrect "
+-                    "profile type.";
++      DVLOG(1) << "Requested load of chrome://newtab/ for incorrect "
++                  "profile type.";  // Mast: expected on every new tab
+       // TODO(crbug.com/40244589): Add DumpWithoutCrashing() here.
+       return false;
+     case NTPResourceCache::INCOGNITO:
 diff -ruN a/chrome/browser/ui/webui/settings/settings_ui.cc b/chrome/browser/ui/webui/settings/settings_ui.cc
 --- a/chrome/browser/ui/webui/settings/settings_ui.cc
 +++ b/chrome/browser/ui/webui/settings/settings_ui.cc

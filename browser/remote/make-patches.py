@@ -212,7 +212,29 @@ edit(H, "chrome/browser/ui/tab_ui_helper.cc", lambda t: once(once(t,
     '    // Mast: a new tab shows the new-tab icon while it loads, not the globe.\n'
     '    if (IsNTP(web_contents()->GetVisibleURL())) {\n'
     '      return ui::ImageModel::FromResourceId(IDR_NTP_FAVICON);\n    }\n'))
+# The new tab's sails stayed grey: before the page commits a new tab has no entry, so its
+# icon isn't themed; after it commits the icon is the same image, and SetIcon() returned
+# early on "same icon", dropping the now-true themify flag. It re-themes when only the flag
+# changes, and new tabs are themed from their first frame.
+edit(H, "chrome/browser/ui/views/tabs/tab/tab_icon.cc", lambda t: once(t,
+    '  if (favicon_ == icon) {\n    return;\n  }\n\n  favicon_ = icon;\n',
+    '  if (favicon_ == icon && should_themify_favicon_ == should_themify_favicon) {\n'
+    '    return;  // Mast: a themify change alone re-themes\n  }\n\n  favicon_ = icon;\n'))
+edit(H, "chrome/browser/ui/tab_ui_helper.cc", lambda t: once(t,
+    'bool TabUIHelper::ShouldThemifyFavicon() {\n',
+    'bool TabUIHelper::ShouldThemifyFavicon() {\n'
+    '  // Mast: a new tab\'s sails follow the tab text from the first frame.\n'
+    '  if (IsNTP(tab().GetContents()->GetVisibleURL())) {\n    return true;\n  }\n'))
 edit(H, "chrome/browser/ui/BUILD.gn", lambda t: add_dep(t, '  source_set("tab_ui_helper") {', "//chrome/app/theme:theme_resources"))
+
+# Opening a tab (Ctrl+T, +) asks Chromium's incognito-only chrome://newtab config whether it
+# serves this profile before the URL is redirected to chrome://new-tab-page; it says no and
+# logged an ERROR every time. Same answer, logged only at verbose level.
+edit(H, "chrome/browser/ui/webui/ntp/new_tab_ui.cc", lambda t: once(t,
+    '      LOG(ERROR) << "Requested load of chrome://newtab/ for incorrect "\n'
+    '                    "profile type.";\n',
+    '      DVLOG(1) << "Requested load of chrome://newtab/ for incorrect "\n'
+    '                  "profile type.";  // Mast: expected on every new tab\n'))
 
 # ---------------------------------------------------------------- bookmarks
 # Saved sites live on the new tab page (a bookmarks folder, mast/browser/desktop). There is
