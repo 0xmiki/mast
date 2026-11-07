@@ -606,6 +606,90 @@ edit(R, "chrome/browser/ui/tabs/tab_favicon_theming.cc", lambda t: once(once(t,
     '  }\n'))
 edit(R, "chrome/browser/ui/tabs/BUILD.gn", lambda t: add_dep(t, 'source_set("favicon_theming") {', "//mast/common"))
 
+# Tab groups as pills (design C22, option A). In the one-row window a group's header is a
+# pill like the tabs, tinted with the group's colour, and the group's header and pills sit
+# in a faint lane of that colour. Chromium's 2px underline along the row's edge and the
+# group-coloured outline around the active tab go.
+edit(R, "chrome/browser/ui/views/tabs/tab_group_header.cc", lambda t: once(once(once(once(once(once(t,
+    '#include "chrome/browser/ui/layout_constants.h"\n',
+    '#include "chrome/browser/ui/layout_constants.h"\n#include "mast/common/mast_features.h"\n'),
+    'int TabGroupHeader::GetChipHeight() const {\n',
+    'int TabGroupHeader::GetChipHeight() const {\n'
+    '  if (mast::IsOneRowWindow()) {  // Mast: as tall as the tab pills\n'
+    '    return GetLayoutConstant(LayoutConstant::kTabHeight) -\n'
+    '           2 * mast::kOneRowTabPillInset;\n  }\n'),
+    'int TabGroupHeader::GetChipY() const {\n',
+    'int TabGroupHeader::GetChipY() const {\n'
+    '  if (mast::IsOneRowWindow()) {\n    return mast::kOneRowTabPillInset;\n  }\n'),
+    '  title_chip_->SetBackground(\n      views::CreateRoundedRectBackground(color_, corner_radius));\n',
+    '  // Mast: a pill tinted with the group\'s colour (its name is in that colour).\n'
+    '  title_chip_->SetBackground(views::CreateRoundedRectBackground(\n'
+    '      mast::IsOneRowWindow() ? SkColorSetA(color_, 0x40) : color_,\n'
+    '      mast::IsOneRowWindow() ? 8 : corner_radius));\n'),
+    '      title_->SetEnabledColor(color_utils::GetColorWithMaxContrast(color_));\n',
+    '      title_->SetEnabledColor(mast::IsOneRowWindow()\n'
+    '                                  ? color_\n'
+    '                                  : color_utils::GetColorWithMaxContrast(color_));\n'),
+    '  title_chip_->SetBounds(empty_origin.x(), chip_y, empty_width, chip_height);\n'
+    '  title_chip_->SetBackground(group_style_->GetEmptyTitleChipBackground(color_));\n',
+    '  title_chip_->SetBounds(empty_origin.x(), chip_y, empty_width, chip_height);\n'
+    '  title_chip_->SetBackground(group_style_->GetEmptyTitleChipBackground(color_));\n'
+    '  if (mast::IsOneRowWindow()) {\n'
+    '    // Mast: an unnamed group is a dot of its colour, centred in the row.\n'
+    '    constexpr int kDot = 12;\n'
+    '    title_chip_->SetBounds(empty_origin.x() + (empty_width - kDot) / 2,\n'
+    '                           chip_y + (chip_height - kDot) / 2, kDot, kDot);\n'
+    '    title_chip_->SetBackground(\n'
+    '        views::CreateRoundedRectBackground(color_, kDot / 2));\n  }\n'))
+edit(R, "chrome/browser/ui/views/tabs/tab_group_underline.cc", lambda t: once(once(once(t,
+    '#include "chrome/browser/ui/views/tabs/tab_group_views.h"\n',
+    '#include "chrome/browser/ui/views/tabs/tab_group_views.h"\n#include "mast/common/mast_features.h"\n\n#include <algorithm>\n'),
+    'void TabGroupUnderline::OnPaint(gfx::Canvas* canvas) {\n',
+    'void TabGroupUnderline::OnPaint(gfx::Canvas* canvas) {\n'
+    '  if (mast::IsOneRowWindow()) {\n'
+    '    // Mast: the group\'s lane, a faint pill of its colour behind its tabs.\n'
+    '    cc::PaintFlags lane;\n    lane.setAntiAlias(true);\n'
+    '    lane.setColor(SkColorSetA(tab_group_views_->GetGroupColor(), 0x24));\n'
+    '    canvas->DrawRoundRect(GetLocalBounds(), 10, lane);\n    return;\n  }\n'),
+    '    const views::View* const trailing_view) const {\n'
+    '  gfx::RectF leading_bounds = views::View::ConvertRectToTarget(\n',
+    '    const views::View* const trailing_view) const {\n'
+    '  if (mast::IsOneRowWindow()) {\n'
+    '    // Mast: the lane wraps the header pill and the tab pills, 3px around\n'
+    '    // them (tab pills are inset by the bottom corner radius at the sides and\n'
+    '    // kOneRowTabPillInset above and below).\n'
+    '    const gfx::Rect leading = ToEnclosingRect(views::View::ConvertRectToTarget(\n'
+    '        leading_view->parent(), underline_view->parent(),\n'
+    '        gfx::RectF(leading_view->bounds())));\n'
+    '    const gfx::Rect trailing = ToEnclosingRect(views::View::ConvertRectToTarget(\n'
+    '        trailing_view->parent(), underline_view->parent(),\n'
+    '        gfx::RectF(trailing_view->bounds())));\n'
+    '    const int side = TabStyle::Get()->GetBottomCornerRadius();\n'
+    '    const int left =\n'
+    '        leading.x() - 3 +\n'
+    '        (views::IsViewClass<TabGroupHeader>(leading_view)\n'
+    '             ? TabGroupStyle::GetTitleChipOffset(std::nullopt).x()\n'
+    '             : side);\n'
+    '    const int right = trailing.right() + 3 - side;\n'
+    '    const int inset = mast::kOneRowTabPillInset - 3;\n'
+    '    return gfx::Rect(left, leading.y() + inset, std::max(0, right - left),\n'
+    '                     std::max(0, leading.height() - 2 * inset));\n  }\n'
+    '  gfx::RectF leading_bounds = views::View::ConvertRectToTarget(\n'))
+edit(R, "chrome/browser/ui/views/tabs/z_orderable_tab_container_element.cc", lambda t: once(once(t,
+    '#include "chrome/browser/ui/views/tabs/tab_style_views.h"\n',
+    '#include "chrome/browser/ui/views/tabs/tab_style_views.h"\n#include "mast/common/mast_features.h"\n'),
+    '  if (header || underline) {\n',
+    '  // Mast: in one row the underline is the group\'s lane, below every tab.\n'
+    '  if (header || (underline && !mast::IsOneRowWindow())) {\n'))
+# No group-coloured outline around a grouped tab's pill (the lane shows the group).
+edit(R, "chrome/browser/ui/views/tabs/common/horizontal_tab_style_views.cc", lambda t: once(t,
+    '  PaintBackgroundStroke(canvas, group_color.value_or(tab_stroke_color));\n',
+    '  PaintBackgroundStroke(canvas, mast::IsOneRowWindow()\n'
+    '                                    ? tab_stroke_color\n'
+    '                                    : group_color.value_or(tab_stroke_color));\n'))
+edit(R, "chrome/browser/ui/views/tabs/BUILD.gn", lambda t: add_dep(add_dep(t,
+    'source_set("tab_group_impl") {', "//mast/common"), 'source_set("tab_container_impl") {', "//mast/common"))
+
 # No 1px line between the tab row and the page: in the one-row window the page meets the
 # row directly (with a wallpaper the line cut the picture in two).
 edit(R, "chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc", lambda t: once(t,

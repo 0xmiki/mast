@@ -283,6 +283,18 @@ p.go("chrome://extensions", 3)
 shot("27-extensions")
 p.go("https://chromewebstore.google.com/detail/ddkjiahejlhfcafbddmgiahcphecmpfh", 7)
 shot("28-webstore-item", settle=2)
+# Tab groups (design C22 A): the first tab grouped from its context menu and named "hi";
+# its header pill and lane, next to an ungrouped tab.
+p.go("chrome://newtab")
+keys("ctrl+t")
+time.sleep(1)
+subprocess.run(["xdotool", "mousemove", "120", "20", "click", "3"])
+time.sleep(1)
+keys("Down", "Down", "Return")  # "Add tab to new group"
+time.sleep(1.5)
+keys(text="hi")
+keys("Return")
+shot("29-tab-group", settle=1.5)
 p.go("chrome://newtab")
 p.js("chrome.send('setPalette', ['onyx']); chrome.send('clearWallpaper')")
 time.sleep(1)

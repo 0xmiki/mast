@@ -249,6 +249,25 @@ diff -ruN a/chrome/browser/ui/views/omnibox/omnibox_popup_presenter_base.cc b/ch
  
      widget_bounds.Inset(
          -RoundedOmniboxResultsFrame::GetLocationBarAlignmentInsets());
+diff -ruN a/chrome/browser/ui/views/tabs/BUILD.gn b/chrome/browser/ui/views/tabs/BUILD.gn
+--- a/chrome/browser/ui/views/tabs/BUILD.gn
++++ b/chrome/browser/ui/views/tabs/BUILD.gn
+@@ -89,6 +89,7 @@
+   ]
+ 
+   deps = [
++    "//mast/common",
+     ":base",
+     ":tab",
+     ":tab_group",
+@@ -210,6 +211,7 @@
+   ]
+ 
+   deps = [
++    "//mast/common",
+     ":base",
+     ":tab",
+     ":tab_container",
 diff -ruN a/chrome/browser/ui/views/tabs/common/BUILD.gn b/chrome/browser/ui/views/tabs/common/BUILD.gn
 --- a/chrome/browser/ui/views/tabs/common/BUILD.gn
 +++ b/chrome/browser/ui/views/tabs/common/BUILD.gn
@@ -295,7 +314,18 @@ diff -ruN a/chrome/browser/ui/views/tabs/common/horizontal_tab_style_views.cc b/
      const int bottom = top + tab_height;
  
      BrowserFrameView* const browser_frame_view =
-@@ -861,6 +870,9 @@
+@@ -766,7 +775,9 @@
+                 widget->ShouldPaintAsActive() ? kColorTabStrokeFrameActive
+                                               : kColorTabStrokeFrameInactive);
+ 
+-  PaintBackgroundStroke(canvas, group_color.value_or(tab_stroke_color));
++  PaintBackgroundStroke(canvas, mast::IsOneRowWindow()
++                                    ? tab_stroke_color
++                                    : group_color.value_or(tab_stroke_color));
+   PaintSeparators(canvas);
+ }
+ 
+@@ -861,6 +872,9 @@
  }
  
  void HorizontalTabStyleViews::PaintSeparators(gfx::Canvas* canvas) const {
@@ -305,3 +335,148 @@ diff -ruN a/chrome/browser/ui/views/tabs/common/horizontal_tab_style_views.cc b/
    const auto separator_opacities = GetSeparatorOpacities(false);
    if (!separator_opacities.left && !separator_opacities.right) {
      return;
+diff -ruN a/chrome/browser/ui/views/tabs/tab_group_header.cc b/chrome/browser/ui/views/tabs/tab_group_header.cc
+--- a/chrome/browser/ui/views/tabs/tab_group_header.cc
++++ b/chrome/browser/ui/views/tabs/tab_group_header.cc
+@@ -25,6 +25,7 @@
+ #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
+ #include "chrome/browser/ui/color/chrome_color_id.h"
+ #include "chrome/browser/ui/layout_constants.h"
++#include "mast/common/mast_features.h"
+ #include "chrome/browser/ui/tabs/saved_tab_groups/saved_tab_group_utils.h"
+ #include "chrome/browser/ui/tabs/tab_group_attention_indicator.h"
+ #include "chrome/browser/ui/tabs/tab_group_data.h"
+@@ -602,10 +603,17 @@
+ }
+ 
+ int TabGroupHeader::GetChipHeight() const {
++  if (mast::IsOneRowWindow()) {  // Mast: as tall as the tab pills
++    return GetLayoutConstant(LayoutConstant::kTabHeight) -
++           2 * mast::kOneRowTabPillInset;
++  }
+   return TabGroupStyle::GetEmptyChipSize();
+ }
+ 
+ int TabGroupHeader::GetChipY() const {
++  if (mast::IsOneRowWindow()) {
++    return mast::kOneRowTabPillInset;
++  }
+   return TabGroupStyle::GetTitleChipOffset(std::nullopt).y();
+ }
+ 
+@@ -659,7 +667,9 @@
+           frame_active ? ui::kColorSysOnSurfacePrimary
+                        : ui::kColorSysOnSurfacePrimaryInactive));
+     } else {
+-      title_->SetEnabledColor(color_utils::GetColorWithMaxContrast(color_));
++      title_->SetEnabledColor(mast::IsOneRowWindow()
++                                  ? color_
++                                  : color_utils::GetColorWithMaxContrast(color_));
+     }
+   }
+ }
+@@ -712,6 +722,14 @@
+ 
+   title_chip_->SetBounds(empty_origin.x(), chip_y, empty_width, chip_height);
+   title_chip_->SetBackground(group_style_->GetEmptyTitleChipBackground(color_));
++  if (mast::IsOneRowWindow()) {
++    // Mast: an unnamed group is a dot of its colour, centred in the row.
++    constexpr int kDot = 12;
++    title_chip_->SetBounds(empty_origin.x() + (empty_width - kDot) / 2,
++                           chip_y + (chip_height - kDot) / 2, kDot, kDot);
++    title_chip_->SetBackground(
++        views::CreateRoundedRectBackground(color_, kDot / 2));
++  }
+ 
+   const int sync_icon_width = group_style_->GetSyncIconWidth();
+ 
+@@ -801,8 +819,10 @@
+   const int corner_radius = TabGroupStyle::GetChipCornerRadius();
+   title_chip_->SetBounds(named_origin.x(), chip_y, title_chip_width,
+                          chip_height);
+-  title_chip_->SetBackground(
+-      views::CreateRoundedRectBackground(color_, corner_radius));
++  // Mast: a pill tinted with the group's colour (its name is in that colour).
++  title_chip_->SetBackground(views::CreateRoundedRectBackground(
++      mast::IsOneRowWindow() ? SkColorSetA(color_, 0x40) : color_,
++      mast::IsOneRowWindow() ? 8 : corner_radius));
+ 
+   // Set the bounds of the sync icon first, followed by the title.
+   const int start_of_sync_icon = title_chip_insets.left();
+diff -ruN a/chrome/browser/ui/views/tabs/tab_group_underline.cc b/chrome/browser/ui/views/tabs/tab_group_underline.cc
+--- a/chrome/browser/ui/views/tabs/tab_group_underline.cc
++++ b/chrome/browser/ui/views/tabs/tab_group_underline.cc
+@@ -11,6 +11,9 @@
+ #include "chrome/browser/ui/views/tabs/tab_group_header.h"
+ #include "chrome/browser/ui/views/tabs/tab_group_style_views.h"
+ #include "chrome/browser/ui/views/tabs/tab_group_views.h"
++#include "mast/common/mast_features.h"
++
++#include <algorithm>
+ #include "components/tab_groups/tab_group_id.h"
+ #include "ui/base/metadata/metadata_impl_macros.h"
+ #include "ui/gfx/canvas.h"
+@@ -61,6 +64,14 @@
+ }
+ 
+ void TabGroupUnderline::OnPaint(gfx::Canvas* canvas) {
++  if (mast::IsOneRowWindow()) {
++    // Mast: the group's lane, a faint pill of its colour behind its tabs.
++    cc::PaintFlags lane;
++    lane.setAntiAlias(true);
++    lane.setColor(SkColorSetA(tab_group_views_->GetGroupColor(), 0x24));
++    canvas->DrawRoundRect(GetLocalBounds(), 10, lane);
++    return;
++  }
+   SkPath path = style_->GetUnderlinePath(GetLocalBounds());
+   cc::PaintFlags flags;
+   flags.setAntiAlias(true);
+@@ -99,6 +110,27 @@
+     const views::View* const underline_view,
+     const views::View* const leading_view,
+     const views::View* const trailing_view) const {
++  if (mast::IsOneRowWindow()) {
++    // Mast: the lane wraps the header pill and the tab pills, 3px around
++    // them (tab pills are inset by the bottom corner radius at the sides and
++    // kOneRowTabPillInset above and below).
++    const gfx::Rect leading = ToEnclosingRect(views::View::ConvertRectToTarget(
++        leading_view->parent(), underline_view->parent(),
++        gfx::RectF(leading_view->bounds())));
++    const gfx::Rect trailing = ToEnclosingRect(views::View::ConvertRectToTarget(
++        trailing_view->parent(), underline_view->parent(),
++        gfx::RectF(trailing_view->bounds())));
++    const int side = TabStyle::Get()->GetBottomCornerRadius();
++    const int left =
++        leading.x() - 3 +
++        (views::IsViewClass<TabGroupHeader>(leading_view)
++             ? TabGroupStyle::GetTitleChipOffset(std::nullopt).x()
++             : side);
++    const int right = trailing.right() + 3 - side;
++    const int inset = mast::kOneRowTabPillInset - 3;
++    return gfx::Rect(left, leading.y() + inset, std::max(0, right - left),
++                     std::max(0, leading.height() - 2 * inset));
++  }
+   gfx::RectF leading_bounds = views::View::ConvertRectToTarget(
+       leading_view->parent(), underline_view->parent(),
+       gfx::RectF(leading_view->bounds()));
+diff -ruN a/chrome/browser/ui/views/tabs/z_orderable_tab_container_element.cc b/chrome/browser/ui/views/tabs/z_orderable_tab_container_element.cc
+--- a/chrome/browser/ui/views/tabs/z_orderable_tab_container_element.cc
++++ b/chrome/browser/ui/views/tabs/z_orderable_tab_container_element.cc
+@@ -12,6 +12,7 @@
+ #include "chrome/browser/ui/views/tabs/tab_group_highlight.h"
+ #include "chrome/browser/ui/views/tabs/tab_group_underline.h"
+ #include "chrome/browser/ui/views/tabs/tab_style_views.h"
++#include "mast/common/mast_features.h"
+ #include "ui/views/view_utils.h"
+ 
+ // static
+@@ -51,7 +52,8 @@
+   }
+ 
+   // Group headers and underlines are painted above non-active tabs.
+-  if (header || underline) {
++  // Mast: in one row the underline is the group's lane, below every tab.
++  if (header || (underline && !mast::IsOneRowWindow())) {
+     z_value |= kGroupView;
+   }
+ 
