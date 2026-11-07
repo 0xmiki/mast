@@ -40,7 +40,7 @@ const mock = `<script>
     desktop: ${JSON.stringify(sites)}, desktopReady: true, widgets: ['clock', 'distractions'] };
   const palettes = ${JSON.stringify(palettes)};
   s.palettes = palettes.map(({ css, ...p }) => p);
-  s.theme = { palette: 'onyx', css: palettes[0].css, wallpaper: 0, tone: 'dark', tabBar: 'picture' };
+  s.theme = { palette: 'onyx', css: palettes[0].css, wallpaper: 0, tone: 'dark', tabBar: 'site' };
   window.__wallUrl = '';
   if (location.hash === '#blocked') for (const c of cats) if (s.distractions.includes(c.id)) for (const v of c.services) for (const d of v.domains) s.blocks[d] = { since: Date.now() - H, until: midnight() };
   if (location.hash === '#empty') s.desktop = [];

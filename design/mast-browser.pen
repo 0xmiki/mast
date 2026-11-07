@@ -41069,6 +41069,2105 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "QWFW5",
+      "x": 30100,
+      "y": 4227,
+      "name": "C23d Match site preview — options",
+      "theme": {
+        "palette": "onyx"
+      },
+      "width": 1340,
+      "fill": "#0c0c0c",
+      "cornerRadius": 16,
+      "gap": 32,
+      "padding": 40,
+      "children": [
+        {
+          "type": "frame",
+          "id": "z3PKYz",
+          "name": "A · Three sites",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 14,
+          "children": [
+            {
+              "type": "text",
+              "id": "VzBPV",
+              "name": "Option",
+              "fill": "#ededed",
+              "content": "A · Three sites",
+              "fontFamily": "$font",
+              "fontSize": 15,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "R4mRQ",
+              "name": "Note",
+              "fill": "#9a9a9a",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Three windows on three different sites, each tab bar the same colour as its page. Reads as \"it changes per site\".",
+              "lineHeight": 1.45,
+              "fontFamily": "$font",
+              "fontSize": 12
+            },
+            {
+              "type": "frame",
+              "id": "krHj5",
+              "name": "Section",
+              "width": "fill_container",
+              "fill": "$chrome-2",
+              "cornerRadius": 12,
+              "stroke": "$line",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 10,
+              "padding": 20,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "PTUdM",
+                  "name": "Label",
+                  "fill": "$text-2",
+                  "content": "Tab bar on websites",
+                  "fontFamily": "$font",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "CPztP",
+                  "name": "Choices",
+                  "width": "fill_container",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "AVIHp",
+                      "name": "Picture",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 7,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "VyXAu",
+                          "name": "Preview",
+                          "clip": true,
+                          "width": "fill_container",
+                          "height": 66,
+                          "cornerRadius": 7,
+                          "stroke": "#2a2a2a",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "e9R4V",
+                              "name": "Window",
+                              "clip": true,
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "fill": "#f6f5f2",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "Z6DHDY",
+                                  "name": "Tab bar",
+                                  "width": "fill_container",
+                                  "height": 16,
+                                  "fill": {
+                                    "type": "image",
+                                    "enabled": true,
+                                    "url": "assets/trident.jpg",
+                                    "mode": "cover"
+                                  },
+                                  "gap": 4,
+                                  "padding": [
+                                    0,
+                                    5
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "RcpPR",
+                                      "name": "Active tab",
+                                      "width": 24,
+                                      "height": 9,
+                                      "fill": "#ffffff2e",
+                                      "cornerRadius": 3,
+                                      "padding": [
+                                        0,
+                                        4
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "rectangle",
+                                          "cornerRadius": 1,
+                                          "id": "GN81Z",
+                                          "name": "Title",
+                                          "fill": "#ffffffb3",
+                                          "width": 12,
+                                          "height": 2
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "A8KLZ",
+                                      "name": "Tab",
+                                      "fill": "#ffffff66",
+                                      "width": 10,
+                                      "height": 2
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "ukkBO",
+                                  "name": "Page",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "padding": [
+                                    6,
+                                    10
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "M1ar2",
+                                      "name": "Line",
+                                      "fill": "#1d1b1833",
+                                      "width": 44,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "eZrUS",
+                                      "name": "Line",
+                                      "fill": "#1d1b1833",
+                                      "width": 58,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "SUMK3",
+                                      "name": "Line",
+                                      "fill": "#1d1b1833",
+                                      "width": 34,
+                                      "height": 3
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "SXR3K",
+                          "name": "Label",
+                          "fill": "$text-2",
+                          "content": "Picture",
+                          "fontFamily": "$font",
+                          "fontSize": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "vbwzG",
+                      "name": "Theme",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 7,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "T5itqg",
+                          "name": "Preview",
+                          "clip": true,
+                          "width": "fill_container",
+                          "height": 66,
+                          "cornerRadius": 7,
+                          "stroke": "#2a2a2a",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "o9T6OM",
+                              "name": "Window",
+                              "clip": true,
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "fill": "#f6f5f2",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "RlkGh",
+                                  "name": "Tab bar",
+                                  "width": "fill_container",
+                                  "height": 16,
+                                  "fill": "#070707",
+                                  "gap": 4,
+                                  "padding": [
+                                    0,
+                                    5
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "lwZ6o",
+                                      "name": "Active tab",
+                                      "width": 24,
+                                      "height": 9,
+                                      "fill": "#ffffff2e",
+                                      "cornerRadius": 3,
+                                      "padding": [
+                                        0,
+                                        4
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "rectangle",
+                                          "cornerRadius": 1,
+                                          "id": "ruzO4",
+                                          "name": "Title",
+                                          "fill": "#ffffffb3",
+                                          "width": 12,
+                                          "height": 2
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "M3QR6",
+                                      "name": "Tab",
+                                      "fill": "#ffffff66",
+                                      "width": 10,
+                                      "height": 2
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "JhxyJ",
+                                  "name": "Page",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "padding": [
+                                    6,
+                                    10
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "rheLu",
+                                      "name": "Line",
+                                      "fill": "#1d1b1833",
+                                      "width": 44,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "rO7Ci",
+                                      "name": "Line",
+                                      "fill": "#1d1b1833",
+                                      "width": 58,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "JXXJg",
+                                      "name": "Line",
+                                      "fill": "#1d1b1833",
+                                      "width": 34,
+                                      "height": 3
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "ImoDG",
+                          "name": "Label",
+                          "fill": "$text-2",
+                          "content": "Theme",
+                          "fontFamily": "$font",
+                          "fontSize": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "KLbro",
+                      "name": "Match site",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 7,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "AveiW",
+                          "name": "Preview",
+                          "clip": true,
+                          "width": "fill_container",
+                          "height": 66,
+                          "fill": "#1a1a1a",
+                          "cornerRadius": 7,
+                          "stroke": "$text",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "inner",
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "duLDw",
+                              "layoutPosition": "absolute",
+                              "x": 40,
+                              "y": 4,
+                              "name": "Site 1",
+                              "clip": true,
+                              "width": 64,
+                              "height": 44,
+                              "fill": "#16243a",
+                              "cornerRadius": 4,
+                              "stroke": "#00000040",
+                              "strokeWidth": 1,
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "#00000066",
+                                "offset": {
+                                  "x": 0,
+                                  "y": 2
+                                },
+                                "blur": 6
+                              },
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "j6Yms",
+                                  "name": "Tab bar",
+                                  "width": "fill_container",
+                                  "height": 11,
+                                  "fill": "#16243a",
+                                  "gap": 4,
+                                  "padding": [
+                                    0,
+                                    5
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "K5QqSC",
+                                      "name": "Active tab",
+                                      "width": 18,
+                                      "height": 9,
+                                      "fill": "#ffffff2e",
+                                      "cornerRadius": 3,
+                                      "padding": [
+                                        0,
+                                        4
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "rectangle",
+                                          "cornerRadius": 1,
+                                          "id": "DraWt",
+                                          "name": "Title",
+                                          "fill": "#ffffffb3",
+                                          "width": 6,
+                                          "height": 2
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "Pxgey",
+                                      "name": "Tab",
+                                      "fill": "#ffffff66",
+                                      "width": 10,
+                                      "height": 2
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "gadmo",
+                                  "name": "Page",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "padding": [
+                                    6,
+                                    7
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "YikR5",
+                                      "name": "Line",
+                                      "fill": "#ffffff33",
+                                      "width": 28,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "pnRfP",
+                                      "name": "Line",
+                                      "fill": "#ffffff33",
+                                      "width": 36,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "OV21I",
+                                      "name": "Line",
+                                      "fill": "#ffffff33",
+                                      "width": 20,
+                                      "height": 3
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "ZBUoe",
+                              "layoutPosition": "absolute",
+                              "x": 24,
+                              "y": 14,
+                              "name": "Site 2",
+                              "clip": true,
+                              "width": 64,
+                              "height": 44,
+                              "fill": "#1f3d2e",
+                              "cornerRadius": 4,
+                              "stroke": "#00000040",
+                              "strokeWidth": 1,
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "#00000066",
+                                "offset": {
+                                  "x": 0,
+                                  "y": 2
+                                },
+                                "blur": 6
+                              },
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "z0FvlM",
+                                  "name": "Tab bar",
+                                  "width": "fill_container",
+                                  "height": 11,
+                                  "fill": "#1f3d2e",
+                                  "gap": 4,
+                                  "padding": [
+                                    0,
+                                    5
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "cdMHd",
+                                      "name": "Active tab",
+                                      "width": 18,
+                                      "height": 9,
+                                      "fill": "#ffffff2e",
+                                      "cornerRadius": 3,
+                                      "padding": [
+                                        0,
+                                        4
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "rectangle",
+                                          "cornerRadius": 1,
+                                          "id": "sk2RV",
+                                          "name": "Title",
+                                          "fill": "#ffffffb3",
+                                          "width": 6,
+                                          "height": 2
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "sK4AJ",
+                                      "name": "Tab",
+                                      "fill": "#ffffff66",
+                                      "width": 10,
+                                      "height": 2
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "EqZJl",
+                                  "name": "Page",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "padding": [
+                                    6,
+                                    7
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "ITVPP",
+                                      "name": "Line",
+                                      "fill": "#ffffff33",
+                                      "width": 28,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "NJj52",
+                                      "name": "Line",
+                                      "fill": "#ffffff33",
+                                      "width": 36,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "t0SVQK",
+                                      "name": "Line",
+                                      "fill": "#ffffff33",
+                                      "width": 20,
+                                      "height": 3
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "bFXu4",
+                              "layoutPosition": "absolute",
+                              "x": 8,
+                              "y": 24,
+                              "name": "Site 3",
+                              "clip": true,
+                              "width": 64,
+                              "height": 44,
+                              "fill": "#f6f5f2",
+                              "cornerRadius": 4,
+                              "stroke": "#00000040",
+                              "strokeWidth": 1,
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "#00000066",
+                                "offset": {
+                                  "x": 0,
+                                  "y": 2
+                                },
+                                "blur": 6
+                              },
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "OuQ2r",
+                                  "name": "Tab bar",
+                                  "width": "fill_container",
+                                  "height": 11,
+                                  "fill": "#f6f5f2",
+                                  "gap": 4,
+                                  "padding": [
+                                    0,
+                                    5
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "Z5gPc3",
+                                      "name": "Active tab",
+                                      "width": 18,
+                                      "height": 9,
+                                      "fill": "#1d1b1814",
+                                      "cornerRadius": 3,
+                                      "padding": [
+                                        0,
+                                        4
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "rectangle",
+                                          "cornerRadius": 1,
+                                          "id": "GlCSs",
+                                          "name": "Title",
+                                          "fill": "#1d1b18b3",
+                                          "width": 6,
+                                          "height": 2
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "hnU2B",
+                                      "name": "Tab",
+                                      "fill": "#1d1b1866",
+                                      "width": 10,
+                                      "height": 2
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "r7o41H",
+                                  "name": "Page",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "padding": [
+                                    6,
+                                    7
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "e7ScTX",
+                                      "name": "Line",
+                                      "fill": "#1d1b1833",
+                                      "width": 28,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "Ck9OF",
+                                      "name": "Line",
+                                      "fill": "#1d1b1833",
+                                      "width": 36,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "c6Eif",
+                                      "name": "Line",
+                                      "fill": "#1d1b1833",
+                                      "width": 20,
+                                      "height": 3
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "yfCOM",
+                          "name": "Label",
+                          "fill": "$text",
+                          "content": "Match site",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "QZ5iY",
+                  "name": "Hint",
+                  "fill": "$text-3",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "The tab bar takes each website's own color, so the site runs up to the top.",
+                  "lineHeight": 1.45,
+                  "fontFamily": "$font",
+                  "fontSize": 12
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "OPET1",
+          "name": "B · Slices",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 14,
+          "children": [
+            {
+              "type": "text",
+              "id": "UP9Yi",
+              "name": "Option",
+              "fill": "#ededed",
+              "content": "B · Slices",
+              "fontFamily": "$font",
+              "fontSize": 15,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "UEZNK",
+              "name": "Note",
+              "fill": "#9a9a9a",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "One window cut into three sites. Each slice's tab bar continues straight into its page, with no line between them.",
+              "lineHeight": 1.45,
+              "fontFamily": "$font",
+              "fontSize": 12
+            },
+            {
+              "type": "frame",
+              "id": "GMItm",
+              "name": "Section",
+              "width": "fill_container",
+              "fill": "$chrome-2",
+              "cornerRadius": 12,
+              "stroke": "$line",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 10,
+              "padding": 20,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "GvD8F",
+                  "name": "Label",
+                  "fill": "$text-2",
+                  "content": "Tab bar on websites",
+                  "fontFamily": "$font",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "Y98bu",
+                  "name": "Choices",
+                  "width": "fill_container",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "eXS0A",
+                      "name": "Picture",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 7,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "rxAqb",
+                          "name": "Preview",
+                          "clip": true,
+                          "width": "fill_container",
+                          "height": 66,
+                          "cornerRadius": 7,
+                          "stroke": "#2a2a2a",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "repW1",
+                              "name": "Window",
+                              "clip": true,
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "fill": "#f6f5f2",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "YKAMF",
+                                  "name": "Tab bar",
+                                  "width": "fill_container",
+                                  "height": 16,
+                                  "fill": {
+                                    "type": "image",
+                                    "enabled": true,
+                                    "url": "assets/trident.jpg",
+                                    "mode": "cover"
+                                  },
+                                  "gap": 4,
+                                  "padding": [
+                                    0,
+                                    5
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "w0mlnf",
+                                      "name": "Active tab",
+                                      "width": 24,
+                                      "height": 9,
+                                      "fill": "#ffffff2e",
+                                      "cornerRadius": 3,
+                                      "padding": [
+                                        0,
+                                        4
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "rectangle",
+                                          "cornerRadius": 1,
+                                          "id": "v5GVW",
+                                          "name": "Title",
+                                          "fill": "#ffffffb3",
+                                          "width": 12,
+                                          "height": 2
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "ScwfN",
+                                      "name": "Tab",
+                                      "fill": "#ffffff66",
+                                      "width": 10,
+                                      "height": 2
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "lGm6G",
+                                  "name": "Page",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "padding": [
+                                    6,
+                                    10
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "jE6Af",
+                                      "name": "Line",
+                                      "fill": "#1d1b1833",
+                                      "width": 44,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "X8AyMi",
+                                      "name": "Line",
+                                      "fill": "#1d1b1833",
+                                      "width": 58,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "muanq",
+                                      "name": "Line",
+                                      "fill": "#1d1b1833",
+                                      "width": 34,
+                                      "height": 3
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "qcLzS",
+                          "name": "Label",
+                          "fill": "$text-2",
+                          "content": "Picture",
+                          "fontFamily": "$font",
+                          "fontSize": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "YVJmq",
+                      "name": "Theme",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 7,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "QMC03",
+                          "name": "Preview",
+                          "clip": true,
+                          "width": "fill_container",
+                          "height": 66,
+                          "cornerRadius": 7,
+                          "stroke": "#2a2a2a",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "B2ovv",
+                              "name": "Window",
+                              "clip": true,
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "fill": "#f6f5f2",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "Rm30R",
+                                  "name": "Tab bar",
+                                  "width": "fill_container",
+                                  "height": 16,
+                                  "fill": "#070707",
+                                  "gap": 4,
+                                  "padding": [
+                                    0,
+                                    5
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "IqY8U",
+                                      "name": "Active tab",
+                                      "width": 24,
+                                      "height": 9,
+                                      "fill": "#ffffff2e",
+                                      "cornerRadius": 3,
+                                      "padding": [
+                                        0,
+                                        4
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "rectangle",
+                                          "cornerRadius": 1,
+                                          "id": "Pl9ht",
+                                          "name": "Title",
+                                          "fill": "#ffffffb3",
+                                          "width": 12,
+                                          "height": 2
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "T4pv5",
+                                      "name": "Tab",
+                                      "fill": "#ffffff66",
+                                      "width": 10,
+                                      "height": 2
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "zCQYQ",
+                                  "name": "Page",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "padding": [
+                                    6,
+                                    10
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "P3Be3",
+                                      "name": "Line",
+                                      "fill": "#1d1b1833",
+                                      "width": 44,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "G8HWj",
+                                      "name": "Line",
+                                      "fill": "#1d1b1833",
+                                      "width": 58,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "jLQ7m",
+                                      "name": "Line",
+                                      "fill": "#1d1b1833",
+                                      "width": 34,
+                                      "height": 3
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "AfrnK",
+                          "name": "Label",
+                          "fill": "$text-2",
+                          "content": "Theme",
+                          "fontFamily": "$font",
+                          "fontSize": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hwvm0",
+                      "name": "Match site",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 7,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "ZIc3p",
+                          "name": "Preview",
+                          "clip": true,
+                          "width": "fill_container",
+                          "height": 66,
+                          "cornerRadius": 7,
+                          "stroke": "$text",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "inner",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "j5GLg",
+                              "name": "Slice 1",
+                              "clip": true,
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "fill": "#f6f5f2",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "Nhg34",
+                                  "name": "Tab bar",
+                                  "width": "fill_container",
+                                  "height": 16,
+                                  "fill": "#f6f5f2",
+                                  "gap": 4,
+                                  "padding": [
+                                    0,
+                                    5
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "SZvD6",
+                                      "name": "Active tab",
+                                      "width": 16,
+                                      "height": 9,
+                                      "fill": "#1d1b1814",
+                                      "cornerRadius": 3,
+                                      "padding": [
+                                        0,
+                                        4
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "rectangle",
+                                          "cornerRadius": 1,
+                                          "id": "jCFkV",
+                                          "name": "Title",
+                                          "fill": "#1d1b18b3",
+                                          "width": 4,
+                                          "height": 2
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "iPuWx",
+                                      "name": "Tab",
+                                      "fill": "#1d1b1866",
+                                      "width": 10,
+                                      "height": 2
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "UiIt6",
+                                  "name": "Page",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "padding": 6,
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "FFUvO",
+                                      "name": "Line",
+                                      "fill": "#1d1b1833",
+                                      "width": 18,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "yzVOG",
+                                      "name": "Line",
+                                      "fill": "#1d1b1833",
+                                      "width": 24,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "fVfmw",
+                                      "name": "Line",
+                                      "fill": "#1d1b1833",
+                                      "width": 12,
+                                      "height": 3
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "FnMAB",
+                              "name": "Slice 2",
+                              "clip": true,
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "fill": "#16243a",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "hHuNw",
+                                  "name": "Tab bar",
+                                  "width": "fill_container",
+                                  "height": 16,
+                                  "fill": "#16243a",
+                                  "gap": 4,
+                                  "padding": [
+                                    0,
+                                    5
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "QqivQ",
+                                      "name": "Active tab",
+                                      "width": 16,
+                                      "height": 9,
+                                      "fill": "#ffffff2e",
+                                      "cornerRadius": 3,
+                                      "padding": [
+                                        0,
+                                        4
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "rectangle",
+                                          "cornerRadius": 1,
+                                          "id": "auSRf",
+                                          "name": "Title",
+                                          "fill": "#ffffffb3",
+                                          "width": 4,
+                                          "height": 2
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "S4NCU",
+                                      "name": "Tab",
+                                      "fill": "#ffffff66",
+                                      "width": 10,
+                                      "height": 2
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "KlXNe",
+                                  "name": "Page",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "padding": 6,
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "klvhR",
+                                      "name": "Line",
+                                      "fill": "#ffffff33",
+                                      "width": 18,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "nPHsT",
+                                      "name": "Line",
+                                      "fill": "#ffffff33",
+                                      "width": 24,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "w3qxc5",
+                                      "name": "Line",
+                                      "fill": "#ffffff33",
+                                      "width": 12,
+                                      "height": 3
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Vn5mq",
+                              "name": "Slice 3",
+                              "clip": true,
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "fill": "#1f3d2e",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "e2eGa",
+                                  "name": "Tab bar",
+                                  "width": "fill_container",
+                                  "height": 16,
+                                  "fill": "#1f3d2e",
+                                  "gap": 4,
+                                  "padding": [
+                                    0,
+                                    5
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "nZvPP",
+                                      "name": "Active tab",
+                                      "width": 16,
+                                      "height": 9,
+                                      "fill": "#ffffff2e",
+                                      "cornerRadius": 3,
+                                      "padding": [
+                                        0,
+                                        4
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "rectangle",
+                                          "cornerRadius": 1,
+                                          "id": "dczAU",
+                                          "name": "Title",
+                                          "fill": "#ffffffb3",
+                                          "width": 4,
+                                          "height": 2
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "frY1B",
+                                      "name": "Tab",
+                                      "fill": "#ffffff66",
+                                      "width": 10,
+                                      "height": 2
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "S2ROmA",
+                                  "name": "Page",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "padding": 6,
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "uru6I",
+                                      "name": "Line",
+                                      "fill": "#ffffff33",
+                                      "width": 18,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "TsXQY",
+                                      "name": "Line",
+                                      "fill": "#ffffff33",
+                                      "width": 24,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "B9Z6GF",
+                                      "name": "Line",
+                                      "fill": "#ffffff33",
+                                      "width": 12,
+                                      "height": 3
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "yoOTY",
+                          "name": "Label",
+                          "fill": "$text",
+                          "content": "Match site",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "mjj9w",
+                  "name": "Hint",
+                  "fill": "$text-3",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "The tab bar takes each website's own color, so the site runs up to the top.",
+                  "lineHeight": 1.45,
+                  "fontFamily": "$font",
+                  "fontSize": 12
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "e0vj7L",
+          "name": "C · Before → after",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 14,
+          "children": [
+            {
+              "type": "text",
+              "id": "DZPiA",
+              "name": "Option",
+              "fill": "#ededed",
+              "content": "C · Before → after",
+              "fontFamily": "$font",
+              "fontSize": 15,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "e4Cvfa",
+              "name": "Note",
+              "fill": "#9a9a9a",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "The same colourful site twice: the plain theme bar on the left, then the bar taking the site's colour. Shows what \"match\" does.",
+              "lineHeight": 1.45,
+              "fontFamily": "$font",
+              "fontSize": 12
+            },
+            {
+              "type": "frame",
+              "id": "JjQ5i",
+              "name": "Section",
+              "width": "fill_container",
+              "fill": "$chrome-2",
+              "cornerRadius": 12,
+              "stroke": "$line",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 10,
+              "padding": 20,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "g8N2Tp",
+                  "name": "Label",
+                  "fill": "$text-2",
+                  "content": "Tab bar on websites",
+                  "fontFamily": "$font",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "IHqAl",
+                  "name": "Choices",
+                  "width": "fill_container",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "rG4VV",
+                      "name": "Picture",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 7,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "nqWGW",
+                          "name": "Preview",
+                          "clip": true,
+                          "width": "fill_container",
+                          "height": 66,
+                          "cornerRadius": 7,
+                          "stroke": "#2a2a2a",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "hTgkZ",
+                              "name": "Window",
+                              "clip": true,
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "fill": "#f6f5f2",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "nUdQz",
+                                  "name": "Tab bar",
+                                  "width": "fill_container",
+                                  "height": 16,
+                                  "fill": {
+                                    "type": "image",
+                                    "enabled": true,
+                                    "url": "assets/trident.jpg",
+                                    "mode": "cover"
+                                  },
+                                  "gap": 4,
+                                  "padding": [
+                                    0,
+                                    5
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "J91e0Y",
+                                      "name": "Active tab",
+                                      "width": 24,
+                                      "height": 9,
+                                      "fill": "#ffffff2e",
+                                      "cornerRadius": 3,
+                                      "padding": [
+                                        0,
+                                        4
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "rectangle",
+                                          "cornerRadius": 1,
+                                          "id": "ihCGk",
+                                          "name": "Title",
+                                          "fill": "#ffffffb3",
+                                          "width": 12,
+                                          "height": 2
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "vtSNo",
+                                      "name": "Tab",
+                                      "fill": "#ffffff66",
+                                      "width": 10,
+                                      "height": 2
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "g6OQl",
+                                  "name": "Page",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "padding": [
+                                    6,
+                                    10
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "q7MMe",
+                                      "name": "Line",
+                                      "fill": "#1d1b1833",
+                                      "width": 44,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "e904Z",
+                                      "name": "Line",
+                                      "fill": "#1d1b1833",
+                                      "width": 58,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "KrFgm",
+                                      "name": "Line",
+                                      "fill": "#1d1b1833",
+                                      "width": 34,
+                                      "height": 3
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "DCAXb",
+                          "name": "Label",
+                          "fill": "$text-2",
+                          "content": "Picture",
+                          "fontFamily": "$font",
+                          "fontSize": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "b9GIlg",
+                      "name": "Theme",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 7,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "hOBrk",
+                          "name": "Preview",
+                          "clip": true,
+                          "width": "fill_container",
+                          "height": 66,
+                          "cornerRadius": 7,
+                          "stroke": "#2a2a2a",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "U8cQh4",
+                              "name": "Window",
+                              "clip": true,
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "fill": "#f6f5f2",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "BSoFy",
+                                  "name": "Tab bar",
+                                  "width": "fill_container",
+                                  "height": 16,
+                                  "fill": "#070707",
+                                  "gap": 4,
+                                  "padding": [
+                                    0,
+                                    5
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "kbHd0",
+                                      "name": "Active tab",
+                                      "width": 24,
+                                      "height": 9,
+                                      "fill": "#ffffff2e",
+                                      "cornerRadius": 3,
+                                      "padding": [
+                                        0,
+                                        4
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "rectangle",
+                                          "cornerRadius": 1,
+                                          "id": "us1tL",
+                                          "name": "Title",
+                                          "fill": "#ffffffb3",
+                                          "width": 12,
+                                          "height": 2
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "sOaCj",
+                                      "name": "Tab",
+                                      "fill": "#ffffff66",
+                                      "width": 10,
+                                      "height": 2
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "Mfnns",
+                                  "name": "Page",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "padding": [
+                                    6,
+                                    10
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "MbLUE",
+                                      "name": "Line",
+                                      "fill": "#1d1b1833",
+                                      "width": 44,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "ppf69",
+                                      "name": "Line",
+                                      "fill": "#1d1b1833",
+                                      "width": 58,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "M5qau6",
+                                      "name": "Line",
+                                      "fill": "#1d1b1833",
+                                      "width": 34,
+                                      "height": 3
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "adJla",
+                          "name": "Label",
+                          "fill": "$text-2",
+                          "content": "Theme",
+                          "fontFamily": "$font",
+                          "fontSize": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "v9wdV",
+                      "name": "Match site",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 7,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Ts16b",
+                          "name": "Preview",
+                          "clip": true,
+                          "width": "fill_container",
+                          "height": 66,
+                          "cornerRadius": 7,
+                          "stroke": "$text",
+                          "strokeWidth": 2,
+                          "strokeAlignment": "inner",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "peOGl",
+                              "name": "Before",
+                              "opacity": 0.55,
+                              "clip": true,
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "fill": "#16243a",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "N9r5xg",
+                                  "name": "Tab bar",
+                                  "width": "fill_container",
+                                  "height": 16,
+                                  "fill": "#070707",
+                                  "gap": 4,
+                                  "padding": [
+                                    0,
+                                    5
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "cgrcx",
+                                      "name": "Active tab",
+                                      "width": 16,
+                                      "height": 9,
+                                      "fill": "#ffffff2e",
+                                      "cornerRadius": 3,
+                                      "padding": [
+                                        0,
+                                        4
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "rectangle",
+                                          "cornerRadius": 1,
+                                          "id": "Q1vvS",
+                                          "name": "Title",
+                                          "fill": "#ffffffb3",
+                                          "width": 4,
+                                          "height": 2
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "MsATU",
+                                      "name": "Tab",
+                                      "fill": "#ffffff66",
+                                      "width": 10,
+                                      "height": 2
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "ONGoH",
+                                  "name": "Page",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "padding": 6,
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "wV2Lv",
+                                      "name": "Line",
+                                      "fill": "#ffffff33",
+                                      "width": 18,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "i4Kp2",
+                                      "name": "Line",
+                                      "fill": "#ffffff33",
+                                      "width": 24,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "WONlG",
+                                      "name": "Line",
+                                      "fill": "#ffffff33",
+                                      "width": 12,
+                                      "height": 3
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Ukiaa",
+                              "name": "After",
+                              "clip": true,
+                              "width": "fill_container",
+                              "height": "fill_container",
+                              "fill": "#16243a",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "uKMH2",
+                                  "name": "Tab bar",
+                                  "width": "fill_container",
+                                  "height": 16,
+                                  "fill": "#16243a",
+                                  "gap": 4,
+                                  "padding": [
+                                    0,
+                                    5
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "f5V4K9",
+                                      "name": "Active tab",
+                                      "width": 16,
+                                      "height": 9,
+                                      "fill": "#ffffff2e",
+                                      "cornerRadius": 3,
+                                      "padding": [
+                                        0,
+                                        4
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "rectangle",
+                                          "cornerRadius": 1,
+                                          "id": "kiOsK",
+                                          "name": "Title",
+                                          "fill": "#ffffffb3",
+                                          "width": 4,
+                                          "height": 2
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1,
+                                      "id": "agNJj",
+                                      "name": "Tab",
+                                      "fill": "#ffffff66",
+                                      "width": 10,
+                                      "height": 2
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "Q0pMfn",
+                                  "name": "Page",
+                                  "width": "fill_container",
+                                  "height": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "padding": 6,
+                                  "children": [
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "gmZAu",
+                                      "name": "Line",
+                                      "fill": "#ffffff33",
+                                      "width": 18,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "A0ceib",
+                                      "name": "Line",
+                                      "fill": "#ffffff33",
+                                      "width": 24,
+                                      "height": 3
+                                    },
+                                    {
+                                      "type": "rectangle",
+                                      "cornerRadius": 1.5,
+                                      "id": "ACxji",
+                                      "name": "Line",
+                                      "fill": "#ffffff33",
+                                      "width": 12,
+                                      "height": 3
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "KVuwo",
+                              "layoutPosition": "absolute",
+                              "x": 44,
+                              "y": 24,
+                              "name": "Arrow",
+                              "width": 16,
+                              "height": 16,
+                              "fill": "#ededed",
+                              "cornerRadius": 8,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "CY3Hn",
+                                  "name": "Icon",
+                                  "width": 11,
+                                  "height": 11,
+                                  "icon": "arrow-right",
+                                  "library": "lucide",
+                                  "fill": "#141414"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "fWz6A",
+                          "name": "Label",
+                          "fill": "$text",
+                          "content": "Match site",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "z4eU8",
+                  "name": "Hint",
+                  "fill": "$text-3",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "The tab bar takes each website's own color, so the site runs up to the top.",
+                  "lineHeight": 1.45,
+                  "fontFamily": "$font",
+                  "fontSize": 12
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {

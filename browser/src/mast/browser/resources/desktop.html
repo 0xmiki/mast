@@ -403,7 +403,7 @@ function renderCustomize() {
     <p class="sub">Light makes text and icons dark, for bright pictures.</p>`;
   // What the tab row shows on websites. "Picture" needs one; without it the
   // row is the palette, as "Theme" (the pref stays, for when a picture comes).
-  const bar = !wallpaper && t.tabBar === 'picture' ? 'theme' : (t.tabBar || 'picture');
+  const bar = !wallpaper && t.tabBar === 'picture' ? 'theme' : (t.tabBar || 'site');
   const mini = (cls, b) => `<span class="mini ${cls}" style="--b:${b}"><span class="tb"><i></i><i></i><i></i></span><span class="pg"><i></i><i></i><i></i></span></span>`;
   const bars = [
     ['picture', 'Picture', mini('', wallpaper ? `url(wallpaper-${wallpaper}.jpg)` : 'linear-gradient(120deg,#5b4a3a,#2c2a33)'), !wallpaper],
