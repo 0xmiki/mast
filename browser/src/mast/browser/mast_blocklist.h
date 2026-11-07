@@ -10,7 +10,8 @@
 namespace mast {
 
 // One thing people block, e.g. "YouTube": every domain that opens it, plus
-// subdomains left open because work depends on them (aws.amazon.com).
+// subdomains left open because work depends on them (aws.amazon.com). A
+// feed's row ("Other gambling sites") has the single domain FeedKey(id).
 struct Service {
   std::string name;
   std::vector<std::string> domains;

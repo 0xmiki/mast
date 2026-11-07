@@ -1,0 +1,2 @@
+# Sites the feeds must never block (false positives). One domain per line; each also
+# covers its subdomains. Domains in blocklist.json win automatically and needn't be here.

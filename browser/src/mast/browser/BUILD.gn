@@ -8,6 +8,8 @@ source_set("browser") {
     "mast_blocklist.h",
     "mast_blocks.cc",
     "mast_blocks.h",
+    "mast_feeds.cc",
+    "mast_feeds.h",
     "mast_navigation_throttle.cc",
     "mast_navigation_throttle.h",
     "mast_page_backdrop.cc",

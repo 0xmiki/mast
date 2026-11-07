@@ -125,7 +125,7 @@ const MastBlocklist = (() => {
         const k = key(c, s);
         return `<li class="${b ? 'is-blocked' : ''}">
           <button class="check ${selected.has(k) ? 'on' : ''}" ${fv ? 'disabled title="Blocked forever"' : ''} data-svc="${esc(k)}" aria-label="Select ${esc(s.name)}">${selected.has(k) ? tick : ''}</button>
-          <span class="svc"><span class="s">${esc(s.name)}</span>${s.custom ? '' : `<span class="d">${esc(s.domains.join(', '))}</span>`}</span>
+          <span class="svc"><span class="s">${esc(s.name)}</span>${s.custom ? '' : `<span class="d">${s.feed ? 'Tens of thousands more, from a maintained list' : esc(s.domains.join(', '))}</span>`}</span>
           ${b ? `<span class="status blocked">${ind(b)}${b.partial ? 'Partly blocked' : b.until === null ? 'Forever' : untilText(b.until)}</span>`
               : `<span class="status">Open</span>`}
           ${s.custom && !b ? `<button class="rm" data-rm="${esc(s.name)}" aria-label="Remove ${esc(s.name)}">${cross}</button>` : ''}

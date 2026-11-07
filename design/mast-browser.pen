@@ -35961,6 +35961,740 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "j3E617",
+      "x": 26520,
+      "y": 7815,
+      "name": "C22 Tab groups — options",
+      "width": 1440,
+      "fill": [
+        {
+          "type": "image",
+          "enabled": true,
+          "url": "assets/trident.jpg",
+          "mode": "cover"
+        },
+        {
+          "type": "gradient",
+          "gradientType": "linear",
+          "enabled": true,
+          "rotation": 180,
+          "size": {
+            "height": 1
+          },
+          "colors": [
+            {
+              "color": "#000000a6",
+              "position": 0
+            },
+            {
+              "color": "#00000040",
+              "position": 0.3
+            },
+            {
+              "color": "#00000026",
+              "position": 0.65
+            },
+            {
+              "color": "#00000073",
+              "position": 1
+            }
+          ]
+        }
+      ],
+      "layout": "vertical",
+      "gap": 28,
+      "padding": [
+        32,
+        16,
+        40,
+        16
+      ],
+      "children": [
+        {
+          "type": "text",
+          "id": "rwqOy",
+          "name": "Caption",
+          "fill": "#f2f2f2",
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#00000080",
+            "offset": {
+              "x": 0,
+              "y": 1
+            },
+            "blur": 6
+          },
+          "content": "A — Tinted lane: the header is a tinted pill; the group's tabs sit in a faint lane of its colour",
+          "fontFamily": "$font",
+          "fontSize": 13,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "hkzy3",
+          "name": "A",
+          "width": "fill_container",
+          "height": 44,
+          "gap": 4,
+          "padding": [
+            0,
+            8
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "D6MLqq",
+              "name": "Group Lane",
+              "height": 34,
+              "fill": "#bdc1c61f",
+              "cornerRadius": 10,
+              "gap": 4,
+              "padding": 2,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Suzw1",
+                  "name": "Group Header",
+                  "height": 30,
+                  "fill": "#bdc1c633",
+                  "cornerRadius": 8,
+                  "padding": [
+                    0,
+                    10
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "rGVhe",
+                      "name": "Name",
+                      "fill": "#bdc1c6",
+                      "content": "something",
+                      "fontFamily": "$font",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "id": "dCaVL",
+                  "type": "ref",
+                  "ref": "qNSzU",
+                  "name": "Tab",
+                  "width": 200,
+                  "descendants": {
+                    "f1ISiM": {
+                      "fill": "#f2f2f2d9"
+                    },
+                    "IbmVE": {
+                      "content": "New Tab",
+                      "fill": "#f2f2f2d9"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "id": "nOs47",
+              "type": "ref",
+              "ref": "qNSzU",
+              "name": "Tab",
+              "width": 200,
+              "descendants": {
+                "f1ISiM": {
+                  "fill": "#f2f2f2d9"
+                },
+                "IbmVE": {
+                  "content": "New Tab",
+                  "fill": "#f2f2f2d9"
+                }
+              }
+            },
+            {
+              "type": "frame",
+              "id": "gf2mn",
+              "name": "Group Lane",
+              "height": 34,
+              "fill": "#8ab4f81f",
+              "cornerRadius": 10,
+              "gap": 4,
+              "padding": 2,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "fMuFu",
+                  "name": "Group Header",
+                  "height": 30,
+                  "fill": "#8ab4f833",
+                  "cornerRadius": 8,
+                  "padding": [
+                    0,
+                    10
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "qDhBG",
+                      "name": "Name",
+                      "fill": "#8ab4f8",
+                      "content": "hi",
+                      "fontFamily": "$font",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "id": "h42gfU",
+                  "type": "ref",
+                  "ref": "wpoTK",
+                  "name": "Active Tab",
+                  "width": 200,
+                  "fill": "#ffffff26",
+                  "descendants": {
+                    "aEy6X": {
+                      "fill": "#f2f2f2"
+                    },
+                    "Kf0pw": {
+                      "content": "New Tab",
+                      "fill": "#f2f2f2"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "FGO1l",
+              "name": "New Tab Button",
+              "fill": "#f2f2f2d9",
+              "content": "+",
+              "fontFamily": "$font",
+              "fontSize": 20,
+              "fontWeight": "300"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "wcqiD",
+          "name": "Caption",
+          "fill": "#f2f2f2",
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#00000080",
+            "offset": {
+              "x": 0,
+              "y": 1
+            },
+            "blur": 6
+          },
+          "content": "B — Dot and line: a coloured dot names the group; a thin line in its colour runs under its pills",
+          "fontFamily": "$font",
+          "fontSize": 13,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "EPokW",
+          "name": "B",
+          "width": "fill_container",
+          "height": 44,
+          "gap": 4,
+          "padding": [
+            0,
+            8
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "ov0R5",
+              "name": "Group Header",
+              "height": 30,
+              "gap": 7,
+              "padding": [
+                0,
+                8,
+                0,
+                6
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "eGi9T",
+                  "name": "Dot",
+                  "fill": "#bdc1c6",
+                  "width": 8,
+                  "height": 8
+                },
+                {
+                  "type": "text",
+                  "id": "rOhTU",
+                  "name": "Name",
+                  "fill": "#f2f2f2",
+                  "content": "something",
+                  "fontFamily": "$font",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Mf402",
+              "name": "Group",
+              "layout": "vertical",
+              "gap": 3,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "azAOW",
+                  "name": "Tabs",
+                  "gap": 4,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "rplv3",
+                      "type": "ref",
+                      "ref": "qNSzU",
+                      "name": "Tab",
+                      "width": 200,
+                      "descendants": {
+                        "f1ISiM": {
+                          "fill": "#f2f2f2d9"
+                        },
+                        "IbmVE": {
+                          "content": "New Tab",
+                          "fill": "#f2f2f2d9"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "KjeTV",
+                  "name": "Group Line",
+                  "width": 200,
+                  "height": 2,
+                  "fill": "#bdc1c6",
+                  "cornerRadius": 1
+                }
+              ]
+            },
+            {
+              "id": "URjHK",
+              "type": "ref",
+              "ref": "qNSzU",
+              "name": "Tab",
+              "width": 200,
+              "descendants": {
+                "f1ISiM": {
+                  "fill": "#f2f2f2d9"
+                },
+                "IbmVE": {
+                  "content": "New Tab",
+                  "fill": "#f2f2f2d9"
+                }
+              }
+            },
+            {
+              "type": "frame",
+              "id": "CB3NT",
+              "name": "Group Header",
+              "height": 30,
+              "gap": 7,
+              "padding": [
+                0,
+                8,
+                0,
+                6
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "NBxao",
+                  "name": "Dot",
+                  "fill": "#8ab4f8",
+                  "width": 8,
+                  "height": 8
+                },
+                {
+                  "type": "text",
+                  "id": "X5blYc",
+                  "name": "Name",
+                  "fill": "#f2f2f2",
+                  "content": "hi",
+                  "fontFamily": "$font",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "H0rHM1",
+              "name": "Group",
+              "layout": "vertical",
+              "gap": 3,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "xUWfx",
+                  "name": "Tabs",
+                  "gap": 4,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "QTuN5",
+                      "type": "ref",
+                      "ref": "wpoTK",
+                      "name": "Active Tab",
+                      "width": 200,
+                      "fill": "#ffffff26",
+                      "descendants": {
+                        "aEy6X": {
+                          "fill": "#f2f2f2"
+                        },
+                        "Kf0pw": {
+                          "content": "New Tab",
+                          "fill": "#f2f2f2"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ivhOp",
+                  "name": "Group Line",
+                  "width": 200,
+                  "height": 2,
+                  "fill": "#8ab4f8",
+                  "cornerRadius": 1
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "u1ls3Z",
+              "name": "New Tab Button",
+              "fill": "#f2f2f2d9",
+              "content": "+",
+              "fontFamily": "$font",
+              "fontSize": 20,
+              "fontWeight": "300"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "Z6TT0",
+          "name": "Caption",
+          "fill": "#f2f2f2",
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#00000080",
+            "offset": {
+              "x": 0,
+              "y": 1
+            },
+            "blur": 6
+          },
+          "content": "C — Header only: just the tinted pill; tabs look like any other tab",
+          "fontFamily": "$font",
+          "fontSize": 13,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "IN5Xy",
+          "name": "C",
+          "width": "fill_container",
+          "height": 44,
+          "gap": 4,
+          "padding": [
+            0,
+            8
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "ZyZ9T",
+              "name": "Group Header",
+              "height": 30,
+              "fill": "#bdc1c633",
+              "cornerRadius": 8,
+              "padding": [
+                0,
+                10
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "URPMg",
+                  "name": "Name",
+                  "fill": "#bdc1c6",
+                  "content": "something",
+                  "fontFamily": "$font",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "id": "R2byI",
+              "type": "ref",
+              "ref": "qNSzU",
+              "name": "Tab",
+              "width": 200,
+              "descendants": {
+                "f1ISiM": {
+                  "fill": "#f2f2f2d9"
+                },
+                "IbmVE": {
+                  "content": "New Tab",
+                  "fill": "#f2f2f2d9"
+                }
+              }
+            },
+            {
+              "id": "Su3ax",
+              "type": "ref",
+              "ref": "qNSzU",
+              "name": "Tab",
+              "width": 200,
+              "descendants": {
+                "f1ISiM": {
+                  "fill": "#f2f2f2d9"
+                },
+                "IbmVE": {
+                  "content": "New Tab",
+                  "fill": "#f2f2f2d9"
+                }
+              }
+            },
+            {
+              "type": "frame",
+              "id": "a7pIYo",
+              "name": "Group Header",
+              "height": 30,
+              "fill": "#8ab4f833",
+              "cornerRadius": 8,
+              "padding": [
+                0,
+                10
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "KAL9n",
+                  "name": "Name",
+                  "fill": "#8ab4f8",
+                  "content": "hi",
+                  "fontFamily": "$font",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "id": "N9snV",
+              "type": "ref",
+              "ref": "wpoTK",
+              "name": "Active Tab",
+              "width": 200,
+              "fill": "#ffffff26",
+              "descendants": {
+                "aEy6X": {
+                  "fill": "#f2f2f2"
+                },
+                "Kf0pw": {
+                  "content": "New Tab",
+                  "fill": "#f2f2f2"
+                }
+              }
+            },
+            {
+              "type": "text",
+              "id": "AMrYD",
+              "name": "New Tab Button",
+              "fill": "#f2f2f2d9",
+              "content": "+",
+              "fontFamily": "$font",
+              "fontSize": 20,
+              "fontWeight": "300"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "qjSBL",
+          "name": "Caption",
+          "fill": "#f2f2f2",
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#00000080",
+            "offset": {
+              "x": 0,
+              "y": 1
+            },
+            "blur": 6
+          },
+          "content": "Collapsed (all options): the header pill with a count",
+          "fontFamily": "$font",
+          "fontSize": 13,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "PSQg8",
+          "name": "Collapsed",
+          "width": "fill_container",
+          "height": 44,
+          "gap": 4,
+          "padding": [
+            0,
+            8
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "d1HU3z",
+              "name": "Group Header",
+              "height": 30,
+              "fill": "#bdc1c633",
+              "cornerRadius": 8,
+              "padding": [
+                0,
+                10
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "pZ7Th",
+                  "name": "Name",
+                  "fill": "#bdc1c6",
+                  "content": "something",
+                  "fontFamily": "$font",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "y18s3Q",
+                  "name": "Count",
+                  "fill": "#bdc1c6b3",
+                  "content": "  3",
+                  "fontFamily": "$font",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "id": "Ajkxs",
+              "type": "ref",
+              "ref": "qNSzU",
+              "name": "Tab",
+              "width": 200,
+              "descendants": {
+                "f1ISiM": {
+                  "fill": "#f2f2f2d9"
+                },
+                "IbmVE": {
+                  "content": "New Tab",
+                  "fill": "#f2f2f2d9"
+                }
+              }
+            },
+            {
+              "type": "frame",
+              "id": "R6imjD",
+              "name": "Group Lane",
+              "height": 34,
+              "fill": "#8ab4f81f",
+              "cornerRadius": 10,
+              "gap": 4,
+              "padding": 2,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "JbsBe",
+                  "name": "Group Header",
+                  "height": 30,
+                  "fill": "#8ab4f833",
+                  "cornerRadius": 8,
+                  "padding": [
+                    0,
+                    10
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "o50n44",
+                      "name": "Name",
+                      "fill": "#8ab4f8",
+                      "content": "hi",
+                      "fontFamily": "$font",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "id": "R6dd0A",
+                  "type": "ref",
+                  "ref": "wpoTK",
+                  "name": "Active Tab",
+                  "width": 200,
+                  "fill": "#ffffff26",
+                  "descendants": {
+                    "aEy6X": {
+                      "fill": "#f2f2f2"
+                    },
+                    "Kf0pw": {
+                      "content": "New Tab",
+                      "fill": "#f2f2f2"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "on9gG",
+              "name": "New Tab Button",
+              "fill": "#f2f2f2d9",
+              "content": "+",
+              "fontFamily": "$font",
+              "fontSize": 20,
+              "fontWeight": "300"
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {

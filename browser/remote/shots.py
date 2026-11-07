@@ -224,6 +224,12 @@ p.go("https://www.youtube.com/", 4)
 shot("12-blocked-timed")
 p.go("https://x.com/", 4)
 shot("13-blocked-forever")
+# The feeds (mast_feeds.cc): a betting site only the gambling feed lists, blocked by
+# "Block distractions" above; and an adult site, always blocked, quietly (no end time).
+p.go("https://www.pokerstars.net/", 4)
+shot("30-gambling-feed")
+p.go("https://onlyfans.com/", 4)
+shot("31-quiet-block")
 # Page info -> "Block this site" -> the block bubble -> undo.
 p.go("https://en.wikipedia.org/wiki/Dieter_Rams", 5)
 native_dump("14-site", click=("LocationIconView", None))
@@ -238,6 +244,10 @@ keys("Escape")
 p.go("chrome://newtab")
 p.js("document.getElementById('editList').click()")
 shot("17-blocklist-panel")
+p.js("document.querySelector('[data-toggle=gambling]').click()")
+time.sleep(0.3)
+p.js("document.querySelector('[data-toggle=gambling]').scrollIntoView({block: 'start'})")
+shot("32-gambling-row")
 p.js("document.getElementById('blClose').click()")
 # Customize: the panel, then a palette (the whole window should follow), then an image.
 p.js("document.getElementById('customize').click()")

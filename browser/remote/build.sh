@@ -99,11 +99,14 @@ say "Building chrome"
 time autoninja -C "$OUT" -k 0 chrome
 
 # 6. Package only what the browser needs at runtime
+# The adult and gambling feeds: data files beside the browser, read at startup (mast_feeds.cc).
+say "Feeds"
+python3 "$M/remote/build-feeds.py" "$M/blocklist" "$OUT/mast-feeds" /root/mast-feeds-cache
 say "Packaging"
 cd "$OUT"
 keep=()
 for f in chrome chrome_crashpad_handler icudtl.dat vk_swiftshader_icd.json locales MEIPreload \
-	*.pak *.bin *.so *.so.*; do
+	mast-feeds *.pak *.bin *.so *.so.*; do
 	[ -e "$f" ] && keep+=("$f")
 done
 mkdir -p "$M/dist"

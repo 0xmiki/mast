@@ -9,6 +9,7 @@
 #include "base/no_destructor.h"
 #include "base/strings/string_util.h"
 #include "base/values.h"
+#include "mast/browser/mast_feeds.h"
 #include "url/gurl.h"
 
 namespace mast {
@@ -50,6 +51,12 @@ std::vector<Category> Parse() {
                                      Strings(sd.FindList("domains")),
                                      Strings(sd.FindList("except"))});
       }
+    }
+    // A category backed by a feed gets one more row for everything else the
+    // feed lists, e.g. "Other gambling sites" (mast_feeds.h).
+    if (const std::string* feed = dict.FindString("feed")) {
+      category.services.push_back(
+          {"Other " + *feed + " sites", {FeedKey(*feed)}, {}});
     }
     categories.push_back(std::move(category));
   }

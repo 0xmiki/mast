@@ -44,6 +44,7 @@
 #include "mast/browser/desktop/mast_desktop.h"
 #include "mast/browser/mast_blocklist.h"
 #include "mast/browser/mast_blocks.h"
+#include "mast/browser/mast_feeds.h"
 #include "mast/browser/mast_page_backdrop.h"
 #include "mast/browser/mast_pages.h"
 #include "mast/browser/mast_prefs.h"
@@ -89,8 +90,12 @@ const base::ListValue& CategoriesValue() {
         for (const std::string& d : s.domains) {
           domains.Append(d);
         }
-        services.Append(base::DictValue().Set("name", s.name).Set(
-            "domains", std::move(domains)));
+        // A feed's row ("Other gambling sites") lists no domains to show.
+        const bool feed = s.domains.size() == 1 && IsFeedKey(s.domains[0]);
+        services.Append(base::DictValue()
+                            .Set("name", s.name)
+                            .Set("domains", std::move(domains))
+                            .Set("feed", feed));
       }
       categories.Append(base::DictValue()
                             .Set("id", c.id)

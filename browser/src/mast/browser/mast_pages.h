@@ -18,6 +18,11 @@ std::string BlockPageHtml(std::string_view host,
                           const BlockMatch& match,
                           const PageBackdrop& backdrop);
 
+// The same page for sites on the always-on adult list (mast_feeds.h): just
+// "This site is blocked", with no end time and no reason.
+std::string QuietBlockPageHtml(std::string_view host,
+                               const PageBackdrop& backdrop);
+
 // chrome://mast: the blocklist, every category and site.
 // `as_new_tab` titles it "New Tab" so tabs and history read naturally.
 std::string StartPageHtml(bool as_new_tab);

@@ -78,6 +78,7 @@ body.wall.light h1, body.wall.light .st, body.wall.light .back { text-shadow:0 1
 <button class="back" id="back" onclick="history.back()">&larr; Back</button>
 </main><script>
 const until = {{UNTIL}};
+const quiet = {{QUIET}};  // always blocked (adult list): no end, no reason given
 const wall = {{WALL}}, wallTop = {{WALL_TOP}};
 const D = 864e5;
 const hm = (t) => new Date(t).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
@@ -100,7 +101,8 @@ function leftText(u) {
 }
 function paint() {
   const forever = until === null;
-  document.getElementById('state').textContent = forever ? 'Blocked forever' : 'Blocked ' + untilText(until);
+  document.getElementById('state').textContent = quiet ? 'This site is blocked'
+      : forever ? 'Blocked forever' : 'Blocked ' + untilText(until);
   document.getElementById('left').textContent = forever ? '' : leftText(until);
   if (!forever && Date.now() >= until) location.reload();
 }
@@ -159,9 +161,13 @@ std::string Fill(std::string page) {
 
 }  // namespace
 
-std::string BlockPageHtml(std::string_view host,
-                          const BlockMatch& match,
-                          const PageBackdrop& backdrop) {
+namespace {
+
+// `until`: ms since the epoch, or "null" for forever.
+std::string BlockPage(std::string_view host,
+                      std::string_view until,
+                      bool quiet,
+                      const PageBackdrop& backdrop) {
   std::string page = Fill(kBlockPage);
   const bool wall = !backdrop.data_url.empty();
   base::ReplaceSubstringsAfterOffset(&page, 0, "{{HOST}}",
@@ -171,16 +177,32 @@ std::string BlockPageHtml(std::string_view host,
       wall ? (backdrop.light ? "wall light" : "wall") : "");
   base::ReplaceSubstringsAfterOffset(&page, 0, "{{WALL_TOP}}",
                                      base::NumberToString(backdrop.top));
-  base::ReplaceSubstringsAfterOffset(
-      &page, 0, "{{UNTIL}}",
-      match.block.until
-          ? base::NumberToString(match.block.until->InMillisecondsSinceUnixEpoch())
-          : std::string("null"));
+  base::ReplaceSubstringsAfterOffset(&page, 0, "{{UNTIL}}", until);
+  base::ReplaceSubstringsAfterOffset(&page, 0, "{{QUIET}}",
+                                     quiet ? "true" : "false");
   // Last: the picture is the one large value (a base64 data: URL; no quotes
   // or braces in it).
   base::ReplaceSubstringsAfterOffset(
       &page, 0, "{{WALL}}", wall ? "\"" + backdrop.data_url + "\"" : "null");
   return page;
+}
+
+}  // namespace
+
+std::string BlockPageHtml(std::string_view host,
+                          const BlockMatch& match,
+                          const PageBackdrop& backdrop) {
+  return BlockPage(
+      host,
+      match.block.until
+          ? base::NumberToString(match.block.until->InMillisecondsSinceUnixEpoch())
+          : std::string("null"),
+      /*quiet=*/false, backdrop);
+}
+
+std::string QuietBlockPageHtml(std::string_view host,
+                               const PageBackdrop& backdrop) {
+  return BlockPage(host, "null", /*quiet=*/true, backdrop);
 }
 
 std::string StartPageHtml(bool as_new_tab) {

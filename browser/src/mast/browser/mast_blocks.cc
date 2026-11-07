@@ -20,6 +20,7 @@
 #include "content/public/browser/render_widget_host_iterator.h"
 #include "content/public/browser/web_contents.h"
 #include "mast/browser/mast_blocklist.h"
+#include "mast/browser/mast_feeds.h"
 #include "url/gurl.h"
 
 namespace mast {
@@ -36,9 +37,20 @@ constexpr char kDistractionsPref[] = "mast.distractions";
 
 // Blocked by "Block distractions" until someone changes the set. Shopping,
 // games, trading, dating and messaging stay open: people often need them.
+// (Adult sites aren't a category: they're always blocked; see mast_feeds.h.)
 constexpr const char* kDefaultDistractions[] = {
     "social", "video",  "streaming", "news",  "forums",
-    "entertainment", "sports", "gambling", "adult"};
+    "entertainment", "sports", "gambling"};
+
+// A list entry: a domain, or a feed ("feed:gambling") that matches every
+// domain the feed lists.
+bool EntryMatches(std::string_view host, std::string_view entry) {
+  if (IsFeedKey(entry)) {
+    entry.remove_prefix(std::string_view(kFeedKeyPrefix).size());
+    return MastFeeds::Get().Contains(entry, host);
+  }
+  return HostMatches(host, entry);
+}
 
 double Ms(base::Time t) {
   return static_cast<double>(t.InMillisecondsSinceUnixEpoch());
@@ -175,7 +187,7 @@ std::optional<BlockMatch> MastBlocks::ForUrl(const GURL& url) const {
   const base::Time now = base::Time::Now();
   std::optional<BlockMatch> best;
   for (const auto [domain, value] : p->GetDict(kBlocksPref)) {
-    if (!HostMatches(host, domain)) {
+    if (!EntryMatches(host, domain)) {
       continue;
     }
     std::optional<Block> block = ParseBlock(value, now);
@@ -225,7 +237,8 @@ int MastBlocks::BlockSites(const std::vector<std::string>& domains,
   {
     ScopedDictPrefUpdate blocks(p, kBlocksPref);
     for (const std::string& input : domains) {
-      const std::string domain = CleanDomain(input);
+      const std::string domain =
+          IsFeedKey(input) && IsListed(input) ? input : CleanDomain(input);
       if (domain.empty() || recent.before.contains(domain)) {
         continue;
       }

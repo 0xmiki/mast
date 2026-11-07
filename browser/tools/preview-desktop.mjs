@@ -34,9 +34,9 @@ const mock = `<script>
 (() => {
   const H = 36e5, D = 864e5;
   const midnight = () => { const d = new Date(); d.setHours(24, 0, 0, 0); return d.getTime(); };
-  const cats = ${JSON.stringify(list.categories.map((c) => ({ id: c.id, name: c.name, services: c.services.map((s) => ({ name: s.name, domains: s.domains })) })))};
+  const cats = ${JSON.stringify(list.categories.map((c) => ({ id: c.id, name: c.name, services: [...c.services.map((s) => ({ name: s.name, domains: s.domains })), ...(c.feed ? [{ name: `Other ${c.feed} sites`, domains: [`feed:${c.feed}`], feed: true }] : [])] })))};
   const s = { categories: cats, custom: [], blocks: {}, lastDuration: 'today', canUndo: false, stopped: 0,
-    distractions: ['social','video','streaming','news','forums','entertainment','sports','gambling','adult'],
+    distractions: ['social','video','streaming','news','forums','entertainment','sports','gambling'],
     desktop: ${JSON.stringify(sites)}, desktopReady: true, widgets: ['clock', 'distractions'] };
   const palettes = ${JSON.stringify(palettes)};
   s.palettes = palettes.map(({ css, ...p }) => p);

@@ -1,6 +1,6 @@
 {
 	"version": 1,
-	"updated": "2026-11-03",
+	"updated": "2026-11-07",
 	"categories": [
 		{
 			"id": "social",
@@ -407,6 +407,7 @@
 		{
 			"id": "gambling",
 			"name": "Gambling & betting",
+			"feed": "gambling",
 			"services": [
 				{ "name": "bet365", "domains": ["bet365.com"] },
 				{ "name": "DraftKings", "domains": ["draftkings.com"] },
@@ -540,52 +541,6 @@
 				{ "name": "LINE", "domains": ["line.me"] },
 				{ "name": "GroupMe", "domains": ["groupme.com"] },
 				{ "name": "Omegle-style chat", "domains": ["ome.tv", "chatroulette.com", "emeraldchat.com"] }
-			]
-		},
-		{
-			"id": "adult",
-			"name": "Adult",
-			"services": [
-				{ "name": "Pornhub", "domains": ["pornhub.com", "pornhub.org"] },
-				{ "name": "XVideos", "domains": ["xvideos.com"] },
-				{ "name": "XNXX", "domains": ["xnxx.com"] },
-				{ "name": "xHamster", "domains": ["xhamster.com", "xhamster.desi"] },
-				{ "name": "YouPorn", "domains": ["youporn.com"] },
-				{ "name": "RedTube", "domains": ["redtube.com"] },
-				{ "name": "Tube8", "domains": ["tube8.com"] },
-				{ "name": "SpankBang", "domains": ["spankbang.com"] },
-				{ "name": "Eporner", "domains": ["eporner.com"] },
-				{ "name": "Beeg", "domains": ["beeg.com"] },
-				{ "name": "TXXX", "domains": ["txxx.com"] },
-				{ "name": "HQporner", "domains": ["hqporner.com"] },
-				{ "name": "PornTrex", "domains": ["porntrex.com"] },
-				{ "name": "TNAFlix", "domains": ["tnaflix.com"] },
-				{ "name": "4tube", "domains": ["4tube.com"] },
-				{ "name": "Porn.com", "domains": ["porn.com"] },
-				{ "name": "Sex.com", "domains": ["sex.com"] },
-				{ "name": "PornPics", "domains": ["pornpics.com"] },
-				{ "name": "ImageFap", "domains": ["imagefap.com"] },
-				{ "name": "EroMe", "domains": ["erome.com"] },
-				{ "name": "OnlyFans", "domains": ["onlyfans.com"] },
-				{ "name": "Fansly", "domains": ["fansly.com"] },
-				{ "name": "ManyVids", "domains": ["manyvids.com"] },
-				{ "name": "Clips4Sale", "domains": ["clips4sale.com"] },
-				{ "name": "Chaturbate", "domains": ["chaturbate.com"] },
-				{ "name": "Stripchat", "domains": ["stripchat.com"] },
-				{ "name": "BongaCams", "domains": ["bongacams.com"] },
-				{ "name": "CAM4", "domains": ["cam4.com"] },
-				{ "name": "LiveJasmin", "domains": ["livejasmin.com"] },
-				{ "name": "MyFreeCams", "domains": ["myfreecams.com"] },
-				{ "name": "CamSoda", "domains": ["camsoda.com"] },
-				{ "name": "Brazzers", "domains": ["brazzers.com"] },
-				{ "name": "Reality Kings", "domains": ["realitykings.com"] },
-				{ "name": "Bang Bros", "domains": ["bangbros.com"] },
-				{ "name": "nhentai", "domains": ["nhentai.net"] },
-				{ "name": "Rule 34", "domains": ["rule34.xxx"] },
-				{ "name": "e621", "domains": ["e621.net"] },
-				{ "name": "F95zone", "domains": ["f95zone.to"] },
-				{ "name": "Literotica", "domains": ["literotica.com"] },
-				{ "name": "AdultFriendFinder", "domains": ["adultfriendfinder.com"] }
 			]
 		}
 	]

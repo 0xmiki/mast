@@ -15,7 +15,7 @@ const out = `{
 	"updated": ${s(list.updated)},
 	"categories": [
 ${list.categories
-	.map((c) => `\t\t{\n\t\t\t"id": ${s(c.id)},\n\t\t\t"name": ${s(c.name)},\n\t\t\t"services": [\n${c.services.map(service).join(',\n')}\n\t\t\t]\n\t\t}`)
+	.map((c) => `\t\t{\n\t\t\t"id": ${s(c.id)},\n\t\t\t"name": ${s(c.name)},\n${c.feed ? `\t\t\t"feed": ${s(c.feed)},\n` : ''}\t\t\t"services": [\n${c.services.map(service).join(',\n')}\n\t\t\t]\n\t\t}`)
 	.join(',\n')}
 	]
 }

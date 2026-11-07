@@ -43,12 +43,12 @@ service lists every domain that opens it.
 - **Host-based only.** Services that live under a path of a bigger site can't be blocked on
   their own yet: BBC iPlayer (`bbc.co.uk/iplayer`), Facebook Marketplace, NYT Games, YouTube
   Shorts. Adding path rules is a later step.
-- **Adult and gambling can't be complete by hand.** These lists cover the large, well-known
-  sites. Full coverage needs a maintained feed; see "Large feeds" below.
+- **Adult and gambling can't be complete by hand.** They come from maintained feeds; see
+  "Feeds" below.
 
-## Counts (2026-11-03)
+## Counts (2026-11-07)
 
-14 categories, 502 services, 641 domains:
+13 categories, 462 services, 599 domains, plus the feeds:
 - Social media
 - Video
 - TV & film streaming
@@ -62,9 +62,27 @@ service lists every domain that opens it.
 - Trading & crypto
 - Dating
 - Messaging & chat
-- Adult
 
-## Large feeds (Adult, Gambling)
+## Feeds (Adult, Gambling)
+
+Built 2026-11-07. `remote/build-feeds.py` fetches them at build time and ships them as data
+files beside the browser (`mast-feeds/adult.txt`, `gambling.txt`, with `SOURCES.txt` and
+the GPL-3.0 licence); `mast_feeds.cc` reads them at startup.
+
+- **Adult is not a category.** It is always blocked, in every window, and never shown: no
+  option, no row, no count. Its page says only "This site is blocked". Source: HaGeZi NSFW
+  (~78k domains) plus [`feeds/adult.txt`](feeds/adult.txt), the hand-picked sites that used to
+  be the Adult category.
+- **Gambling stays a category** (legal, and some people need betting or lottery sites), on in
+  "Block distractions" by default. HaGeZi gambling mini (~69k domains) is its last row,
+  "Other gambling sites" (list entry `feed:gambling`), blocked like any other row.
+- **Hand-curated entries win.** A feed entry that is, or is a parent of, a domain in
+  `blocklist.json` is dropped: okcupid.com stays Dating, sleeper.com stays Sports. False
+  positives go in [`feeds/allow.txt`](feeds/allow.txt).
+- **Licence.** The feed files are GPL-3.0 data shipped next to the browser, not compiled into
+  it; the browser code stays BSD.
+
+### Survey
 
 Surveyed 2026-11-03 against the live repos.
 
@@ -78,9 +96,5 @@ Surveyed 2026-11-03 against the live repos.
 | UT1 (Toulouse) | CC BY-SA 4.0 | adult 4.6M, gambling 48k, … | site down, mirror weekly | Cross-check only |
 | NextDNS services | MIT | 42 service lists | stale | Cross-check our service domains |
 
-Plan:
-- **Ship each feed as its own data file.** Keep the feeds out of `blocklist.json`.
-- **Bundle the licence and source URL with each feed** (GPL-3.0 for HaGeZi).
-- **Keep the browser code separate from the feeds.** The browser code stays BSD; the feed files are aggregated data alongside it.
-- **Refresh feeds through Mast's update channel.** No browser release needed.
-- **Hand-curated entries win on conflicts.** Example: kalshi.com and polymarket.com sit in Gambling here and also appear in HaGeZi.
+Still to do: refresh the feeds through Mast's update channel, so they stay current between
+browser releases.

@@ -11,6 +11,8 @@ const file = new URL('./blocklist.json', import.meta.url);
 const list = JSON.parse(fs.readFileSync(file, 'utf8'));
 const offline = process.argv.includes('--offline');
 const problems = [];
+// Large maintained lists behind a category (remote/build-feeds.py fetches them at build time).
+const FEEDS = { gambling: true };
 const HOST = /^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9-]{2,63}$/;
 
 const seen = new Map();
@@ -19,6 +21,8 @@ let services = 0;
 for (const c of list.categories) {
 	if (ids.has(c.id)) problems.push(`duplicate category id ${c.id}`);
 	ids.add(c.id);
+	if (c.feed !== undefined && !FEEDS[c.feed])
+		problems.push(`${c.id}: unknown feed "${c.feed}"`);
 	const names = new Set();
 	for (const s of c.services) {
 		services++;
@@ -34,6 +38,15 @@ for (const c of list.categories) {
 			if (!s.domains.some((d) => e.endsWith('.' + d))) problems.push(`${c.id}/${s.name}: exception ${e} is not under any of its domains`);
 		}
 	}
+}
+
+// The hand-written feed files: one host per line.
+for (const name of ['adult.txt', 'allow.txt']) {
+	const lines = fs.readFileSync(new URL(`./feeds/${name}`, import.meta.url), 'utf8').split('\n');
+	lines.forEach((l, i) => {
+		l = l.trim();
+		if (l && !l.startsWith('#') && !HOST.test(l)) problems.push(`feeds/${name}:${i + 1}: bad host "${l}"`);
+	});
 }
 
 // A domain under another listed domain is redundant (matching already covers subdomains).

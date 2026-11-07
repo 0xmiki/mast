@@ -272,7 +272,7 @@ first (4 are colour mixer only; the rest are 1–3 line hooks).
 
 - "Your Mast" in the app menu (string). Warm greys in settings (WebUI colour tokens, `DESIGN-PLAN.md` §F).
 - Our own time server for `NetworkTimeTracker` (blocks must survive clock changes).
-- Adult and gambling feeds: the GPL-3.0 HaGeZi lists vs MIT StevenBlack (decision pending).
+- Adult and gambling feeds: built (HaGeZi NSFW always on and hidden; HaGeZi gambling behind "Other gambling sites"). Still to do: refresh them through an update channel between releases.
 
 ## 4. Budget (testing only)
 
