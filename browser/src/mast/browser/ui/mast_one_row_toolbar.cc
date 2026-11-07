@@ -17,6 +17,7 @@
 #include "components/prefs/pref_service.h"
 #include "mast/browser/mast_prefs.h"
 #include "mast/browser/mast_theme.h"
+#include "mast/browser/ui/mast_tab_bar.h"
 #include "mast/common/mast_features.h"
 #include "ui/gfx/geometry/size.h"
 #include "ui/views/layout/flex_layout_types.h"
@@ -53,6 +54,8 @@ void OnBrowserWindowReady(BrowserWindowInterface* browser) {
       browser->GetType() != BrowserWindowInterface::TYPE_NORMAL) {
     return;
   }
+  // Customize's "Tab bar on websites" for this window.
+  MastTabBar::Attach(browser);
   BrowserView* browser_view = BrowserView::GetBrowserViewForBrowser(browser);
   ToolbarView* toolbar = browser_view ? browser_view->toolbar() : nullptr;
   LocationBarView* location_bar =

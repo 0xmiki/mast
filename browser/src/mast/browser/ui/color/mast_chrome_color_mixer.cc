@@ -2,9 +2,13 @@
 
 #include "mast/browser/ui/color/mast_chrome_color_mixer.h"
 
+#include <initializer_list>
+#include <optional>
+
 #include "chrome/browser/ui/color/chrome_color_id.h"
 #include "mast/common/mast_features.h"
 #include "mast/ui/color/mast_palette.h"
+#include "mast/ui/color/mast_site_color.h"
 #include "ui/color/color_id.h"
 #include "ui/color/color_mixer.h"
 #include "ui/color/color_provider.h"
@@ -13,6 +17,86 @@
 #include "ui/color/color_transform.h"
 
 namespace mast {
+
+namespace {
+
+// The one-row tab row in a website's own colour (Customize: Tab bar on
+// websites, "Match site"; design C23). Everything is built from that colour
+// (mast/ui/color/mast_site_color.h): the row is the colour, the active tab and
+// the address field are steps away from it, text and icons are dark on a light
+// colour and light on a dark one. The window stays in dark mode either way: a
+// page's own light or dark look follows the window's, so a light row must not
+// turn the site light. Menus and bubbles keep the palette.
+void AddSiteRow(ui::ColorMixer& mixer, const site_color::Row& r) {
+  for (ui::ColorId id :
+       std::initializer_list<ui::ColorId>{ui::kColorFrameActive, ui::kColorFrameInactive, kColorToolbar,
+        kColorToolbarContentAreaSeparator,
+        kColorTabBackgroundInactiveFrameActive,
+        kColorTabBackgroundInactiveFrameInactive}) {
+    mixer[id] = {r.bar};
+  }
+  mixer[kColorTabBackgroundInactiveHoverFrameActive] = {r.hover};
+  mixer[kColorTabBackgroundInactiveHoverFrameInactive] = {r.hover};
+  mixer[kColorTabBackgroundActiveFrameActive] = {r.pill};
+  mixer[kColorTabBackgroundActiveFrameInactive] = {r.pill};
+  mixer[kColorTabForegroundActiveFrameActive] = {r.text};
+  mixer[kColorTabForegroundActiveFrameInactive] = {r.text};
+  mixer[kColorTabForegroundInactiveFrameActive] = {r.text2};
+  mixer[kColorTabForegroundInactiveFrameInactive] = {r.text2};
+  for (ui::ColorId id : std::initializer_list<ui::ColorId>{kColorNewTabButtonForegroundFrameActive,
+                         kColorNewTabButtonForegroundFrameInactive,
+                         kColorNewTabButtonCRForegroundFrameActive,
+                         kColorNewTabButtonCRForegroundFrameInactive}) {
+    mixer[id] = {r.text2};
+  }
+  for (ui::ColorId id : std::initializer_list<ui::ColorId>{kColorNewTabButtonBackgroundFrameActive,
+                         kColorNewTabButtonBackgroundFrameInactive,
+                         kColorNewTabButtonCRBackgroundFrameActive,
+                         kColorNewTabButtonCRBackgroundFrameInactive}) {
+    mixer[id] = {SK_ColorTRANSPARENT};
+  }
+  mixer[kColorToolbarButtonIcon] = {r.text2};
+  mixer[kColorToolbarButtonIconHovered] = {r.text};
+  mixer[kColorToolbarButtonIconPressed] = {r.text};
+  mixer[kColorToolbarButtonIconInactive] = {r.faint};
+  mixer[kColorToolbarButtonIconDisabled] = {r.faint};
+  mixer[kColorToolbarButtonText] = {r.text};
+
+  // The address field, and its icons (the lock, the star).
+  mixer[kColorLocationBarBackground] = {r.field};
+  mixer[kColorLocationBarBackgroundHovered] = {r.field_hover};
+  mixer[kColorLocationBarBorder] = {r.border};
+  mixer[kColorOmniboxText] = {r.text};
+  mixer[kColorOmniboxTextDimmed] = {r.text2};
+  mixer[kColorOmniboxActionIcon] = {r.text2};
+  mixer[kColorPageInfoForeground] = {r.text2};
+  mixer[kColorPageInfoSubtitleForeground] = {r.text2};
+  mixer[kColorLocationBarClearAllButtonIcon] = {r.text2};
+  if (!r.light) {
+    return;  // a dark row: the palette's dark suggestions suit it
+  }
+  // A light row: the focused field paints the suggestions' colour, so they go
+  // light too, with dark text and icons.
+  mixer[kColorOmniboxResultsBackground] = {r.field};
+  mixer[kColorOmniboxResultsBackgroundHovered] = {r.raised};
+  mixer[kColorOmniboxResultsBackgroundSelected] = {r.raised2};
+  for (ui::ColorId id : std::initializer_list<ui::ColorId>{kColorOmniboxResultsTextSelected,
+                         kColorOmniboxResultsTextAnswer,
+                         kColorOmniboxKeywordSelected}) {
+    mixer[id] = {r.text};
+  }
+  for (ui::ColorId id :
+       std::initializer_list<ui::ColorId>{kColorOmniboxResultsTextDimmed, kColorOmniboxResultsTextDimmedSelected,
+        kColorOmniboxResultsTextSecondary, kColorOmniboxResultsUrl,
+        kColorOmniboxResultsUrlSelected, kColorOmniboxResultsIcon,
+        kColorOmniboxResultsIconSelected, kColorOmniboxResultsIconHovered,
+        kColorOmniboxResultsButtonIcon, kColorOmniboxResultsButtonIconSelected,
+        kColorOmniboxIconForeground, kColorOmniboxKeywordSeparator}) {
+    mixer[id] = {r.text2};
+  }
+}
+
+}  // namespace
 
 void AddMastChromeColorMixer(ui::ColorProvider* provider,
                              const ui::ColorProviderKey& key) {
@@ -124,7 +208,15 @@ void AddMastChromeColorMixer(ui::ColorProvider* provider,
   // icons are strong enough to read on any picture: light on a dark image,
   // dark on a light one (the user's Dark/Light pick). The address field stays a
   // dark pill either way; its suggestions open below it in the same colour.
-  const palette::Backdrop backdrop = palette::CurrentBackdrop();
+  //
+  // A window can set its own row instead (Customize: Tab bar on websites;
+  // mast/browser/ui/mast_tab_bar.h), carried in its key like an installed web
+  // app's colours: transparent for the palette (a website in "Theme"), or a
+  // website's colour ("Match site").
+  const std::optional<SkColor> own_row =
+      key.app_controller ? std::nullopt : key.app_background_color;
+  const palette::Backdrop backdrop =
+      own_row ? palette::Backdrop::kPalette : palette::CurrentBackdrop();
   if (IsOneRowWindow() && backdrop != palette::Backdrop::kPalette) {
     const bool light = backdrop == palette::Backdrop::kLightImage;
     const SkColor fg = light ? SkColorSetRGB(0x14, 0x14, 0x14) : p.text;
@@ -174,6 +266,12 @@ void AddMastChromeColorMixer(ui::ColorProvider* provider,
     mixer[kColorLocationBarBackground] = {SkColorSetARGB(0x99, 0x0A, 0x0A, 0x0A)};
     mixer[kColorLocationBarBackgroundHovered] = {
         SkColorSetARGB(0xB3, 0x0A, 0x0A, 0x0A)};
+  }
+
+  if (IsOneRowWindow() && own_row && SkColorGetA(*own_row) == SK_AlphaOPAQUE) {
+    if (const std::optional<site_color::Row> row = site_color::RowFor(*own_row)) {
+      AddSiteRow(mixer, *row);
+    }
   }
 }
 

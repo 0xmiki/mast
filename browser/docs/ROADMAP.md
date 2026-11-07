@@ -264,6 +264,30 @@ first (4 are colour mixer only; the rest are 1–3 line hooks).
     has been tested.
 - **Settings (built):** it loads `colors.css` always (Chromium gated it behind the 2026
   redesign flags). Its page, cards and selected menu item follow the palette.
+- **Tab bar on websites (built, design C23):** Picture (the image everywhere), Theme (the
+  image on the new tab only) or Match site (each website's own colour). Pref `mast.tab_bar`.
+  - Modelled on how Chromium recolours an installed web app's window from its
+    theme-color (`AppBrowserController::UpdateThemeSupplier`). Each one-row window has a
+    `MastTabBar` (`mast/browser/ui/mast_tab_bar.cc`). It watches the active tab and
+    publishes the row per window (`mast/common/mast_tab_bar_state.h`).
+    `BrowserWidget::GetColorProviderKey` puts that colour in the key's
+    `app_background_color`, which only app windows set and no mixer reads. The mixer then
+    builds the row from it, and the frame skips the picture.
+  - The window stays in dark mode: pages take their light/dark look from the window, so a
+    light row must not turn the site light (that would feed back into the colour).
+  - The colour comes from the page's top 2px, copied like hover-card thumbnails and taken
+    as the OKLab median. A strip that isn't one colour (picture headers) falls back to the
+    palette. So do colours that are too loud (chroma above 0.14), near ember, or that no
+    text colour reads on at 4.5:1. theme-color stands in until the first strip arrives.
+  - A tab keeps its colour across switches and navigations until the new page's colour is
+    known. Re-sampled every 2s; a change is adopted only once it's seen twice in a row.
+  - Rows are built in OKLCH (`mast/ui/color/mast_site_color.h`): the same hue and chroma,
+    lightness steps for the pill and the field. A light row also makes the address
+    field's suggestions light.
+  - Chromium keeps every ColorProvider it builds. The manager keeps the 24 newest Mast row
+    colours and drops older ones once no window shows them.
+  - Later: fade between colours (Chromium switches instantly), and check thresholds on
+    more sites.
 - **Step 2:**
   - Paper, the light palette, needs light-mode mixers.
   - The palette is process-wide for now; make it per profile.

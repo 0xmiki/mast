@@ -445,7 +445,7 @@ edit(T, "chrome/browser/ui/color/chrome_color_mixers.cc", lambda t: once(once(t,
     '  AddMaterialTabStripColorMixer(provider, key);\n  mast::AddMastChromeColorMixer(provider, key);\n'))
 edit(T, "chrome/browser/ui/color/BUILD.gn", lambda t: add_dep(once(t,
     '    "chrome_color_mixers.cc",\n',
-    '    "chrome_color_mixers.cc",\n    "//mast/browser/ui/color/mast_chrome_color_mixer.cc",\n    "//mast/browser/ui/color/mast_chrome_color_mixer.h",\n'),
+    '    "chrome_color_mixers.cc",\n    "//mast/browser/ui/color/mast_chrome_color_mixer.cc",\n    "//mast/browser/ui/color/mast_chrome_color_mixer.h",\n    "//mast/ui/color/mast_site_color.h",\n'),
     'source_set("mixers") {', "//mast/common"))
 
 # Calm UI: no ink ripples (the demo has none), no profile button (no sign-in),
@@ -574,10 +574,14 @@ edit(R, "chrome/browser/ui/browser_window/internal/embedder_browser_window_featu
     '#include "chrome/browser/ui/views/frame/browser_view.h"\n#include "mast/browser/ui/mast_one_row_toolbar.h"\n'),
     'void EmbedderBrowserWindowFeatures::InitPostWindowConstruction(\n    BrowserWindowInterface* browser) {\n  // Embedder implementation goes here.\n}',
     'void EmbedderBrowserWindowFeatures::InitPostWindowConstruction(\n    BrowserWindowInterface* browser) {\n  mast::OnBrowserWindowReady(browser);\n}'))
-edit(R, "chrome/browser/ui/browser_window/internal/BUILD.gn", lambda t: add_dep(once(t,
+edit(R, "chrome/browser/ui/browser_window/internal/BUILD.gn", lambda t: add_dep(add_dep(add_dep(add_dep(once(t,
     '      "embedder_browser_window_features.cc",\n',
-    '      "embedder_browser_window_features.cc",\n      "//mast/browser/ui/mast_one_row_toolbar.cc",\n      "//mast/browser/ui/mast_one_row_toolbar.h",\n'),
-    'source_set("internal") {', "//mast/common"))
+    '      "embedder_browser_window_features.cc",\n      "//mast/browser/ui/mast_one_row_toolbar.cc",\n      "//mast/browser/ui/mast_one_row_toolbar.h",\n'
+    '      "//mast/browser/ui/mast_tab_bar.cc",\n      "//mast/browser/ui/mast_tab_bar.h",\n'),
+    'source_set("internal") {', "//mast/common"),
+    'source_set("internal") {', "//components/prefs"),
+    'source_set("internal") {', "//content/public/browser"),
+    'source_set("internal") {', "//skia"))
 
 # No dividers between tabs in the one-row window: tabs are pills with space between them.
 # (Chromium paints dividers with SkColorSetA(colour, opacity), which overrides the colour's
@@ -735,6 +739,47 @@ edit(R, "chrome/browser/ui/views/frame/BUILD.gn", lambda t: add_dep(add_dep(add_
     'source_set("themed_background_impl") {', "//mast/common"),
     'source_set("themed_background_impl") {', "//ui/display"),
     'source_set("themed_background_impl") {', "//ui/gfx/codec"))
+
+# Customize's "Tab bar on websites" (mast/browser/ui/mast_tab_bar.h): each one-row window's
+# row can take the active website's colour, or the palette instead of the picture. Done
+# the way Chromium recolours an installed web app's window from its theme-color: the
+# window's ColorProviderKey carries the colour (app_background_color, which only app
+# windows set and no mixer reads), and mast_chrome_color_mixer.cc builds the row from it.
+edit(R, "chrome/browser/ui/views/frame/browser_widget.cc", lambda t: once(once(t,
+    '#include "chrome/browser/ui/views/frame/browser_widget.h"\n',
+    '#include "chrome/browser/ui/views/frame/browser_widget.h"\n\n#include "mast/common/mast_tab_bar_state.h"\n'),
+    '    key.app_controller = app_controller;\n'
+    '    key.app_background_color = app_controller->GetBackgroundColor();\n  }\n',
+    '    key.app_controller = app_controller;\n'
+    '    key.app_background_color = app_controller->GetBackgroundColor();\n'
+    '  } else if (const std::optional<uint32_t> mast_row =\n'
+    '                 mast::TabBarColor(browser_view_.get())) {\n'
+    '    // Mast: what the tab row sits on for the active tab.\n'
+    '    key.app_background_color = *mast_row;\n  }\n'))
+edit(R, "chrome/browser/ui/views/frame/BUILD.gn", lambda t: add_dep(t, 'source_set("browser_widget_impl") {', "//mast/common"))
+# Each website colour gets its own ColorProvider, and Chromium keeps every provider it
+# builds. Keep the 24 newest Mast row colours; older ones go once no window shows them.
+edit(T, "ui/color/color_provider_manager.cc", lambda t: once(once(once(t,
+    '#include <algorithm>\n',
+    '#include <algorithm>\n#include <deque>\n'),
+    '#include "ui/webui/buildflags.h"\n',
+    '#include "ui/webui/buildflags.h"\n\n#include "mast/common/mast_tab_bar_state.h"\n'),
+    '    iter = color_providers_.emplace(key, std::move(provider)).first;\n',
+    '    // Mast: "Match site" (mast/common/mast_tab_bar_state.h) makes a provider\n'
+    '    // per website colour. Drop the oldest that no window shows any more.\n'
+    '    if (key.app_background_color && !key.app_controller) {\n'
+    '      static base::NoDestructor<std::deque<ColorProviderKey>> mast_rows;\n'
+    '      mast_rows->push_back(key);\n'
+    '      while (mast_rows->size() > 24) {\n'
+    '        const auto old = std::ranges::find_if(\n'
+    '            *mast_rows, [](const ColorProviderKey& k) {\n'
+    '              return !mast::TabBarColorInUse(*k.app_background_color);\n'
+    '            });\n'
+    '        if (old == mast_rows->end()) {\n          break;\n        }\n'
+    '        color_providers_.erase(*old);\n'
+    '        mast_rows->erase(old);\n      }\n    }\n'
+    '    iter = color_providers_.emplace(key, std::move(provider)).first;\n'))
+edit(T, "ui/color/BUILD.gn", lambda t: add_dep(t, 'component("mixers") {', "//mast/common"))
 
 # ---------------------------------------------------------------- branding
 B = "mast-branding.patch"

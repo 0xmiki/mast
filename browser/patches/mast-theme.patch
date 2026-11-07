@@ -16,16 +16,17 @@ diff -ruN a/chrome/browser/resources/settings/settings_ui/settings_ui.ts b/chrom
 diff -ruN a/chrome/browser/ui/color/BUILD.gn b/chrome/browser/ui/color/BUILD.gn
 --- a/chrome/browser/ui/color/BUILD.gn
 +++ b/chrome/browser/ui/color/BUILD.gn
-@@ -21,6 +21,8 @@
+@@ -21,6 +21,9 @@
      "chrome_color_mixer.cc",
      "chrome_color_mixer.h",
      "chrome_color_mixers.cc",
 +    "//mast/browser/ui/color/mast_chrome_color_mixer.cc",
 +    "//mast/browser/ui/color/mast_chrome_color_mixer.h",
++    "//mast/ui/color/mast_site_color.h",
      "chrome_color_mixers.h",
      "chrome_color_provider_utils.cc",
      "chrome_color_provider_utils.h",
-@@ -50,6 +52,7 @@
+@@ -50,6 +53,7 @@
    configs += [ "//build/config/compiler:wexit_time_destructors" ]
  
    deps = [
@@ -135,6 +136,14 @@ diff -ruN a/ui/color/BUILD.gn b/ui/color/BUILD.gn
      "color_mixers.h",
      "color_provider_manager.cc",
      "color_provider_manager.h",
+@@ -179,6 +182,7 @@
+   defines = [ "IS_COLOR_IMPL" ]
+ 
+   deps = [
++    "//mast/common",
+     ":color",
+     ":color_headers",
+     ":color_provider_key",
 diff -ruN a/ui/color/color_mixers.cc b/ui/color/color_mixers.cc
 --- a/ui/color/color_mixers.cc
 +++ b/ui/color/color_mixers.cc
@@ -155,6 +164,50 @@ diff -ruN a/ui/color/color_mixers.cc b/ui/color/color_mixers.cc
    // TODO(tluk): Determine the correct place to insert the sys color mixer.
    AddSysColorMixer(provider, key);
  #if BUILDFLAG(IS_ANDROID)
+diff -ruN a/ui/color/color_provider_manager.cc b/ui/color/color_provider_manager.cc
+--- a/ui/color/color_provider_manager.cc
++++ b/ui/color/color_provider_manager.cc
+@@ -5,6 +5,7 @@
+ #include "ui/color/color_provider_manager.h"
+ 
+ #include <algorithm>
++#include <deque>
+ #include <optional>
+ #include <utility>
+ 
+@@ -22,6 +23,8 @@
+ #include "ui/color/color_provider_utils.h"
+ #include "ui/webui/buildflags.h"
+ 
++#include "mast/common/mast_tab_bar_state.h"
++
+ namespace ui {
+ 
+ namespace {
+@@ -125,6 +128,23 @@
+       });
+     }
+ 
++    // Mast: "Match site" (mast/common/mast_tab_bar_state.h) makes a provider
++    // per website colour. Drop the oldest that no window shows any more.
++    if (key.app_background_color && !key.app_controller) {
++      static base::NoDestructor<std::deque<ColorProviderKey>> mast_rows;
++      mast_rows->push_back(key);
++      while (mast_rows->size() > 24) {
++        const auto old = std::ranges::find_if(
++            *mast_rows, [](const ColorProviderKey& k) {
++              return !mast::TabBarColorInUse(*k.app_background_color);
++            });
++        if (old == mast_rows->end()) {
++          break;
++        }
++        color_providers_.erase(*old);
++        mast_rows->erase(old);
++      }
++    }
+     iter = color_providers_.emplace(key, std::move(provider)).first;
+     RecordColorProviderCacheSize(static_cast<int>(color_providers_.size()));
+   }
 diff -ruN a/ui/gfx/platform_font_skia.cc b/ui/gfx/platform_font_skia.cc
 --- a/ui/gfx/platform_font_skia.cc
 +++ b/ui/gfx/platform_font_skia.cc

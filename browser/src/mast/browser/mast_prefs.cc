@@ -23,6 +23,7 @@ void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry) {
   registry->RegisterStringPref(kPalettePref, "onyx");
   registry->RegisterIntegerPref(kWallpaperPref, 0);
   registry->RegisterStringPref(kWallpaperTonePref, "dark");
+  registry->RegisterStringPref(kTabBarPref, "picture");
 }
 
 }  // namespace mast

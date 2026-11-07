@@ -22,6 +22,10 @@ inline constexpr char kWallpaperFile[] = "Mast Wallpaper.jpg";
 // Whether the image is "dark" or "light": the tab row's text and icons, and the
 // new tab page's tiles and widgets, follow it.
 inline constexpr char kWallpaperTonePref[] = "mast.ntp.wallpaper_tone";
+// What the one-row tab row shows on websites (Customize: Tab bar on websites):
+// "picture" (Customize's picture, as on the new tab page), "theme" (the
+// palette) or "site" (each website's own colour). See mast/browser/ui/mast_tab_bar.h.
+inline constexpr char kTabBarPref[] = "mast.tab_bar";
 
 // Profile prefs: Mast's own, and Mast's defaults for some of Chromium's. Called
 // last in RegisterProfilePrefs(), so every upstream pref is already registered.

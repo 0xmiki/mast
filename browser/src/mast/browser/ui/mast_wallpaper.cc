@@ -18,6 +18,7 @@
 #include "components/prefs/pref_service.h"
 #include "mast/browser/mast_prefs.h"
 #include "mast/common/mast_features.h"
+#include "mast/common/mast_tab_bar_state.h"
 #include "mast/ui/color/mast_palette.h"
 #include "third_party/skia/include/core/SkBitmap.h"
 #include "third_party/skia/include/core/SkColor.h"
@@ -127,6 +128,11 @@ void OnDecoded(const base::FilePath& path, int version, SkBitmap bitmap) {
 
 gfx::ImageSkia WallpaperFrameImage(const BrowserView* browser_view) {
   if (!IsOneRowWindow() || !browser_view || !browser_view->GetWidget()) {
+    return gfx::ImageSkia();
+  }
+  // A website in "Theme" or "Match site" (Customize: Tab bar on websites):
+  // the row is the palette or the site's colour (mast_tab_bar.h).
+  if (TabBarColor(browser_view)) {
     return gfx::ImageSkia();
   }
   Profile* profile = browser_view->GetProfile();

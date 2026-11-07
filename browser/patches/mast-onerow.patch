@@ -1,20 +1,25 @@
 diff -ruN a/chrome/browser/ui/browser_window/internal/BUILD.gn b/chrome/browser/ui/browser_window/internal/BUILD.gn
 --- a/chrome/browser/ui/browser_window/internal/BUILD.gn
 +++ b/chrome/browser/ui/browser_window/internal/BUILD.gn
-@@ -13,6 +13,7 @@
+@@ -13,6 +13,10 @@
      "profile_browser_collection.cc",
    ]
    deps = [
++    "//skia",
++    "//content/public/browser",
++    "//components/prefs",
 +    "//mast/common",
      "//base",
      "//chrome/browser:browser_process",
      "//chrome/browser:global_features",
-@@ -66,6 +67,8 @@
+@@ -66,6 +70,10 @@
        "create_browser_window_non_android.cc",
        "desktop_browser_window_capabilities.cc",
        "embedder_browser_window_features.cc",
 +      "//mast/browser/ui/mast_one_row_toolbar.cc",
 +      "//mast/browser/ui/mast_one_row_toolbar.h",
++      "//mast/browser/ui/mast_tab_bar.cc",
++      "//mast/browser/ui/mast_tab_bar.h",
        "global_browser_collection_platform_delegate_non_android.cc",
      ]
      public_deps = [
@@ -94,6 +99,29 @@ diff -ruN a/chrome/browser/ui/views/frame/browser_frame_view.cc b/chrome/browser
    const ui::ThemeProvider* tp = GetThemeProvider();
    const int frame_image_id = ShouldPaintAsActiveForState(active_state)
                                   ? IDR_THEME_FRAME
+diff -ruN a/chrome/browser/ui/views/frame/browser_widget.cc b/chrome/browser/ui/views/frame/browser_widget.cc
+--- a/chrome/browser/ui/views/frame/browser_widget.cc
++++ b/chrome/browser/ui/views/frame/browser_widget.cc
+@@ -4,6 +4,8 @@
+ 
+ #include "chrome/browser/ui/views/frame/browser_widget.h"
+ 
++#include "mast/common/mast_tab_bar_state.h"
++
+ #include <memory>
+ #include <utility>
+ 
+@@ -509,6 +511,10 @@
+           web_app::AppBrowserController::From(browser_view_->browser())) {
+     key.app_controller = app_controller;
+     key.app_background_color = app_controller->GetBackgroundColor();
++  } else if (const std::optional<uint32_t> mast_row =
++                 mast::TabBarColor(browser_view_.get())) {
++    // Mast: what the tab row sits on for the active tab.
++    key.app_background_color = *mast_row;
+   }
+ 
+ #if BUILDFLAG(IS_CHROMEOS)
 diff -ruN a/chrome/browser/ui/views/frame/BUILD.gn b/chrome/browser/ui/views/frame/BUILD.gn
 --- a/chrome/browser/ui/views/frame/BUILD.gn
 +++ b/chrome/browser/ui/views/frame/BUILD.gn
@@ -126,6 +154,14 @@ diff -ruN a/chrome/browser/ui/views/frame/BUILD.gn b/chrome/browser/ui/views/fra
      ":custom_corners",
      ":custom_corners_background",
      ":custom_floating_corner",
+@@ -2732,6 +2740,7 @@
+     "//chrome/browser:browser_public_dependencies",
+   ]
+   deps = [
++    "//mast/common",
+     ":browser_frame_view",
+     ":browser_native_widget",
+     ":browser_native_widget_factory",
 diff -ruN a/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc b/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc
 --- a/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc
 +++ b/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc

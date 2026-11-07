@@ -6,6 +6,8 @@ source_set("common") {
   sources = [
     "mast_features.cc",
     "mast_features.h",
+    "mast_tab_bar_state.cc",
+    "mast_tab_bar_state.h",
   ]
   deps = [ "//base" ]
 }

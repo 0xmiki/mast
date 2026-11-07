@@ -142,6 +142,25 @@ dialog.cz { width: 400px; padding: 18px 20px 20px; }
 .bgs .up { background: none; box-shadow: inset 0 0 0 1px var(--text-3); }
 .bgs .up:hover { box-shadow: inset 0 0 0 1px var(--text-2); }
 .bgs .up[disabled] { cursor: default; opacity: .6; }
+/* Tab bar on websites (design C23): each choice shows a tiny window on a light
+   website, so the difference is visible before picking. */
+.bars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+.bars button { display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 0; border: 0; background: none; color: var(--text-2); font-size: 12px; }
+.bars button:hover { color: var(--text); }
+.bars button.on { color: var(--text); font-weight: 600; }
+.bars button[disabled] { opacity: .35; cursor: default; color: var(--text-2); }
+.mini { position: relative; display: flex; flex-direction: column; width: 100%; aspect-ratio: 16 / 10; overflow: hidden; border-radius: 7px; background: #f6f5f2; }
+.mini::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px var(--line); pointer-events: none; }
+.bars button.on .mini::after { box-shadow: inset 0 0 0 2px var(--text); }
+.mini .tb { display: flex; align-items: center; gap: 4px; height: 26%; padding: 0 6px; background: var(--b) center / cover; }
+.mini .tb i { width: 14%; height: 3px; border-radius: 2px; background: rgb(255 255 255/.5); }
+.mini .tb i:first-child { width: 30%; height: 60%; border-radius: 3px; background: rgb(255 255 255/.22); }
+.mini.site .tb i { background: rgb(29 27 24/.4); }
+.mini.site .tb i:first-child { background: rgb(29 27 24/.08); }
+.mini .pg { display: flex; flex: 1; flex-direction: column; gap: 5px; padding: 9% 12%; }
+.mini .pg i { width: 60%; height: 4px; border-radius: 2px; background: #c9c6bf; }
+.mini .pg i:nth-child(2) { width: 85%; }
+.mini .pg i:nth-child(3) { width: 45%; }
 .sw { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
 .sw button { display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 4px 0; border: 0; background: none; color: var(--text-2); font-size: 11px; }
 .sw button:hover, .sw button.on { color: var(--text); }
@@ -176,6 +195,7 @@ dialog.cz { width: 400px; padding: 18px 20px 20px; }
   <h4>Background</h4>
   <div class="bgs" id="czBgs"></div>
   <div id="czTone"></div>
+  <div id="czBar"></div>
   <h4>Colors</h4>
   <div class="sw" id="czSw"></div>
   <p class="note"><i class="ind"></i>Ember stays the same: it always means blocked.</p>
@@ -381,6 +401,23 @@ function renderCustomize() {
     <div class="tone">${[['dark', 'Dark'], ['light', 'Light']].map(([id, label]) =>
       `<button data-tone="${id}" class="${tone === id ? 'on' : ''}" aria-pressed="${tone === id}">${label}</button>`).join('')}</div>
     <p class="sub">Light makes text and icons dark, for bright pictures.</p>`;
+  // What the tab row shows on websites. "Picture" needs one; without it the
+  // row is the palette, as "Theme" (the pref stays, for when a picture comes).
+  const bar = !wallpaper && t.tabBar === 'picture' ? 'theme' : (t.tabBar || 'picture');
+  const mini = (cls, b) => `<span class="mini ${cls}" style="--b:${b}"><span class="tb"><i></i><i></i><i></i></span><span class="pg"><i></i><i></i><i></i></span></span>`;
+  const bars = [
+    ['picture', 'Picture', mini('', wallpaper ? `url(wallpaper-${wallpaper}.jpg)` : 'linear-gradient(120deg,#5b4a3a,#2c2a33)'), !wallpaper],
+    ['theme', 'Theme', mini('', 'var(--surface)'), false],
+    ['site', 'Match site', mini('site', '#f6f5f2'), false]];
+  const barText = {
+    picture: 'Your picture runs behind the tabs on every site, like the new tab page.',
+    theme: wallpaper ? 'Websites get a plain tab bar in your color. The picture stays on the new tab page.'
+      : 'Websites get a plain tab bar in your color. Picture needs a background picture.',
+    site: "The tab bar takes each website's own color, so the site runs up to the top."};
+  document.getElementById('czBar').innerHTML = `<h4>Tab bar on websites</h4>
+    <div class="bars">${bars.map(([id, label, m, off]) =>
+      `<button data-bar="${id}" class="${bar === id ? 'on' : ''}" aria-pressed="${bar === id}" ${off ? 'disabled' : ''}>${m}${label}</button>`).join('')}</div>
+    <p class="sub">${barText[bar]}</p>`;
   document.getElementById('czSw').innerHTML = (state.palettes || []).map((p) => `
     <button data-palette="${esc(p.id)}" class="${p.id === t.palette ? 'on' : ''}" aria-pressed="${p.id === t.palette}">
       <i style="background:linear-gradient(135deg, ${p.surface} 50%, ${p.field} 50%)"></i>${esc(p.name)}</button>`).join('');
@@ -475,6 +512,7 @@ document.addEventListener('click', (e) => {
   if (t.dataset.bg === 'none') return wallpaper && chrome.send('clearWallpaper');
   if (t.dataset.bg === 'upload') return document.getElementById('czFile').click();
   if (t.dataset.palette) return chrome.send('setPalette', [t.dataset.palette]);
+  if (t.dataset.bar) { state.theme.tabBar = t.dataset.bar; renderCustomize(); return chrome.send('setTabBar', [t.dataset.bar]); }
   if (t.dataset.tone) { applyTone(t.dataset.tone); renderCustomize(); return chrome.send('setWallpaperTone', [t.dataset.tone]); }
 });
 document.addEventListener('change', (e) => {

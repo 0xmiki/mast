@@ -40,7 +40,7 @@ const mock = `<script>
     desktop: ${JSON.stringify(sites)}, desktopReady: true, widgets: ['clock', 'distractions'] };
   const palettes = ${JSON.stringify(palettes)};
   s.palettes = palettes.map(({ css, ...p }) => p);
-  s.theme = { palette: 'onyx', css: palettes[0].css, wallpaper: 0, tone: 'dark' };
+  s.theme = { palette: 'onyx', css: palettes[0].css, wallpaper: 0, tone: 'dark', tabBar: 'picture' };
   window.__wallUrl = '';
   if (location.hash === '#blocked') for (const c of cats) if (s.distractions.includes(c.id)) for (const v of c.services) for (const d of v.domains) s.blocks[d] = { since: Date.now() - H, until: midnight() };
   if (location.hash === '#empty') s.desktop = [];
@@ -67,6 +67,7 @@ const mock = `<script>
     // The browser writes the image to the profile folder; here it stays a data URL.
     if (m === 'setWallpaper') { window.__wallUrl = 'data:image/jpeg;base64,' + a[0]; s.theme = { ...s.theme, wallpaper: Math.abs(s.theme.wallpaper) + 1, tone: a[1] || s.theme.tone }; }
     if (m === 'setWallpaperTone') s.theme = { ...s.theme, tone: a[0] };
+    if (m === 'setTabBar') s.theme = { ...s.theme, tabBar: a[0] };
     if (m === 'clearWallpaper') s.theme = { ...s.theme, wallpaper: -Math.abs(s.theme.wallpaper) };
     if (m === 'addSite' && !s.custom.includes(a[0])) s.custom.push(a[0]);
     if (m === 'removeSite') s.custom = s.custom.filter((d) => d !== a[0]);

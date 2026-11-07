@@ -210,6 +210,7 @@ class MastHandler : public content::WebUIMessageHandler,
     On("setWallpaper", &MastHandler::HandleSetWallpaper);
     On("clearWallpaper", &MastHandler::HandleClearWallpaper);
     On("setWallpaperTone", &MastHandler::HandleSetWallpaperTone);
+    On("setTabBar", &MastHandler::HandleSetTabBar);
   }
 
   void OnJavascriptAllowed() override {
@@ -373,6 +374,16 @@ class MastHandler : public content::WebUIMessageHandler,
     SendState();
   }
 
+  // ["setTabBar", "picture" | "theme" | "site"]: what the tab row shows on
+  // websites. Each window follows the pref (mast/browser/ui/mast_tab_bar.h).
+  void HandleSetTabBar(const base::ListValue& args) {
+    const std::string mode = StringArg(args);
+    if (mode == "picture" || mode == "theme" || mode == "site") {
+      profile_->GetPrefs()->SetString(kTabBarPref, mode);
+    }
+    SendState();
+  }
+
   void SetTone(const std::string& tone) {
     if (tone == "dark" || tone == "light") {
       profile_->GetPrefs()->SetString(kWallpaperTonePref, tone);
@@ -481,7 +492,9 @@ class MastHandler : public content::WebUIMessageHandler,
                                                     kWallpaperPref)))
                   .Set("wallpaperTop", WallpaperTop())
                   .Set("tone", profile_->GetPrefs()->GetString(
-                                   kWallpaperTonePref)));
+                                   kWallpaperTonePref))
+                  .Set("tabBar",
+                       profile_->GetPrefs()->GetString(kTabBarPref)));
     state.Set("palettes", PalettesValue());
     state.Set("result", std::move(result));
     CallJavascriptFunction("mastState", base::Value(std::move(state)));
