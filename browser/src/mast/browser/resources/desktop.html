@@ -161,6 +161,15 @@ dialog.cz { width: 400px; padding: 18px 20px 20px; }
 .mini .pg i { width: 60%; height: 4px; border-radius: 2px; background: #c9c6bf; }
 .mini .pg i:nth-child(2) { width: 85%; }
 .mini .pg i:nth-child(3) { width: 45%; }
+/* Match site (design C23d B): one window cut into three sites; each slice's tab
+   bar runs straight into its own page. */
+.mini.slices { flex-direction: row; }
+.mini .sl { display: flex; flex: 1; flex-direction: column; min-width: 0; background: var(--b); }
+.mini .sl .tb { padding: 0 4px; }
+.mini .sl .pg { padding: 9% 14%; }
+.mini .sl.lt .tb i { background: rgb(29 27 24/.4); }
+.mini .sl.lt .tb i:first-child { background: rgb(29 27 24/.08); }
+.mini .sl:not(.lt) .pg i { background: rgb(255 255 255/.22); }
 .sw { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
 .sw button { display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 4px 0; border: 0; background: none; color: var(--text-2); font-size: 11px; }
 .sw button:hover, .sw button.on { color: var(--text); }
@@ -405,14 +414,16 @@ function renderCustomize() {
   // row is the palette, as "Theme" (the pref stays, for when a picture comes).
   const bar = !wallpaper && t.tabBar === 'picture' ? 'theme' : (t.tabBar || 'site');
   const mini = (cls, b) => `<span class="mini ${cls}" style="--b:${b}"><span class="tb"><i></i><i></i><i></i></span><span class="pg"><i></i><i></i><i></i></span></span>`;
+  const slices = `<span class="mini slices">${[['#f6f5f2', 'lt'], ['#16243a', ''], ['#1f3d2e', '']].map(([b, cls]) =>
+    `<span class="sl ${cls}" style="--b:${b}"><span class="tb"><i></i><i></i></span><span class="pg"><i></i><i></i><i></i></span></span>`).join('')}</span>`;
   const bars = [
-    ['picture', 'Picture', mini('', wallpaper ? `url(wallpaper-${wallpaper}.jpg)` : 'linear-gradient(120deg,#5b4a3a,#2c2a33)'), !wallpaper],
-    ['theme', 'Theme', mini('', 'var(--surface)'), false],
-    ['site', 'Match site', mini('site', '#f6f5f2'), false]];
+    ['picture', 'Your picture', mini('', wallpaper ? `url(wallpaper-${wallpaper}.jpg)` : 'linear-gradient(120deg,#5b4a3a,#2c2a33)'), !wallpaper],
+    ['theme', 'Your color', mini('', 'var(--surface)'), false],
+    ['site', 'Match site', slices, false]];
   const barText = {
     picture: 'Your picture runs behind the tabs on every site, like the new tab page.',
-    theme: wallpaper ? 'Websites get a plain tab bar in your color. The picture stays on the new tab page.'
-      : 'Websites get a plain tab bar in your color. Picture needs a background picture.',
+    theme: wallpaper ? 'Websites get a plain tab bar in your color. Your picture stays on the new tab page.'
+      : 'Websites get a plain tab bar in your color. Your picture needs a background image.',
     site: "The tab bar takes each website's own color, so the site runs up to the top."};
   document.getElementById('czBar').innerHTML = `<h4>Tab bar on websites</h4>
     <div class="bars">${bars.map(([id, label, m, off]) =>
