@@ -18,7 +18,7 @@ std::string BlockPageHtml(std::string_view host,
                           const BlockMatch& match,
                           const PageBackdrop& backdrop);
 
-// The same page for sites on the always-on adult list (mast_feeds.h): just
+// The same page for sites on the always-on lists (mast_feeds.h): just
 // "This site is blocked", with no end time and no reason.
 std::string QuietBlockPageHtml(std::string_view host,
                                const PageBackdrop& backdrop);

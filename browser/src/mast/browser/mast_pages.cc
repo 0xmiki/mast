@@ -78,7 +78,7 @@ body.wall.light h1, body.wall.light .st, body.wall.light .back { text-shadow:0 1
 <button class="back" id="back" onclick="history.back()">&larr; Back</button>
 </main><script>
 const until = {{UNTIL}};
-const quiet = {{QUIET}};  // always blocked (adult list): no end, no reason given
+const quiet = {{QUIET}};  // always blocked (adult, gambling): no end time
 const wall = {{WALL}}, wallTop = {{WALL_TOP}};
 const D = 864e5;
 const hm = (t) => new Date(t).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});

@@ -15,11 +15,12 @@ namespace mast {
 
 // Large maintained blocklists shipped beside the browser as data files
 // (<exe dir>/mast-feeds/<id>.txt, made by remote/build-feeds.py):
-//   - "adult": always blocked, in every window, and never shown anywhere;
-//   - "gambling": the "Other gambling sites" row of Gambling & betting, blocked
-//     like any other row (its list entry is FeedKey("gambling")).
+//   - "adult" and "gambling": always blocked, in every window, outside the
+//     blocklist (the blocklist panel says so in one line). A feed can also back
+//     a category's last row (list entry FeedKey(id)); none does now.
 // Each line is a domain that also covers its subdomains.
 inline constexpr char kAdultFeed[] = "adult";
+inline constexpr char kGamblingFeed[] = "gambling";
 inline constexpr char kFeedKeyPrefix[] = "feed:";
 
 // "gambling" -> "feed:gambling", the feed's entry in the blocks and the list.
@@ -63,7 +64,7 @@ class MastFeeds {
   std::vector<base::OnceClosure> waiting_;
 };
 
-// True if `host` is on the always-on adult list.
+// True if `host` is on an always-on list (adult, gambling).
 bool IsAlwaysBlocked(std::string_view host);
 
 }  // namespace mast

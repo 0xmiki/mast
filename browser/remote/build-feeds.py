@@ -6,8 +6,9 @@
 Writes <out>/adult.txt and <out>/gambling.txt (one domain per line, sorted; each also covers
 its subdomains), SOURCES.txt and the feeds' licence. The browser reads them at startup
 (src/mast/browser/mast_feeds.cc):
-  - adult: always blocked, never shown (HaGeZi NSFW + blocklist/feeds/adult.txt);
-  - gambling: the "Other gambling sites" row of the Gambling & betting category.
+  - adult: HaGeZi NSFW + blocklist/feeds/adult.txt;
+  - gambling: HaGeZi gambling mini + blocklist/feeds/gambling.txt.
+Both are always blocked, in every window, and aren't part of the blocklist.
 
 Hand-curated entries win: a feed entry that is, or is a parent of, a domain in
 blocklist.json or blocklist/feeds/allow.txt is dropped (e.g. okcupid.com is Dating, not
@@ -88,8 +89,9 @@ def main():
         entries = set(hosts(text))
         if len(entries) < MIN_ENTRIES:
             sys.exit(f"{name}: only {len(entries)} entries from {url}")
-        if name == "adult":
-            entries |= set(hosts(open(os.path.join(blocklist, "feeds/adult.txt"), encoding="utf-8").read()))
+        extra = os.path.join(blocklist, f"feeds/{name}.txt")  # Mast's hand-picked sites
+        if os.path.exists(extra):
+            entries |= set(hosts(open(extra, encoding="utf-8").read()))
         dropped = sorted(e for e in entries if e in protected or under(e, allow))
         entries -= set(dropped)
         # Subdomains of another entry are redundant: matching covers subdomains.
@@ -102,7 +104,7 @@ def main():
                     f"  {url}",
                     f"  HaGeZi version {header(text, 'Version')}, licence GPL-3.0 (LICENSE-HaGeZi.txt)",
                     f"  minus {len(dropped)} domains Mast's own list places elsewhere"
-                    + (", plus Mast's blocklist/feeds/adult.txt" if name == "adult" else ""),
+                    + f", plus Mast's blocklist/feeds/{name}.txt",
                     ""]
     with open(os.path.join(out, "SOURCES.txt"), "w", encoding="utf-8") as f:
         f.write("\n".join(sources))

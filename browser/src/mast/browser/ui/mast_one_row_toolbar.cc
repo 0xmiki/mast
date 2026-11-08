@@ -15,7 +15,6 @@
 #include "components/bookmarks/common/bookmark_bar_visibility_state.h"
 #include "components/bookmarks/common/bookmark_pref_names.h"
 #include "components/prefs/pref_service.h"
-#include "mast/browser/mast_blocks.h"
 #include "mast/browser/mast_prefs.h"
 #include "mast/browser/mast_theme.h"
 #include "mast/browser/ui/mast_tab_bar.h"
@@ -49,7 +48,6 @@ void OnBrowserWindowReady(BrowserWindowInterface* browser) {
   // picks apply from the new tab page (mast_ui.cc).
   if (browser && browser->GetProfile()) {
     ApplyTheme(browser->GetProfile()->GetPrefs());
-    MastBlocks::Get().ApplyDefaultBlocks();
     HideBookmarksBar(browser->GetProfile()->GetPrefs());
   }
   if (!IsOneRowWindow() || !browser ||

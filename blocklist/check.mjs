@@ -41,7 +41,7 @@ for (const c of list.categories) {
 }
 
 // The hand-written feed files: one host per line.
-for (const name of ['adult.txt', 'allow.txt']) {
+for (const name of ['adult.txt', 'gambling.txt', 'allow.txt']) {
 	const lines = fs.readFileSync(new URL(`./feeds/${name}`, import.meta.url), 'utf8').split('\n');
 	lines.forEach((l, i) => {
 		l = l.trim();

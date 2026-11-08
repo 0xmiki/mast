@@ -48,7 +48,7 @@ service lists every domain that opens it.
 
 ## Counts (2026-11-07)
 
-13 categories, 462 services, 599 domains, plus the feeds:
+12 categories, 408 services, 538 domains, plus the feeds:
 - Social media
 - Video
 - TV & film streaming
@@ -58,7 +58,6 @@ service lists every domain that opens it.
 - Shopping
 - Games
 - Sports
-- Gambling & betting
 - Trading & crypto
 - Dating
 - Messaging & chat
@@ -69,15 +68,12 @@ Built 2026-11-07. `remote/build-feeds.py` fetches them at build time and ships t
 files beside the browser (`mast-feeds/adult.txt`, `gambling.txt`, with `SOURCES.txt` and
 the GPL-3.0 licence); `mast_feeds.cc` reads them at startup.
 
-- **Adult is not a category.** It is always blocked, in every window, and never shown: no
-  option, no row, no count. Its page says only "This site is blocked". Source: HaGeZi NSFW
-  (~78k domains) plus [`feeds/adult.txt`](feeds/adult.txt), the hand-picked sites that used to
-  be the Adult category.
-- **Gambling is blocked forever out of the box, visibly.** On first run (once per install,
-  `MastBlocks::ApplyDefaultBlocks`) the whole category is blocked forever, like a forever
-  block the user set: it shows as "Blocked forever" in the list and on the block page, so a
-  blocked lottery or odds site is explained, not mysterious. Its last row, "Other gambling
-  sites" (list entry `feed:gambling`), is HaGeZi gambling mini (~69k domains).
+- **Adult and gambling are not categories.** Both are always blocked, in every window,
+  outside the blocklist; the blocklist panel says so in one line ("Adult and gambling sites
+  are always blocked."), and their block page says only "This site is blocked", with no end
+  time. Sources: HaGeZi NSFW (~78k domains) plus [`feeds/adult.txt`](feeds/adult.txt), and
+  HaGeZi gambling mini (~69k) plus [`feeds/gambling.txt`](feeds/gambling.txt) (the
+  hand-picked sites that used to be the Adult and Gambling categories).
 - **Hand-curated entries win.** A feed entry that is, or is a parent of, a domain in
   `blocklist.json` is dropped: okcupid.com stays Dating, sleeper.com stays Sports. False
   positives go in [`feeds/allow.txt`](feeds/allow.txt).

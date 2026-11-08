@@ -11,6 +11,9 @@
 .bl .meta b { color: var(--text-2); font-weight: 500; }
 .bl ul { margin: 0; padding: 0; list-style: none; }
 .bl .cats { border-top: 1px solid var(--line); }
+/* Adult and gambling sites aren't in the list: they're always blocked (mast_feeds.h). */
+.bl .always { display: flex; align-items: center; gap: 8px; margin: 16px 0 0; color: var(--text-3); }
+.bl .always i { width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--signal); }
 .bl .cat { border-bottom: 1px solid var(--line); }
 .bl .row { display: flex; align-items: center; gap: 14px; height: 52px; padding: 0 4px; }
 .bl .name { display: flex; align-items: baseline; gap: 8px; flex: 1; min-width: 0; padding: 0; border: 0; background: none;
@@ -155,6 +158,7 @@ const MastBlocklist = (() => {
     app.innerHTML = `
       <header><h1>Blocklist</h1><span class="meta"><b>${blockedServices}</b> blocked · <b>${state.stopped}</b> stopped today</span></header>
       <ul class="cats">${rows}</ul>
+      <p class="always"><i></i>Adult and gambling sites are always blocked.</p>
       <div class="action">
         <span class="label">How long</span>
         <div class="seg">${DUR.map(([id, label]) => `<button data-dur="${id}" class="${id === dur ? 'on' : ''}">${label}</button>`).join('')}</div>

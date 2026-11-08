@@ -34,18 +34,14 @@ constexpr char kLastDurationPref[] = "mast.last_duration";
 constexpr char kBlockedDayPref[] = "mast.stats.blocked_day";
 constexpr char kBlockedCountPref[] = "mast.stats.blocked_count";
 constexpr char kDistractionsPref[] = "mast.distractions";
-// The version of the default blocks this install has applied (0: none yet).
-constexpr char kDefaultBlocksPref[] = "mast.default_blocks";
-constexpr int kDefaultBlocksVersion = 1;
-// Categories blocked forever out of the box.
-constexpr const char* kDefaultBlockedCategories[] = {"gambling"};
 
 // Blocked by "Block distractions" until someone changes the set. Shopping,
 // games, trading, dating and messaging stay open: people often need them.
-// (Adult sites aren't a category: they're always blocked; see mast_feeds.h.)
+// (Adult and gambling sites aren't categories: they're always blocked; see
+// mast_feeds.h.)
 constexpr const char* kDefaultDistractions[] = {
-    "social", "video",  "streaming", "news",  "forums",
-    "entertainment", "sports", "gambling"};
+    "social", "video",  "streaming", "news",
+    "forums", "entertainment", "sports"};
 
 // A list entry: a domain, or a feed ("feed:gambling") that matches every
 // domain the feed lists.
@@ -165,39 +161,6 @@ void MastBlocks::RegisterLocalStatePrefs(PrefRegistrySimple* registry) {
     distractions.Append(id);
   }
   registry->RegisterListPref(kDistractionsPref, std::move(distractions));
-  registry->RegisterIntegerPref(kDefaultBlocksPref, 0);
-}
-
-void MastBlocks::ApplyDefaultBlocks() {
-  PrefService* p = prefs();
-  if (!p || p->GetInteger(kDefaultBlocksPref) >= kDefaultBlocksVersion) {
-    return;
-  }
-  // Written directly, not through BlockSites(): no undo, no "just blocked"
-  // toast, and nothing joins the user's own sites.
-  const base::Time now = base::Time::Now();
-  {
-    ScopedDictPrefUpdate blocks(p, kBlocksPref);
-    for (const Category& c : Categories()) {
-      if (std::ranges::none_of(kDefaultBlockedCategories,
-                               [&](const char* id) { return c.id == id; })) {
-        continue;
-      }
-      for (const Service& s : c.services) {
-        for (const std::string& domain : s.domains) {
-          const std::optional<Block> current = Of(domain);
-          if (current && current->forever()) {
-            continue;
-          }
-          blocks->Set(domain, BlockToValue({current ? current->since : now,
-                                            std::nullopt}));
-        }
-      }
-    }
-  }
-  p->SetInteger(kDefaultBlocksPref, kDefaultBlocksVersion);
-  p->CommitPendingWrite();
-  ReloadBlockedTabs();
 }
 
 PrefService* MastBlocks::prefs() const {

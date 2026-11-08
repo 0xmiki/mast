@@ -19,7 +19,7 @@ namespace mast {
 
 namespace {
 
-constexpr const char* kFeedIds[] = {kAdultFeed, "gambling"};
+constexpr const char* kFeedIds[] = {kAdultFeed, kGamblingFeed};
 
 base::flat_set<std::string, std::less<>> ReadFeed(const base::FilePath& path) {
   std::string text;
@@ -119,7 +119,8 @@ bool MastFeeds::Contains(std::string_view id, std::string_view host) const {
 }
 
 bool IsAlwaysBlocked(std::string_view host) {
-  return MastFeeds::Get().Contains(kAdultFeed, host);
+  const MastFeeds& feeds = MastFeeds::Get();
+  return feeds.Contains(kAdultFeed, host) || feeds.Contains(kGamblingFeed, host);
 }
 
 }  // namespace mast

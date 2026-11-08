@@ -76,7 +76,7 @@ MastNavigationThrottle::Decide() {
     return GetPageBackdrop(
         navigation_handle()->GetWebContents()->GetBrowserContext());
   };
-  // Adult sites: always, quietly. Not counted, not named, no end time.
+  // Adult and gambling sites: always, quietly. Not counted, no end time.
   if (!IsExcepted(host) && IsAlwaysBlocked(host)) {
     return ThrottleCheckResult(CANCEL, net::ERR_BLOCKED_BY_CLIENT,
                                QuietBlockPageHtml(host, backdrop()));
