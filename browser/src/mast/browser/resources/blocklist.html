@@ -36,6 +36,14 @@
 .bl .svc .d { overflow: hidden; color: var(--text-3); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
 .bl .rm { display: grid; place-items: center; width: 20px; height: 20px; border: 0; border-radius: 50%; background: none; color: var(--text-3); }
 .bl .rm:hover { background: var(--field); color: var(--text); }
+/* YouTube: the whole site, or music only (design C24). */
+.bl .services li.yt { display: block; padding: 2px 0 10px 30px; }
+.bl .yt-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; border-radius: 8px; background: var(--bg); }
+.bl .yt-seg button { display: flex; align-items: center; justify-content: center; gap: 6px; height: 26px; border: 0; border-radius: 6px;
+  background: none; color: var(--text-2); font-size: 12px; }
+.bl .yt-seg button:hover { color: var(--text); }
+.bl .yt-seg button.on { background: var(--pressed); color: var(--text); font-weight: 600; }
+.bl .yt .hint { margin: 6px 0 0; color: var(--text-3); font-size: 11px; }
 .bl .add { flex: 1; height: 28px; padding: 0 10px; border: 0; border-radius: 4px; outline: 0; background: var(--field); }
 .bl .add:focus { box-shadow: 0 0 0 1px var(--text-3); }
 .bl .action { position: sticky; bottom: 0; display: grid; grid-template-columns: 1fr auto; gap: 10px 16px; align-items: center;
@@ -65,6 +73,11 @@ const MastBlocklist = (() => {
   let toastTimer = 0;
   let pending = '';   // what the last Block press was for, e.g. "YouTube" or "8 sites"
   let asked = false;  // a block/undo from this list is waiting for its result
+  let ytMusic = false;  // YouTube selected: block all but music (C24)
+  const MUSIC = 'music:youtube.com';
+  const isYouTube = (s) => !s.custom && s.domains.includes('youtube.com');
+  const ban = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="6" cy="6" r="4.5"/><path d="M2.8 9.2l6.4-6.4"/></svg>';
+  const note = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M4.5 9V2.5l5-1V8"/><circle cx="3.2" cy="9" r="1.3"/><circle cx="8.2" cy="8" r="1.3"/></svg>';
 
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
   const hm = (t) => new Date(t).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
@@ -130,9 +143,12 @@ const MastBlocklist = (() => {
           <button class="check ${selected.has(k) ? 'on' : ''}" ${fv ? 'disabled title="Blocked forever"' : ''} data-svc="${esc(k)}" aria-label="Select ${esc(s.name)}">${selected.has(k) ? tick : ''}</button>
           <span class="svc"><span class="s">${esc(s.name)}</span>${s.custom ? '' : `<span class="d">${s.feed ? 'Tens of thousands more, from a maintained list' : esc(s.domains.join(', '))}</span>`}</span>
           ${b ? `<span class="status blocked">${ind(b)}${b.partial ? 'Partly blocked' : b.until === null ? 'Forever' : untilText(b.until)}</span>`
+              : isYouTube(s) && state.blocks[MUSIC] ? `<span class="status blocked">${ind(state.blocks[MUSIC])}Music only · ${state.blocks[MUSIC].until === null ? 'forever' : untilText(state.blocks[MUSIC].until).toLowerCase()}</span>`
               : `<span class="status">Open</span>`}
           ${s.custom && !b ? `<button class="rm" data-rm="${esc(s.name)}" aria-label="Remove ${esc(s.name)}">${cross}</button>` : ''}
-        </li>`;
+        </li>${isYouTube(s) && selected.has(k) ? `<li class="yt">
+          <div class="yt-seg"><button data-yt="site" class="${ytMusic ? '' : 'on'}">${ban}Whole site</button><button data-yt="music" class="${ytMusic ? 'on' : ''}">${note}Music only</button></div>
+          <p class="hint">${ytMusic ? 'Mixes and songs stay open. Every other video and Shorts are blocked.' : 'All of YouTube is blocked, music too.'}</p></li>` : ''}`;
       }).join('')}${c.custom ? `<li><span class="check" style="visibility:hidden"></span><input class="add" data-add placeholder="Add a site, e.g. espn.com" spellcheck="false"></li>` : ''}</ul>`;
       return `<li class="cat ${open.has(c.id) ? 'open' : ''}">
         <div class="row">
@@ -177,7 +193,11 @@ const MastBlocklist = (() => {
   }
   function selectedDomains() {
     const out = [];
-    for (const c of categories()) for (const s of c.services) if (selected.has(key(c, s))) out.push(...s.domains);
+    for (const c of categories()) for (const s of c.services) {
+      if (!selected.has(key(c, s))) continue;
+      if (isYouTube(s) && ytMusic) out.push(MUSIC);  // YouTube stays open, for music
+      else out.push(...s.domains);
+    }
     return out;
   }
 
@@ -206,6 +226,8 @@ const MastBlocklist = (() => {
       free.forEach((k) => (all ? selected.delete(k) : selected.add(k)));
     } else if (t.dataset.svc) {
       selected.has(t.dataset.svc) ? selected.delete(t.dataset.svc) : selected.add(t.dataset.svc);
+    } else if (t.dataset.yt) {
+      ytMusic = t.dataset.yt === 'music';
     } else if (t.dataset.toggle) {
       open.has(t.dataset.toggle) ? open.delete(t.dataset.toggle) : open.add(t.dataset.toggle);
     } else if (t.dataset.dur) {
@@ -216,6 +238,7 @@ const MastBlocklist = (() => {
     } else if (t.dataset.act === 'block') {
       const domains = selectedDomains();
       pending = selected.size === 1 ? [...selected][0].split('/').slice(1).join('/') : selected.size + ' sites';
+      if (selected.size === 1 && ytMusic && pending === 'YouTube') pending = 'YouTube (all but music)';
       selected.clear();
       asked = true;
       return chrome.send('block', [domains, dur]);

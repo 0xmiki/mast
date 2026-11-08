@@ -70,7 +70,7 @@ fi
 # Mast's HTML pages and the blocklist -> C++ strings, in the generated-sources dir so the
 # rsync of src/mast above never deletes them (unchanged files keep their mtime).
 python3 "$M/remote/embed-pages.py" "$S/mast/browser/resources" "$OUT/gen/mast/browser/resources" \
-	"$M/blocklist/blocklist.json"
+	"$M/blocklist/blocklist.json" "$S/mast/browser/resources/youtube_music.js"
 # Product name in every UI string file (only rewrites files that change).
 python3 "$M/remote/substitute-names.py" "$S"
 # Files that came back byte-identical keep their old timestamps (no needless recompiles).

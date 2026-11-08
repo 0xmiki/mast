@@ -79,6 +79,7 @@ body.wall.light h1, body.wall.light .st, body.wall.light .back { text-shadow:0 1
 </main><script>
 const until = {{UNTIL}};
 const quiet = {{QUIET}};  // always blocked (adult, gambling): no end time
+const label = {{LABEL}};  // "Blocked", or "Music only" (YouTube)
 const wall = {{WALL}}, wallTop = {{WALL_TOP}};
 const D = 864e5;
 const hm = (t) => new Date(t).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
@@ -102,7 +103,7 @@ function leftText(u) {
 function paint() {
   const forever = until === null;
   document.getElementById('state').textContent = quiet ? 'This site is blocked'
-      : forever ? 'Blocked forever' : 'Blocked ' + untilText(until);
+      : forever ? label + ' forever' : label + ' ' + untilText(until);
   document.getElementById('left').textContent = forever ? '' : leftText(until);
   if (!forever && Date.now() >= until) location.reload();
 }
@@ -167,6 +168,7 @@ namespace {
 std::string BlockPage(std::string_view host,
                       std::string_view until,
                       bool quiet,
+                      std::string_view label,
                       const PageBackdrop& backdrop) {
   std::string page = Fill(kBlockPage);
   const bool wall = !backdrop.data_url.empty();
@@ -180,6 +182,8 @@ std::string BlockPage(std::string_view host,
   base::ReplaceSubstringsAfterOffset(&page, 0, "{{UNTIL}}", until);
   base::ReplaceSubstringsAfterOffset(&page, 0, "{{QUIET}}",
                                      quiet ? "true" : "false");
+  base::ReplaceSubstringsAfterOffset(&page, 0, "{{LABEL}}",
+                                     "\"" + std::string(label) + "\"");
   // Last: the picture is the one large value (a base64 data: URL; no quotes
   // or braces in it).
   base::ReplaceSubstringsAfterOffset(
@@ -191,18 +195,19 @@ std::string BlockPage(std::string_view host,
 
 std::string BlockPageHtml(std::string_view host,
                           const BlockMatch& match,
-                          const PageBackdrop& backdrop) {
+                          const PageBackdrop& backdrop,
+                          std::string_view label) {
   return BlockPage(
       host,
       match.block.until
           ? base::NumberToString(match.block.until->InMillisecondsSinceUnixEpoch())
           : std::string("null"),
-      /*quiet=*/false, backdrop);
+      /*quiet=*/false, label, backdrop);
 }
 
 std::string QuietBlockPageHtml(std::string_view host,
                                const PageBackdrop& backdrop) {
-  return BlockPage(host, "null", /*quiet=*/true, backdrop);
+  return BlockPage(host, "null", /*quiet=*/true, "Blocked", backdrop);
 }
 
 std::string StartPageHtml(bool as_new_tab) {

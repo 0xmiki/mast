@@ -20,6 +20,8 @@ source_set("browser") {
     "mast_prefs.h",
     "mast_scheme.cc",
     "mast_scheme.h",
+    "mast_youtube.cc",
+    "mast_youtube.h",
     "mast_theme.h",
   ]
   deps = [

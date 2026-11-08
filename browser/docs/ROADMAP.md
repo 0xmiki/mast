@@ -292,6 +292,34 @@ first (4 are colour mixer only; the rest are 1–3 line hooks).
   - Paper, the light palette, needs light-mode mixers.
   - The palette is process-wide for now; make it per profile.
 
+### J. YouTube, music only (built, design C24)
+
+- **The choice:** YouTube's row in the blocklist offers "Whole site" or "Music only". Music
+  only is a block entry (`music:youtube.com`) with the usual rules: a duration, lengthened
+  but never shortened, a 10-second undo. A whole-site block on youtube.com wins over it.
+- **Where it runs:** `mast_youtube.cc` (a tab helper the navigation throttle attaches)
+  runs `resources/youtube_music.js` in Mast's own isolated world on every YouTube page
+  while the block is in force. That's where an extension's content script would run, but
+  it's built in and can't be switched off. A built-in extension was considered, but it
+  needs a private API (a permission enum and function histogram values, both widely
+  included) plus a background relay just to learn whether the block is on.
+- **What counts as music** (checked on live YouTube, 2026-11-08):
+  - **Lists:** the item's link starts a Mix (`list=RD…`), or its duration badge carries
+    the ♪ icon (non-music badges are plain text), or the badge says "Mix". Everything else
+    is hidden. Undecided items wait invisible so their badges still load.
+  - **Watch pages:** `player-microformat-renderer`'s JSON for that exact video (`@id`)
+    says `genre: "Music"`, or it plays from a Mix. It's re-checked on YouTube's in-page
+    navigation (`yt-navigate-finish`, `yt-page-data-updated`). While checking, the
+    player is hidden and paused. A video that isn't music, or no answer within 6s, reloads
+    with `mast_music_only=1`, and the throttle shows the blocked page ("Music only until
+    …").
+  - **Shorts:** shelves, the Shorts chip and the Shorts guide entry are hidden, and any
+    `/shorts/` address is blocked by the throttle.
+  - **music.youtube.com** stays open.
+- **Known limits:** live streams have no ♪ badge, so they're hidden. Some music videos
+  aren't categorised as Music by their uploaders. YouTube's markup changes, so the
+  selectors will need upkeep.
+
 ### H. Leftovers from the de-Google pass
 
 - "Your Mast" in the app menu (string). Warm greys in settings (WebUI colour tokens, `DESIGN-PLAN.md` §F).

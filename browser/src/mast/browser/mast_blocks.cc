@@ -43,6 +43,11 @@ constexpr const char* kDefaultDistractions[] = {
     "social", "video",  "streaming", "news",
     "forums", "entertainment", "sports"};
 
+// Entries that aren't domains: feeds ("feed:…") and YouTube's Music only.
+bool IsSpecialEntry(std::string_view entry) {
+  return IsFeedKey(entry) || entry == kYouTubeMusicKey;
+}
+
 // A list entry: a domain, or a feed ("feed:gambling") that matches every
 // domain the feed lists.
 bool EntryMatches(std::string_view host, std::string_view entry) {
@@ -239,7 +244,9 @@ int MastBlocks::BlockSites(const std::vector<std::string>& domains,
     ScopedDictPrefUpdate blocks(p, kBlocksPref);
     for (const std::string& input : domains) {
       const std::string domain =
-          IsFeedKey(input) && IsListed(input) ? input : CleanDomain(input);
+          (IsFeedKey(input) && IsListed(input)) || input == kYouTubeMusicKey
+              ? input
+              : CleanDomain(input);
       if (domain.empty() || recent.before.contains(domain)) {
         continue;
       }
@@ -249,7 +256,8 @@ int MastBlocks::BlockSites(const std::vector<std::string>& domains,
       }
       recent.before.emplace(domain, current);
       blocks->Set(domain, BlockToValue({current ? current->since : now, until}));
-      if (!IsListed(domain) && std::ranges::find(custom, domain) == custom.end()) {
+      if (!IsListed(domain) && !IsSpecialEntry(domain) &&
+          std::ranges::find(custom, domain) == custom.end()) {
         custom.push_back(domain);
         recent.added.push_back(domain);
       }
@@ -266,8 +274,9 @@ int MastBlocks::BlockSites(const std::vector<std::string>& domains,
   }
   p->CommitPendingWrite();
   const int changed = static_cast<int>(recent.before.size());
+  const bool youtube = recent.before.contains(kYouTubeMusicKey);
   recent_ = std::move(recent);
-  ReloadBlockedTabs();
+  ReloadBlockedTabs(youtube);
   return changed;
 }
 
@@ -296,8 +305,12 @@ bool MastBlocks::Undo() {
              std::ranges::find(recent_->added, v.GetString()) != recent_->added.end();
     });
   }
+  const bool youtube = recent_->before.contains(kYouTubeMusicKey);
   recent_.reset();
   p->CommitPendingWrite();
+  if (youtube) {
+    ReloadBlockedTabs(/*youtube=*/true);  // the filter goes away
+  }
   return true;
 }
 
@@ -369,7 +382,7 @@ int MastBlocks::StoppedToday() const {
   return p->GetInteger(kBlockedCountPref);
 }
 
-void MastBlocks::ReloadBlockedTabs() {
+void MastBlocks::ReloadBlockedTabs(bool youtube) {
   std::set<content::WebContents*> seen;
   std::unique_ptr<content::RenderWidgetHostIterator> widgets =
       content::RenderWidgetHost::GetRenderWidgetHosts();
@@ -383,7 +396,9 @@ void MastBlocks::ReloadBlockedTabs() {
     if (!contents || !seen.insert(contents).second) {
       continue;
     }
-    if (IsBlocked(contents->GetLastCommittedURL())) {
+    const GURL& url = contents->GetLastCommittedURL();
+    if (IsBlocked(url) || (youtube && url.SchemeIsHTTPOrHTTPS() &&
+                           IsYouTubeHost(url.host()))) {
       contents->GetController().Reload(content::ReloadType::NORMAL,
                                        /*check_for_repost=*/false);
     }
@@ -431,6 +446,17 @@ std::vector<std::string> MastBlocks::DistractionDomains() const {
   const std::vector<std::string> custom = CustomSites();
   domains.insert(domains.end(), custom.begin(), custom.end());
   return domains;
+}
+
+bool IsYouTubeHost(std::string_view host) {
+  return NormalizeHost(host) == "youtube.com";
+}
+
+std::optional<Block> MastBlocks::YouTubeMusicOnly() const {
+  if (Of("youtube.com")) {
+    return std::nullopt;  // the whole site is blocked
+  }
+  return Of(kYouTubeMusicKey);
 }
 
 bool AnyBlockActive() {

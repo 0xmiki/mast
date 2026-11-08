@@ -13,6 +13,7 @@
 #include "mast/browser/mast_page_backdrop.h"
 #include "mast/browser/mast_pages.h"
 #include "mast/browser/mast_blocks.h"
+#include "mast/browser/mast_youtube.h"
 #include "net/base/net_errors.h"
 #include "url/gurl.h"
 
@@ -23,6 +24,9 @@ void MastNavigationThrottle::MaybeCreateAndAdd(
     content::NavigationThrottleRegistry& registry) {
   // Always added: a site can be blocked while a navigation is already pending.
   MastFeeds::Get().Load();
+  // YouTube's Music only works inside the page (mast_youtube.h).
+  MastYouTube::CreateForWebContents(
+      registry.GetNavigationHandle().GetWebContents());
   registry.AddThrottle(std::make_unique<MastNavigationThrottle>(registry));
 }
 
@@ -84,6 +88,20 @@ MastNavigationThrottle::Decide() {
   MastBlocks& blocks = MastBlocks::Get();
   const std::optional<BlockMatch> match = blocks.ForUrl(url);
   if (!match) {
+    // YouTube, music only: Shorts, and videos the page found aren't music
+    // (youtube_music.js reloads them with this marker), get the blocked page.
+    const std::optional<Block> music = blocks.YouTubeMusicOnly();
+    if (music && IsYouTubeHost(url.host()) &&
+        (url.path().starts_with("/shorts") ||
+         url.query().find("mast_music_only=1") != std::string_view::npos)) {
+      if (navigation_handle()->IsInPrimaryMainFrame()) {
+        blocks.RecordBlocked();
+      }
+      return ThrottleCheckResult(
+          CANCEL, net::ERR_BLOCKED_BY_CLIENT,
+          BlockPageHtml(host, BlockMatch{kYouTubeMusicKey, *music}, backdrop(),
+                        "Music only"));
+    }
     return PROCEED;
   }
   if (navigation_handle()->IsInPrimaryMainFrame()) {

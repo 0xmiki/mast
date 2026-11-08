@@ -213,6 +213,23 @@ shot("09-distractions-change")
 p.go("chrome://mast")
 p.js("document.querySelector('[data-toggle=shopping]').click()")
 shot("10-blocklist")
+# YouTube, music only (design C24), before "Block distractions" blocks all of YouTube: the
+# choice on YouTube's row, then YouTube with it on. A search keeps mixes and songs; a Short
+# and a video that isn't music get the blocked page; a song plays.
+p.js("""(() => { const q = (s) => document.querySelector(s);
+  q('[data-toggle=video]').click(); q('[data-svc="video/YouTube"]').click();
+  q('[data-yt=music]').click(); q('[data-dur="1h"]').click(); })()""")
+shot("40-yt-choice")
+p.js("document.querySelector('[data-act=block]').click()")
+time.sleep(1)
+p.go("https://www.youtube.com/results?search_query=lofi+hip+hop", 6)
+shot("41-yt-music-search", settle=2)
+p.go("https://www.youtube.com/shorts/aqz-KE-bpKQ", 4)
+shot("42-yt-short-blocked")
+p.go("https://www.youtube.com/watch?v=UYhKDweME3A", 8)
+shot("43-yt-not-music", settle=2)
+p.go("https://www.youtube.com/watch?v=K5KAc5CoCuk", 8)
+shot("44-yt-song", settle=2)
 # Block distractions for today, and one site forever.
 p.go("chrome://newtab")
 p.js("chrome.send('blockDistractions', ['today'])")

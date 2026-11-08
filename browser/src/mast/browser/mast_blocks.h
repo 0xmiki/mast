@@ -17,6 +17,16 @@ class PrefService;
 
 namespace mast {
 
+// YouTube, music only (design C24): a block on this entry leaves YouTube open
+// for music (mixes and songs) and blocks every other video and Shorts. Not a
+// domain, so it never blocks youtube.com by itself; mast_youtube.cc and the
+// navigation throttle act on it. Blocked like any entry: picked in the list,
+// lengthened but never shortened.
+inline constexpr char kYouTubeMusicKey[] = "music:youtube.com";
+
+// True for youtube.com and www./m. (not music.youtube.com, which stays open).
+bool IsYouTubeHost(std::string_view host);
+
 // How long a block lasts. `until` is empty for forever.
 struct Block {
   base::Time since;
@@ -63,6 +73,9 @@ class MastBlocks {
   // Every block in force, by list entry.
   std::map<std::string, Block> Active() const;
   bool AnyActive() const;
+  // The YouTube "Music only" block in force, unless the whole site is blocked
+  // (that wins).
+  std::optional<Block> YouTubeMusicOnly() const;
 
   // Blocks `domains` until `until` (empty = forever). Entries already blocked
   // at least that long keep their block. Domains not on any list join the
@@ -101,8 +114,9 @@ class MastBlocks {
   };
 
   PrefService* prefs() const;
-  // Tabs already showing a blocked site switch to the block page.
-  void ReloadBlockedTabs();
+  // Tabs already showing a blocked site switch to the block page; with
+  // `youtube`, YouTube tabs reload too (Music only started or was undone).
+  void ReloadBlockedTabs(bool youtube = false);
 
   std::optional<Recent> recent_;
 };

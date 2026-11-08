@@ -14,9 +14,12 @@ struct PageBackdrop;
 
 // The block page shown in place of a blocked site.
 // `backdrop` is Customize's picture, if there is one (mast_page_backdrop.h).
+// `label` leads the status line: "Blocked until midnight", or for YouTube's
+// Music only, "Music only until midnight".
 std::string BlockPageHtml(std::string_view host,
                           const BlockMatch& match,
-                          const PageBackdrop& backdrop);
+                          const PageBackdrop& backdrop,
+                          std::string_view label = "Blocked");
 
 // The same page for sites on the always-on lists (mast_feeds.h): just
 // "This site is blocked", with no end time and no reason.
