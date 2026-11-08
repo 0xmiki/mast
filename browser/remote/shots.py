@@ -213,6 +213,9 @@ shot("09-distractions-change")
 p.go("chrome://mast")
 p.js("document.querySelector('[data-toggle=shopping]').click()")
 shot("10-blocklist")
+p.js("document.querySelector('.always').scrollIntoView({block: 'center'})")
+shot("32-always-blocked-note")
+p.js("window.scrollTo(0, 0)")
 # YouTube, music only (design C24), before "Block distractions" blocks all of YouTube: the
 # choice on YouTube's row, then YouTube with it on. A search keeps mixes and songs; a Short
 # and a video that isn't music get the blocked page; a song plays.
@@ -222,6 +225,10 @@ p.js("""(() => { const q = (s) => document.querySelector(s);
 shot("40-yt-choice")
 p.js("document.querySelector('[data-act=block]').click()")
 time.sleep(1)
+# The builder is in the EU: answer YouTube's cookie question first, as a person would.
+p.go("https://www.youtube.com/", 6)
+p.js("[...document.querySelectorAll('button')].find((b) => /Reject all|Hylkää kaikki/.test(b.textContent))?.click()")
+time.sleep(3)
 p.go("https://www.youtube.com/results?search_query=lofi+hip+hop", 6)
 shot("41-yt-music-search", settle=2)
 p.go("https://www.youtube.com/shorts/aqz-KE-bpKQ", 4)
@@ -261,8 +268,6 @@ keys("Escape")
 p.go("chrome://newtab")
 p.js("document.getElementById('editList').click()")
 shot("17-blocklist-panel")
-p.js("document.querySelector('.bl .always').scrollIntoView({block: 'center'})")
-shot("32-always-blocked-note")
 p.js("document.getElementById('blClose').click()")
 # Customize: the panel, then a palette (the whole window should follow), then an image.
 p.js("document.getElementById('customize').click()")
@@ -346,7 +351,7 @@ keys("ctrl+t")
 time.sleep(1)
 subprocess.run(["xdotool", "mousemove", "120", "20", "click", "3"])
 time.sleep(1)
-native_dump("29-tab-menu", click=(None, "Add tab to new group"))  # the menu's order changes between versions
+keys("Down", "Down", "Down", "Return")  # 156: new tab to the right, split view, then "Add tab to new group"
 time.sleep(1.5)
 keys(text="hi")
 keys("Return")

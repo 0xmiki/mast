@@ -89,19 +89,34 @@
     if (!v || checkedFor === v) return;
     if ((url.searchParams.get('list') || '').startsWith('RD')) { checkedFor = v; release(); return; }
     hold();
-    const data = document.querySelector('player-microformat-renderer script');
-    let info = null;
-    try { info = data && JSON.parse(data.textContent); } catch (e) {}
-    const known = info && String(info['@id'] || info.url || '').includes(v);
-    // Not this video's data yet; after a few seconds without it, strict.
-    if (!known && Date.now() - heldSince < 6000) return;
+    const genre = genreOf(v);
+    // YouTube's cookie consent (in some countries) holds the page back: wait
+    // for it, however long. Otherwise, a few seconds without an answer: strict.
+    if (genre === null && (consentShowing() || Date.now() - heldSince < 8000)) return;
     checkedFor = v;
-    if (known && info.genre === 'Music') return release();
+    if (genre === 'Music') return release();
     url.searchParams.set('mast_music_only', '1');
     leave(url.toString());
   }
+  // The video's genre, from YouTube's own data for exactly this video: the
+  // player's microformat (kept current on in-page navigation) or, on a full
+  // load, the page's meta tags. null: not known yet.
+  function genreOf(v) {
+    const data = document.querySelector('player-microformat-renderer script');
+    try {
+      const info = data && JSON.parse(data.textContent);
+      if (info && String(info['@id'] || info.url || '').includes(v)) return info.genre || '';
+    } catch (e) {}
+    const id = document.querySelector('meta[itemprop="identifier"], meta[itemprop="videoId"]');
+    const genre = document.querySelector('meta[itemprop="genre"]');
+    if (id && id.content === v && genre) return genre.content;
+    return null;
+  }
+  const consentShowing = () => !!document.querySelector(
+      'ytd-consent-bump-v2-lightbox, tp-yt-paper-dialog #consent-bump, form[action*="consent"]');
   // While a video is being checked, its player is hidden and kept silent.
   function hold() {
+    if (!document.documentElement) return;
     if (!('mastChecking' in document.documentElement.dataset)) heldSince = Date.now();
     document.documentElement.dataset.mastChecking = '';
     for (const video of document.querySelectorAll('video')) {
@@ -109,7 +124,7 @@
     }
   }
   function release() {
-    if (!('mastChecking' in document.documentElement.dataset)) return;
+    if (!document.documentElement || !('mastChecking' in document.documentElement.dataset)) return;
     delete document.documentElement.dataset.mastChecking;
     if (pausedHere) { pausedHere = false; const v = document.querySelector('video'); if (v) v.play().catch(() => {}); }
   }
