@@ -57,6 +57,19 @@
     const timed = [...badges].some((b) => /\d:\d\d/.test(b.textContent));
     return timed || el.dataset.mastSeen > 2 ? 'other' : null;
   }
+  // Videos shown as music in a list, remembered for this tab's session: opening
+  // one is music, whatever its watch page says.
+  const KNOWN = 'mastMusicIds';
+  const known = new Set(JSON.parse(sessionStorage.getItem(KNOWN) || '[]'));
+  function remember(el) {
+    for (const a of el.querySelectorAll('a[href*="/watch?v="]')) {
+      const v = new URLSearchParams(a.getAttribute('href').split('?')[1] || '').get('v');
+      if (v && !known.has(v)) {
+        known.add(v);
+        try { sessionStorage.setItem(KNOWN, JSON.stringify([...known].slice(-500))); } catch (e) {}
+      }
+    }
+  }
   function sweep() {
     if (!active()) return stop();
     for (const el of document.querySelectorAll(ITEMS)) {
@@ -64,6 +77,7 @@
       const verdict = musicItem(el);
       if (!verdict) { el.dataset.mastSeen = (+el.dataset.mastSeen || 0) + 1; continue; }
       for (const e of [el, ...el.querySelectorAll(ITEMS)]) if (e.dataset.mast !== verdict) e.dataset.mast = verdict;
+      if (verdict === 'music') remember(el);
     }
     for (const chip of document.querySelectorAll('chip-view-model, yt-chip-cloud-chip-renderer')) {
       if (chip.textContent.trim() === 'Shorts') chip.dataset.mastChip = 'other';
@@ -87,8 +101,9 @@
     if (url.pathname !== '/watch') { release(); return; }
     const v = url.searchParams.get('v');
     if (!v || checkedFor === v) return;
-    if ((url.searchParams.get('list') || '').startsWith('RD')) { checkedFor = v; release(); return; }
+    if ((url.searchParams.get('list') || '').startsWith('RD') || known.has(v)) { checkedFor = v; release(); return; }
     hold();
+    if (document.querySelector('ytd-video-description-music-section-renderer')) { checkedFor = v; return release(); }
     const genre = genreOf(v);
     // YouTube's cookie consent (in some countries) holds the page back: wait
     // for it, however long. Otherwise, a few seconds without an answer: strict.
@@ -96,6 +111,7 @@
     checkedFor = v;
     if (genre === 'Music') return release();
     url.searchParams.set('mast_music_only', '1');
+    url.searchParams.set('mast_why', genre === null ? 'unknown' : 'genre:' + genre);
     leave(url.toString());
   }
   // The video's genre, from YouTube's own data for exactly this video: the
@@ -105,7 +121,7 @@
     const data = document.querySelector('player-microformat-renderer script');
     try {
       const info = data && JSON.parse(data.textContent);
-      if (info && String(info['@id'] || info.url || '').includes(v)) return info.genre || '';
+      if (info && info.genre && String(info['@id'] || info.url || '').includes(v)) return info.genre;
     } catch (e) {}
     const id = document.querySelector('meta[itemprop="identifier"], meta[itemprop="videoId"]');
     const genre = document.querySelector('meta[itemprop="genre"]');

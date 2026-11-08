@@ -615,14 +615,25 @@ edit(R, "chrome/browser/ui/tabs/BUILD.gn", lambda t: add_dep(t, 'source_set("fav
 # pill like the tabs, tinted with the group's colour, and the group's header and pills sit
 # in a faint lane of that colour. Chromium's 2px underline along the row's edge and the
 # group-coloured outline around the active tab go.
-edit(R, "chrome/browser/ui/views/tabs/tab_group_header.cc", lambda t: once(once(once(once(once(once(t,
+edit(R, "chrome/browser/ui/views/tabs/tab_group_header.cc", lambda t: once(once(once(once(once(once(once(once(t,
     '#include "chrome/browser/ui/layout_constants.h"\n',
     '#include "chrome/browser/ui/layout_constants.h"\n#include "mast/common/mast_features.h"\n'),
     'int TabGroupHeader::GetChipHeight() const {\n',
     'int TabGroupHeader::GetChipHeight() const {\n'
-    '  if (mast::IsOneRowWindow()) {  // Mast: as tall as the tab pills\n'
-    '    return GetLayoutConstant(LayoutConstant::kTabHeight) -\n'
-    '           2 * mast::kOneRowTabPillInset;\n  }\n'),
+    '  if (mast::IsOneRowWindow()) {\n'
+    '    // Mast: as tall as the tab pills, from the header\'s own height (the\n'
+    '    // one-row tabs are taller than kTabHeight).\n'
+    '    const int row = height() > 0 ? height()\n'
+    '                                 : GetLayoutConstant(LayoutConstant::kTabHeight);\n'
+    '    return row - 2 * mast::kOneRowTabPillInset;\n  }\n'),
+    '  title_chip_->SetBounds(named_origin.x(), chip_y, title_chip_width,\n                         chip_height);\n',
+    '  // Mast: the tabs\' side gap (4) before the pill, as each tab pill has.\n'
+    '  title_chip_->SetBounds(named_origin.x() + (mast::IsOneRowWindow() ? 4 : 0),\n'
+    '                         chip_y, title_chip_width, chip_height);\n'),
+    '  return overlap_margin + title_chip_->width();\n',
+    '  // Mast: room for the side gap on both sides of the pill.\n'
+    '  return overlap_margin + title_chip_->width() +\n'
+    '         (mast::IsOneRowWindow() ? 8 : 0);\n'),
     'int TabGroupHeader::GetChipY() const {\n',
     'int TabGroupHeader::GetChipY() const {\n'
     '  if (mast::IsOneRowWindow()) {\n    return mast::kOneRowTabPillInset;\n  }\n'),
@@ -673,7 +684,7 @@ edit(R, "chrome/browser/ui/views/tabs/tab_group_underline.cc", lambda t: once(on
     '    const int left =\n'
     '        leading.x() - 3 +\n'
     '        (views::IsViewClass<TabGroupHeader>(leading_view)\n'
-    '             ? TabGroupStyle::GetTitleChipOffset(std::nullopt).x()\n'
+    '             ? TabGroupStyle::GetTitleChipOffset(std::nullopt).x() + 4\n'
     '             : side);\n'
     '    const int right = trailing.right() + 3 - side;\n'
     '    const int inset = mast::kOneRowTabPillInset - 3;\n'

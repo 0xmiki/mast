@@ -383,13 +383,23 @@ diff -ruN a/chrome/browser/ui/views/tabs/tab_group_header.cc b/chrome/browser/ui
  #include "chrome/browser/ui/tabs/saved_tab_groups/saved_tab_group_utils.h"
  #include "chrome/browser/ui/tabs/tab_group_attention_indicator.h"
  #include "chrome/browser/ui/tabs/tab_group_data.h"
-@@ -602,10 +603,17 @@
+@@ -598,14 +599,26 @@
+ 
+ int TabGroupHeader::GetDesiredWidth() const {
+   const int overlap_margin = group_style_->GetTabGroupViewOverlap() * 2;
+-  return overlap_margin + title_chip_->width();
++  // Mast: room for the side gap on both sides of the pill.
++  return overlap_margin + title_chip_->width() +
++         (mast::IsOneRowWindow() ? 8 : 0);
  }
  
  int TabGroupHeader::GetChipHeight() const {
-+  if (mast::IsOneRowWindow()) {  // Mast: as tall as the tab pills
-+    return GetLayoutConstant(LayoutConstant::kTabHeight) -
-+           2 * mast::kOneRowTabPillInset;
++  if (mast::IsOneRowWindow()) {
++    // Mast: as tall as the tab pills, from the header's own height (the
++    // one-row tabs are taller than kTabHeight).
++    const int row = height() > 0 ? height()
++                                 : GetLayoutConstant(LayoutConstant::kTabHeight);
++    return row - 2 * mast::kOneRowTabPillInset;
 +  }
    return TabGroupStyle::GetEmptyChipSize();
  }
@@ -401,7 +411,7 @@ diff -ruN a/chrome/browser/ui/views/tabs/tab_group_header.cc b/chrome/browser/ui
    return TabGroupStyle::GetTitleChipOffset(std::nullopt).y();
  }
  
-@@ -659,7 +667,9 @@
+@@ -659,7 +672,9 @@
            frame_active ? ui::kColorSysOnSurfacePrimary
                         : ui::kColorSysOnSurfacePrimaryInactive));
      } else {
@@ -412,7 +422,7 @@ diff -ruN a/chrome/browser/ui/views/tabs/tab_group_header.cc b/chrome/browser/ui
      }
    }
  }
-@@ -712,6 +722,14 @@
+@@ -712,6 +727,14 @@
  
    title_chip_->SetBounds(empty_origin.x(), chip_y, empty_width, chip_height);
    title_chip_->SetBackground(group_style_->GetEmptyTitleChipBackground(color_));
@@ -427,12 +437,17 @@ diff -ruN a/chrome/browser/ui/views/tabs/tab_group_header.cc b/chrome/browser/ui
  
    const int sync_icon_width = group_style_->GetSyncIconWidth();
  
-@@ -801,8 +819,10 @@
+@@ -799,10 +822,13 @@
+       TabGroupStyle::GetTitleChipOffset(std::nullopt);
+ 
    const int corner_radius = TabGroupStyle::GetChipCornerRadius();
-   title_chip_->SetBounds(named_origin.x(), chip_y, title_chip_width,
-                          chip_height);
+-  title_chip_->SetBounds(named_origin.x(), chip_y, title_chip_width,
+-                         chip_height);
 -  title_chip_->SetBackground(
 -      views::CreateRoundedRectBackground(color_, corner_radius));
++  // Mast: the tabs' side gap (4) before the pill, as each tab pill has.
++  title_chip_->SetBounds(named_origin.x() + (mast::IsOneRowWindow() ? 4 : 0),
++                         chip_y, title_chip_width, chip_height);
 +  // Mast: a pill tinted with the group's colour (its name is in that colour).
 +  title_chip_->SetBackground(views::CreateRoundedRectBackground(
 +      mast::IsOneRowWindow() ? SkColorSetA(color_, 0x40) : color_,
@@ -486,7 +501,7 @@ diff -ruN a/chrome/browser/ui/views/tabs/tab_group_underline.cc b/chrome/browser
 +    const int left =
 +        leading.x() - 3 +
 +        (views::IsViewClass<TabGroupHeader>(leading_view)
-+             ? TabGroupStyle::GetTitleChipOffset(std::nullopt).x()
++             ? TabGroupStyle::GetTitleChipOffset(std::nullopt).x() + 4
 +             : side);
 +    const int right = trailing.right() + 3 - side;
 +    const int inset = mast::kOneRowTabPillInset - 3;
