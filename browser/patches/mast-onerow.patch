@@ -468,7 +468,24 @@ diff -ruN a/chrome/browser/ui/views/tabs/tab_group_underline.cc b/chrome/browser
  #include "components/tab_groups/tab_group_id.h"
  #include "ui/base/metadata/metadata_impl_macros.h"
  #include "ui/gfx/canvas.h"
-@@ -61,6 +64,14 @@
+@@ -31,7 +34,15 @@
+ TabGroupUnderline::TabGroupUnderline(TabGroupViews* tab_group_views,
+                                      const tab_groups::TabGroupId& group,
+                                      const TabGroupStyleViews& style)
+-    : tab_group_views_(tab_group_views), group_(group), style_(style) {}
++    : tab_group_views_(tab_group_views), group_(group), style_(style) {
++  // Mast: in one row this is the group's lane, as tall as the tabs. It's
++  // only paint: the tab strip hands clicks to the first non-tab view it hits
++  // (TabContainerImpl::TargetForRect), so a hit-testable lane would swallow
++  // every click on its tabs.
++  if (mast::IsOneRowWindow()) {
++    SetCanProcessEventsWithinSubtree(false);
++  }
++}
+ 
+ void TabGroupUnderline::UpdateBounds(const views::View* const leading_view,
+                                      const views::View* const trailing_view) {
+@@ -61,6 +72,14 @@
  }
  
  void TabGroupUnderline::OnPaint(gfx::Canvas* canvas) {
@@ -483,7 +500,7 @@ diff -ruN a/chrome/browser/ui/views/tabs/tab_group_underline.cc b/chrome/browser
    SkPath path = style_->GetUnderlinePath(GetLocalBounds());
    cc::PaintFlags flags;
    flags.setAntiAlias(true);
-@@ -99,6 +110,27 @@
+@@ -99,6 +118,27 @@
      const views::View* const underline_view,
      const views::View* const leading_view,
      const views::View* const trailing_view) const {

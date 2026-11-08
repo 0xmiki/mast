@@ -657,7 +657,14 @@ edit(R, "chrome/browser/ui/views/tabs/tab_group_header.cc", lambda t: once(once(
     '                           chip_y + (chip_height - kDot) / 2, kDot, kDot);\n'
     '    title_chip_->SetBackground(\n'
     '        views::CreateRoundedRectBackground(color_, kDot / 2));\n  }\n'))
-edit(R, "chrome/browser/ui/views/tabs/tab_group_underline.cc", lambda t: once(once(once(t,
+edit(R, "chrome/browser/ui/views/tabs/tab_group_underline.cc", lambda t: once(once(once(once(t,
+    '    : tab_group_views_(tab_group_views), group_(group), style_(style) {}\n',
+    '    : tab_group_views_(tab_group_views), group_(group), style_(style) {\n'
+    '  // Mast: in one row this is the group\'s lane, as tall as the tabs. It\'s\n'
+    '  // only paint: the tab strip hands clicks to the first non-tab view it hits\n'
+    '  // (TabContainerImpl::TargetForRect), so a hit-testable lane would swallow\n'
+    '  // every click on its tabs.\n'
+    '  if (mast::IsOneRowWindow()) {\n    SetCanProcessEventsWithinSubtree(false);\n  }\n}\n'),
     '#include "chrome/browser/ui/views/tabs/tab_group_views.h"\n',
     '#include "chrome/browser/ui/views/tabs/tab_group_views.h"\n#include "mast/common/mast_features.h"\n\n#include <algorithm>\n'),
     'void TabGroupUnderline::OnPaint(gfx::Canvas* canvas) {\n',

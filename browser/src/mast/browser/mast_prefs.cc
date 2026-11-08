@@ -5,6 +5,7 @@
 #include <utility>
 
 #include "base/values.h"
+#include "chrome/browser/prefs/session_startup_pref.h"
 #include "chrome/common/pref_names.h"
 #include "components/pref_registry/pref_registry_syncable.h"
 
@@ -15,6 +16,13 @@ void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry) {
   // opens tab search, and anyone who pins it again keeps it.
   registry->SetDefaultPrefValue(prefs::kTabSearchPinnedToTabstrip,
                                 base::Value(false));
+
+  // Start where you left off: tabs, windows and tab groups come back. (Chromium
+  // opens a lone new tab page, which dropped every group on restart.)
+  // Settings > On startup still changes it.
+  registry->SetDefaultPrefValue(
+      prefs::kRestoreOnStartup,
+      base::Value(SessionStartupPref::kPrefValueLast));
 
   base::ListValue widgets;
   widgets.Append("clock");
