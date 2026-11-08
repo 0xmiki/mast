@@ -54,6 +54,13 @@ class MastBlocks {
   static MastBlocks& Get();
   static void RegisterLocalStatePrefs(PrefRegistrySimple* registry);
 
+  // Mast's out-of-the-box blocks, once per install: every gambling site (the
+  // category and its feed, mast_feeds.h) blocked forever, shown like any other
+  // forever block. (Adult sites aren't blocks at all: always blocked, never
+  // shown.) Later versions can add to the set; each install applies each set
+  // once. Called when a window opens.
+  void ApplyDefaultBlocks();
+
   // The block in force on exactly this list entry.
   std::optional<Block> Of(std::string_view domain) const;
   // The block in force for a URL: the longest among matching entries.

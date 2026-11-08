@@ -73,9 +73,11 @@ the GPL-3.0 licence); `mast_feeds.cc` reads them at startup.
   option, no row, no count. Its page says only "This site is blocked". Source: HaGeZi NSFW
   (~78k domains) plus [`feeds/adult.txt`](feeds/adult.txt), the hand-picked sites that used to
   be the Adult category.
-- **Gambling stays a category** (legal, and some people need betting or lottery sites), on in
-  "Block distractions" by default. HaGeZi gambling mini (~69k domains) is its last row,
-  "Other gambling sites" (list entry `feed:gambling`), blocked like any other row.
+- **Gambling is blocked forever out of the box, visibly.** On first run (once per install,
+  `MastBlocks::ApplyDefaultBlocks`) the whole category is blocked forever, like a forever
+  block the user set: it shows as "Blocked forever" in the list and on the block page, so a
+  blocked lottery or odds site is explained, not mysterious. Its last row, "Other gambling
+  sites" (list entry `feed:gambling`), is HaGeZi gambling mini (~69k domains).
 - **Hand-curated entries win.** A feed entry that is, or is a parent of, a domain in
   `blocklist.json` is dropped: okcupid.com stays Dating, sleeper.com stays Sports. False
   positives go in [`feeds/allow.txt`](feeds/allow.txt).
