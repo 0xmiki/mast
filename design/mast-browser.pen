@@ -38369,7 +38369,8 @@
                           "fill": "$text-2",
                           "content": "None",
                           "fontFamily": "$font",
-                          "fontSize": 12
+                          "fontSize": 12,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -38414,7 +38415,8 @@
                           "fill": "$text-2",
                           "content": "Replace",
                           "fontFamily": "$font",
-                          "fontSize": 12
+                          "fontSize": 12,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -38492,7 +38494,8 @@
                           "fill": "$text-2",
                           "content": "Light",
                           "fontFamily": "$font",
-                          "fontSize": 12
+                          "fontSize": 12,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -38505,7 +38508,8 @@
                   "fill": "$text-3",
                   "content": "Light makes text and icons dark, for bright pictures.",
                   "fontFamily": "$font",
-                  "fontSize": 12
+                  "fontSize": 12,
+                  "fontWeight": "normal"
                 }
               ]
             },
@@ -38706,7 +38710,8 @@
                           "fill": "$text-2",
                           "content": "Your picture",
                           "fontFamily": "$font",
-                          "fontSize": 12
+                          "fontSize": 12,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -38877,7 +38882,8 @@
                           "fill": "$text-2",
                           "content": "Your color",
                           "fontFamily": "$font",
-                          "fontSize": 12
+                          "fontSize": 12,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -39235,7 +39241,8 @@
                   "content": "The tab bar takes each website's own color, so the site runs up to the top.",
                   "lineHeight": 1.45,
                   "fontFamily": "$font",
-                  "fontSize": 12
+                  "fontSize": 12,
+                  "fontWeight": "normal"
                 }
               ]
             },
@@ -39357,7 +39364,8 @@
                           "fill": "$text-2",
                           "content": "Graphite",
                           "fontFamily": "$font",
-                          "fontSize": 11
+                          "fontSize": 11,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -39405,7 +39413,8 @@
                           "fill": "$text-2",
                           "content": "Ink",
                           "fontFamily": "$font",
-                          "fontSize": 11
+                          "fontSize": 11,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -39453,7 +39462,8 @@
                           "fill": "$text-2",
                           "content": "Espresso",
                           "fontFamily": "$font",
-                          "fontSize": 11
+                          "fontSize": 11,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -39501,7 +39511,8 @@
                           "fill": "$text-2",
                           "content": "Moss",
                           "fontFamily": "$font",
-                          "fontSize": 11
+                          "fontSize": 11,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -39531,7 +39542,8 @@
                   "fill": "$text-3",
                   "content": "Ember stays the same: it always means blocked.",
                   "fontFamily": "$font",
-                  "fontSize": 12
+                  "fontSize": 12,
+                  "fontWeight": "normal"
                 }
               ]
             }
@@ -40283,7 +40295,8 @@
                       "fill": "$text-2",
                       "content": "Upload image",
                       "fontFamily": "$font",
-                      "fontSize": 12
+                      "fontSize": 12,
+                      "fontWeight": "normal"
                     }
                   ]
                 }
@@ -40364,7 +40377,8 @@
                       "fill": "$text-2",
                       "content": "Light",
                       "fontFamily": "$font",
-                      "fontSize": 12
+                      "fontSize": 12,
+                      "fontWeight": "normal"
                     }
                   ]
                 }
@@ -40377,7 +40391,8 @@
               "fill": "$text-3",
               "content": "Light makes text and icons dark, for bright pictures.",
               "fontFamily": "$font",
-              "fontSize": 12
+              "fontSize": 12,
+              "fontWeight": "normal"
             }
           ]
         },
@@ -40579,7 +40594,8 @@
                       "fill": "$text-2",
                       "content": "Your picture",
                       "fontFamily": "$font",
-                      "fontSize": 12
+                      "fontSize": 12,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -40750,7 +40766,8 @@
                       "fill": "$text-2",
                       "content": "Your color",
                       "fontFamily": "$font",
-                      "fontSize": 12
+                      "fontSize": 12,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -41108,7 +41125,8 @@
               "content": "The tab bar takes each website's own color, so the site runs up to the top.",
               "lineHeight": 1.45,
               "fontFamily": "$font",
-              "fontSize": 12
+              "fontSize": 12,
+              "fontWeight": "normal"
             }
           ]
         },
@@ -41230,7 +41248,8 @@
                       "fill": "$text-2",
                       "content": "Graphite",
                       "fontFamily": "$font",
-                      "fontSize": 11
+                      "fontSize": 11,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -41278,7 +41297,8 @@
                       "fill": "$text-2",
                       "content": "Ink",
                       "fontFamily": "$font",
-                      "fontSize": 11
+                      "fontSize": 11,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -41326,7 +41346,8 @@
                       "fill": "$text-2",
                       "content": "Espresso",
                       "fontFamily": "$font",
-                      "fontSize": 11
+                      "fontSize": 11,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -41374,7 +41395,8 @@
                       "fill": "$text-2",
                       "content": "Moss",
                       "fontFamily": "$font",
-                      "fontSize": 11
+                      "fontSize": 11,
+                      "fontWeight": "normal"
                     }
                   ]
                 }
@@ -41404,7 +41426,8 @@
               "fill": "$text-3",
               "content": "Ember stays the same: it always means blocked.",
               "fontFamily": "$font",
-              "fontSize": 12
+              "fontSize": 12,
+              "fontWeight": "normal"
             }
           ]
         }
@@ -41453,7 +41476,8 @@
               "content": "Three windows on three different sites, each tab bar the same colour as its page. Reads as \"it changes per site\".",
               "lineHeight": 1.45,
               "fontFamily": "$font",
-              "fontSize": 12
+              "fontSize": 12,
+              "fontWeight": "normal"
             },
             {
               "type": "frame",
@@ -41625,7 +41649,8 @@
                           "fill": "$text-2",
                           "content": "Picture",
                           "fontFamily": "$font",
-                          "fontSize": 12
+                          "fontSize": 12,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -41764,7 +41789,8 @@
                           "fill": "$text-2",
                           "content": "Theme",
                           "fontFamily": "$font",
-                          "fontSize": 12
+                          "fontSize": 12,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -42177,7 +42203,8 @@
                   "content": "The tab bar takes each website's own color, so the site runs up to the top.",
                   "lineHeight": 1.45,
                   "fontFamily": "$font",
-                  "fontSize": 12
+                  "fontSize": 12,
+                  "fontWeight": "normal"
                 }
               ]
             }
@@ -42211,7 +42238,8 @@
               "content": "One window cut into three sites. Each slice's tab bar continues straight into its page, with no line between them.",
               "lineHeight": 1.45,
               "fontFamily": "$font",
-              "fontSize": 12
+              "fontSize": 12,
+              "fontWeight": "normal"
             },
             {
               "type": "frame",
@@ -42383,7 +42411,8 @@
                           "fill": "$text-2",
                           "content": "Picture",
                           "fontFamily": "$font",
-                          "fontSize": 12
+                          "fontSize": 12,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -42522,7 +42551,8 @@
                           "fill": "$text-2",
                           "content": "Theme",
                           "fontFamily": "$font",
-                          "fontSize": 12
+                          "fontSize": 12,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -42876,7 +42906,8 @@
                   "content": "The tab bar takes each website's own color, so the site runs up to the top.",
                   "lineHeight": 1.45,
                   "fontFamily": "$font",
-                  "fontSize": 12
+                  "fontSize": 12,
+                  "fontWeight": "normal"
                 }
               ]
             }
@@ -42910,7 +42941,8 @@
               "content": "The same colourful site twice: the plain theme bar on the left, then the bar taking the site's colour. Shows what \"match\" does.",
               "lineHeight": 1.45,
               "fontFamily": "$font",
-              "fontSize": 12
+              "fontSize": 12,
+              "fontWeight": "normal"
             },
             {
               "type": "frame",
@@ -43082,7 +43114,8 @@
                           "fill": "$text-2",
                           "content": "Picture",
                           "fontFamily": "$font",
-                          "fontSize": 12
+                          "fontSize": 12,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -43221,7 +43254,8 @@
                           "fill": "$text-2",
                           "content": "Theme",
                           "fontFamily": "$font",
-                          "fontSize": 12
+                          "fontSize": 12,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -43501,7 +43535,1423 @@
                   "content": "The tab bar takes each website's own color, so the site runs up to the top.",
                   "lineHeight": 1.45,
                   "fontFamily": "$font",
-                  "fontSize": 12
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "Wlfl5",
+      "x": 30100,
+      "y": 4704,
+      "name": "C24 YouTube — Music only (pitch)",
+      "theme": {
+        "palette": "onyx"
+      },
+      "width": 1584,
+      "fill": "#0c0c0c",
+      "cornerRadius": 16,
+      "gap": 32,
+      "padding": 40,
+      "children": [
+        {
+          "type": "frame",
+          "id": "m1lInb",
+          "name": "1 · Choose it when you block",
+          "width": 480,
+          "layout": "vertical",
+          "gap": 14,
+          "children": [
+            {
+              "type": "text",
+              "id": "Lt6g3",
+              "name": "Step",
+              "fill": "#ededed",
+              "content": "1 · Choose it when you block",
+              "fontFamily": "$font",
+              "fontSize": 15,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "a3dL3",
+              "name": "Note",
+              "fill": "#9a9a9a",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "YouTube's row in the blocklist gets one extra choice. Picking Music only blocks every other video and Shorts, for as long as the block lasts.",
+              "lineHeight": 1.45,
+              "fontFamily": "$font",
+              "fontSize": 12
+            },
+            {
+              "type": "frame",
+              "id": "Bnzgu",
+              "name": "Blocklist",
+              "width": "fill_container",
+              "fill": "$chrome-2",
+              "cornerRadius": 12,
+              "stroke": "$line",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "padding": [
+                8,
+                20,
+                16,
+                20
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "pqCGv",
+                  "name": "Category",
+                  "width": "fill_container",
+                  "height": 40,
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "i8AsLl",
+                      "name": "Select",
+                      "width": 16,
+                      "height": 16,
+                      "fill": "#00000000",
+                      "cornerRadius": 4,
+                      "stroke": "$text-3",
+                      "strokeWidth": 1.2,
+                      "justifyContent": "center",
+                      "alignItems": "center"
+                    },
+                    {
+                      "type": "text",
+                      "id": "gkSvt",
+                      "name": "Name",
+                      "fill": "$text",
+                      "content": "Video",
+                      "fontFamily": "$font",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "HFiUg",
+                      "name": "Expand",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "chevron-up",
+                      "library": "lucide",
+                      "fill": "$text-3"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ki8YP",
+                  "name": "YouTube",
+                  "width": "fill_container",
+                  "height": 34,
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "u4K9d",
+                      "name": "Select",
+                      "width": 16,
+                      "height": 16,
+                      "fill": "$text",
+                      "cornerRadius": 4,
+                      "stroke": "$text",
+                      "strokeWidth": 1.2,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "RlRDa",
+                          "name": "Tick",
+                          "width": 11,
+                          "height": 11,
+                          "icon": "check",
+                          "library": "lucide",
+                          "fill": "#141414"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Zbbt5",
+                      "name": "Site",
+                      "width": "fill_container",
+                      "gap": 10,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "r5xVvS",
+                          "name": "Name",
+                          "fill": "$text",
+                          "content": "YouTube",
+                          "fontFamily": "$font",
+                          "fontSize": 13
+                        },
+                        {
+                          "type": "text",
+                          "id": "ijvYf",
+                          "name": "Domains",
+                          "fill": "$text-3",
+                          "content": "youtube.com, youtu.be",
+                          "fontFamily": "$font",
+                          "fontSize": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "YLqFd",
+                      "name": "State",
+                      "fill": "$text-3",
+                      "content": "Open",
+                      "fontFamily": "$font",
+                      "fontSize": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "bZQ29",
+                  "name": "YouTube choice",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "padding": [
+                    2,
+                    0,
+                    10,
+                    28
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "VMh7A",
+                      "name": "Seg",
+                      "width": "fill_container",
+                      "height": 30,
+                      "fill": "#050505",
+                      "cornerRadius": 8,
+                      "gap": 3,
+                      "padding": 3,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "cdU5K",
+                          "name": "Whole site",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "fill": "#00000000",
+                          "cornerRadius": 6,
+                          "gap": 6,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "N7l1Di",
+                              "name": "Icon",
+                              "width": 12,
+                              "height": 12,
+                              "icon": "ban",
+                              "library": "lucide",
+                              "fill": "$text-3"
+                            },
+                            {
+                              "type": "text",
+                              "id": "lCZfR",
+                              "name": "Label",
+                              "fill": "$text-2",
+                              "content": "Whole site",
+                              "fontFamily": "$font",
+                              "fontSize": 12
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "VFAcO",
+                          "name": "Music only",
+                          "width": "fill_container",
+                          "height": "fill_container",
+                          "fill": "#1e1e1e",
+                          "cornerRadius": 6,
+                          "gap": 6,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "j5UC70",
+                              "name": "Icon",
+                              "width": 12,
+                              "height": 12,
+                              "icon": "music",
+                              "library": "lucide",
+                              "fill": "$text"
+                            },
+                            {
+                              "type": "text",
+                              "id": "C6Kpj",
+                              "name": "Label",
+                              "fill": "$text",
+                              "content": "Music only",
+                              "fontFamily": "$font",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "SUGdJ",
+                      "name": "Hint",
+                      "fill": "$text-3",
+                      "content": "Mixes and songs stay open. Every other video and Shorts are blocked.",
+                      "fontFamily": "$font",
+                      "fontSize": 11
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "M0AOnn",
+                  "name": "Twitch",
+                  "width": "fill_container",
+                  "height": 34,
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "EzaEo",
+                      "name": "Select",
+                      "width": 16,
+                      "height": 16,
+                      "fill": "#00000000",
+                      "cornerRadius": 4,
+                      "stroke": "$text-3",
+                      "strokeWidth": 1.2,
+                      "justifyContent": "center",
+                      "alignItems": "center"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "p6tvUS",
+                      "name": "Site",
+                      "width": "fill_container",
+                      "gap": 10,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "ippzS",
+                          "name": "Name",
+                          "fill": "$text",
+                          "content": "Twitch",
+                          "fontFamily": "$font",
+                          "fontSize": 13
+                        },
+                        {
+                          "type": "text",
+                          "id": "wgGRI",
+                          "name": "Domains",
+                          "fill": "$text-3",
+                          "content": "twitch.tv",
+                          "fontFamily": "$font",
+                          "fontSize": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "CIGpt",
+                      "name": "State",
+                      "fill": "$text-3",
+                      "content": "Open",
+                      "fontFamily": "$font",
+                      "fontSize": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "lhgEC",
+                  "name": "Vimeo",
+                  "width": "fill_container",
+                  "height": 34,
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "NAPzY",
+                      "name": "Select",
+                      "width": 16,
+                      "height": 16,
+                      "fill": "#00000000",
+                      "cornerRadius": 4,
+                      "stroke": "$text-3",
+                      "strokeWidth": 1.2,
+                      "justifyContent": "center",
+                      "alignItems": "center"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Dyo5A",
+                      "name": "Site",
+                      "width": "fill_container",
+                      "gap": 10,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "comrM",
+                          "name": "Name",
+                          "fill": "$text",
+                          "content": "Vimeo",
+                          "fontFamily": "$font",
+                          "fontSize": 13
+                        },
+                        {
+                          "type": "text",
+                          "id": "XmeyE",
+                          "name": "Domains",
+                          "fill": "$text-3",
+                          "content": "vimeo.com",
+                          "fontFamily": "$font",
+                          "fontSize": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "PTEjF",
+                      "name": "State",
+                      "fill": "$text-3",
+                      "content": "Open",
+                      "fontFamily": "$font",
+                      "fontSize": 12
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "qLmnC",
+                  "name": "Dailymotion",
+                  "width": "fill_container",
+                  "height": 34,
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "LaJpD",
+                      "name": "Select",
+                      "width": 16,
+                      "height": 16,
+                      "fill": "#00000000",
+                      "cornerRadius": 4,
+                      "stroke": "$text-3",
+                      "strokeWidth": 1.2,
+                      "justifyContent": "center",
+                      "alignItems": "center"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "pOXxd",
+                      "name": "Site",
+                      "width": "fill_container",
+                      "gap": 10,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "nvXMH",
+                          "name": "Name",
+                          "fill": "$text",
+                          "content": "Dailymotion",
+                          "fontFamily": "$font",
+                          "fontSize": 13
+                        },
+                        {
+                          "type": "text",
+                          "id": "Q5fOYj",
+                          "name": "Domains",
+                          "fill": "$text-3",
+                          "content": "dailymotion.com",
+                          "fontFamily": "$font",
+                          "fontSize": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "Hx4JI",
+                      "name": "State",
+                      "fill": "$text-3",
+                      "content": "Open",
+                      "fontFamily": "$font",
+                      "fontSize": 12
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "CSN1p",
+          "name": "2 · YouTube, music only",
+          "width": 480,
+          "layout": "vertical",
+          "gap": 14,
+          "children": [
+            {
+              "type": "text",
+              "id": "s0ZI1F",
+              "name": "Step",
+              "fill": "#ededed",
+              "content": "2 · YouTube, music only",
+              "fontFamily": "$font",
+              "fontSize": 15,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "kvl33",
+              "name": "Note",
+              "fill": "#9a9a9a",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Only mixes (the Mix badge) and songs (the ♪ badge) are left on YouTube's pages, and the Shorts shelf is gone. A small ember chip in the address bar says what's on.",
+              "lineHeight": 1.45,
+              "fontFamily": "$font",
+              "fontSize": 12
+            },
+            {
+              "type": "frame",
+              "id": "SWU2Z",
+              "name": "Window",
+              "clip": true,
+              "width": "fill_container",
+              "fill": "#0f0f0f",
+              "cornerRadius": 10,
+              "stroke": "#222222",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "R3iOq",
+                  "name": "Tab row",
+                  "width": "fill_container",
+                  "height": 34,
+                  "fill": "#070707",
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    8
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "USb66",
+                      "name": "Active tab",
+                      "width": 120,
+                      "height": 24,
+                      "fill": "#ffffff1a",
+                      "cornerRadius": 6,
+                      "gap": 6,
+                      "padding": [
+                        0,
+                        8
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "sgU7O",
+                          "name": "Favicon",
+                          "width": 12,
+                          "height": 9,
+                          "fill": "#e5e5e5",
+                          "cornerRadius": 2
+                        },
+                        {
+                          "type": "text",
+                          "id": "HMl7q",
+                          "name": "Title",
+                          "fill": "$text",
+                          "content": "YouTube",
+                          "fontFamily": "$font",
+                          "fontSize": 11
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Bjkl8",
+                      "name": "Spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "icon",
+                      "id": "d7CbI",
+                      "name": "Back",
+                      "width": 13,
+                      "height": 13,
+                      "icon": "arrow-left",
+                      "library": "lucide",
+                      "fill": "$text-2"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Y4G1in",
+                      "name": "Address",
+                      "width": 200,
+                      "height": 24,
+                      "fill": "#141414",
+                      "cornerRadius": 12,
+                      "gap": 6,
+                      "padding": [
+                        0,
+                        4,
+                        0,
+                        10
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "WWMCy",
+                          "name": "URL",
+                          "fill": "$text",
+                          "content": "youtube.com",
+                          "fontFamily": "$font",
+                          "fontSize": 11
+                        },
+                        {
+                          "type": "frame",
+                          "id": "G5pXC",
+                          "name": "Music only chip",
+                          "height": 18,
+                          "fill": "#ff8f6326",
+                          "cornerRadius": 9,
+                          "gap": 4,
+                          "padding": [
+                            0,
+                            7
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "s4l7bA",
+                              "name": "Icon",
+                              "width": 10,
+                              "height": 10,
+                              "icon": "music",
+                              "library": "lucide",
+                              "fill": "#ff8f63"
+                            },
+                            {
+                              "type": "text",
+                              "id": "NSqfR",
+                              "name": "Label",
+                              "fill": "#ff8f63",
+                              "content": "Music only",
+                              "fontFamily": "$font",
+                              "fontSize": 10,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "icon",
+                      "id": "d3DXA",
+                      "name": "Menu",
+                      "width": 13,
+                      "height": 13,
+                      "icon": "ellipsis-vertical",
+                      "library": "lucide",
+                      "fill": "$text-2"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "GhP8T",
+                  "name": "YouTube",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "GT0ZO",
+                      "name": "Filters",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "U0MUq",
+                          "name": "Music",
+                          "height": 22,
+                          "fill": "#f1f1f1",
+                          "cornerRadius": 6,
+                          "padding": [
+                            0,
+                            10
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "UANx2",
+                              "name": "Label",
+                              "fill": "#0f0f0f",
+                              "content": "Music",
+                              "fontFamily": "$font",
+                              "fontSize": 10,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "jC3tr",
+                          "name": "Mixes",
+                          "height": 22,
+                          "fill": "#272727",
+                          "cornerRadius": 6,
+                          "padding": [
+                            0,
+                            10
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Dij7M",
+                              "name": "Label",
+                              "fill": "#f1f1f1",
+                              "content": "Mixes",
+                              "fontFamily": "$font",
+                              "fontSize": 10,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "a8A9gQ",
+                          "name": "Live",
+                          "height": 22,
+                          "fill": "#272727",
+                          "cornerRadius": 6,
+                          "padding": [
+                            0,
+                            10
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "DJMIS",
+                              "name": "Label",
+                              "fill": "#f1f1f1",
+                              "content": "Live",
+                              "fontFamily": "$font",
+                              "fontSize": 10,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "O31A1h",
+                      "name": "Grid",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 14,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "mr65M",
+                          "name": "Row",
+                          "width": "fill_container",
+                          "gap": 12,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "UCN9Y",
+                              "name": "Item",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "ErZyj",
+                                  "name": "Thumb",
+                                  "width": "fill_container",
+                                  "height": 112,
+                                  "fill": {
+                                    "type": "gradient",
+                                    "gradientType": "linear",
+                                    "enabled": true,
+                                    "rotation": 135,
+                                    "size": {
+                                      "height": 1
+                                    },
+                                    "colors": [
+                                      {
+                                        "color": "#3a2550",
+                                        "position": 0
+                                      },
+                                      {
+                                        "color": "#c4567f",
+                                        "position": 1
+                                      }
+                                    ]
+                                  },
+                                  "cornerRadius": 8,
+                                  "layout": "vertical",
+                                  "padding": 6,
+                                  "justifyContent": "end",
+                                  "alignItems": "end",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "jxShq",
+                                      "name": "Badge",
+                                      "height": 16,
+                                      "fill": "#000000b3",
+                                      "cornerRadius": 4,
+                                      "gap": 3,
+                                      "padding": [
+                                        0,
+                                        5
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "bKVkb",
+                                          "name": "Icon",
+                                          "width": 9,
+                                          "height": 9,
+                                          "icon": "list-music",
+                                          "library": "lucide",
+                                          "fill": "#ffffff"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "V4kYp",
+                                          "name": "Label",
+                                          "fill": "#ffffff",
+                                          "content": "Mix",
+                                          "fontFamily": "$font",
+                                          "fontSize": 9,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "WVuQ4",
+                                  "name": "Title",
+                                  "fill": "#f1f1f1",
+                                  "content": "Mix — late night drive",
+                                  "fontFamily": "$font",
+                                  "fontSize": 11,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "HwNeM",
+                                  "name": "Meta",
+                                  "fill": "#aaaaaa",
+                                  "content": "Various artists",
+                                  "fontFamily": "$font",
+                                  "fontSize": 10
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "mMAyt",
+                              "name": "Item",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "cDjbr",
+                                  "name": "Thumb",
+                                  "width": "fill_container",
+                                  "height": 112,
+                                  "fill": {
+                                    "type": "gradient",
+                                    "gradientType": "linear",
+                                    "enabled": true,
+                                    "rotation": 135,
+                                    "size": {
+                                      "height": 1
+                                    },
+                                    "colors": [
+                                      {
+                                        "color": "#123b3a",
+                                        "position": 0
+                                      },
+                                      {
+                                        "color": "#3fa58c",
+                                        "position": 1
+                                      }
+                                    ]
+                                  },
+                                  "cornerRadius": 8,
+                                  "layout": "vertical",
+                                  "padding": 6,
+                                  "justifyContent": "end",
+                                  "alignItems": "end",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "aqe3P",
+                                      "name": "Badge",
+                                      "height": 16,
+                                      "fill": "#000000b3",
+                                      "cornerRadius": 4,
+                                      "gap": 3,
+                                      "padding": [
+                                        0,
+                                        5
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "XbgeH",
+                                          "name": "Label",
+                                          "fill": "#ffffff",
+                                          "content": "♪ 3:42",
+                                          "fontFamily": "$font",
+                                          "fontSize": 9,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "DJLRi",
+                                  "name": "Title",
+                                  "fill": "#f1f1f1",
+                                  "content": "Song title — Artist",
+                                  "fontFamily": "$font",
+                                  "fontSize": 11,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "Iflky",
+                                  "name": "Meta",
+                                  "fill": "#aaaaaa",
+                                  "content": "Artist · 2.1M views",
+                                  "fontFamily": "$font",
+                                  "fontSize": 10
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "s4B4ww",
+                          "name": "Row",
+                          "width": "fill_container",
+                          "gap": 12,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "q9aT6s",
+                              "name": "Item",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "Cbnc7",
+                                  "name": "Thumb",
+                                  "width": "fill_container",
+                                  "height": 112,
+                                  "fill": {
+                                    "type": "gradient",
+                                    "gradientType": "linear",
+                                    "enabled": true,
+                                    "rotation": 135,
+                                    "size": {
+                                      "height": 1
+                                    },
+                                    "colors": [
+                                      {
+                                        "color": "#41260f",
+                                        "position": 0
+                                      },
+                                      {
+                                        "color": "#d9873a",
+                                        "position": 1
+                                      }
+                                    ]
+                                  },
+                                  "cornerRadius": 8,
+                                  "layout": "vertical",
+                                  "padding": 6,
+                                  "justifyContent": "end",
+                                  "alignItems": "end",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "z9LRE",
+                                      "name": "Badge",
+                                      "height": 16,
+                                      "fill": "#000000b3",
+                                      "cornerRadius": 4,
+                                      "gap": 3,
+                                      "padding": [
+                                        0,
+                                        5
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "aTXXD",
+                                          "name": "Label",
+                                          "fill": "#ffffff",
+                                          "content": "♪ 4:05",
+                                          "fontFamily": "$font",
+                                          "fontSize": 9,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "CDMCs",
+                                  "name": "Title",
+                                  "fill": "#f1f1f1",
+                                  "content": "Another song — Band",
+                                  "fontFamily": "$font",
+                                  "fontSize": 11,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "yqvnv",
+                                  "name": "Meta",
+                                  "fill": "#aaaaaa",
+                                  "content": "Band · 880K views",
+                                  "fontFamily": "$font",
+                                  "fontSize": 10
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "vIN5e",
+                              "name": "Item",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "AgqPG",
+                                  "name": "Thumb",
+                                  "width": "fill_container",
+                                  "height": 112,
+                                  "fill": {
+                                    "type": "gradient",
+                                    "gradientType": "linear",
+                                    "enabled": true,
+                                    "rotation": 135,
+                                    "size": {
+                                      "height": 1
+                                    },
+                                    "colors": [
+                                      {
+                                        "color": "#18233f",
+                                        "position": 0
+                                      },
+                                      {
+                                        "color": "#5a7be0",
+                                        "position": 1
+                                      }
+                                    ]
+                                  },
+                                  "cornerRadius": 8,
+                                  "layout": "vertical",
+                                  "padding": 6,
+                                  "justifyContent": "end",
+                                  "alignItems": "end",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "Dbwzx",
+                                      "name": "Badge",
+                                      "height": 16,
+                                      "fill": "#000000b3",
+                                      "cornerRadius": 4,
+                                      "gap": 3,
+                                      "padding": [
+                                        0,
+                                        5
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "rWmV4",
+                                          "name": "Icon",
+                                          "width": 9,
+                                          "height": 9,
+                                          "icon": "list-music",
+                                          "library": "lucide",
+                                          "fill": "#ffffff"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "F8n2nn",
+                                          "name": "Label",
+                                          "fill": "#ffffff",
+                                          "content": "Mix",
+                                          "fontFamily": "$font",
+                                          "fontSize": 9,
+                                          "fontWeight": "600"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "YVHGH",
+                                  "name": "Title",
+                                  "fill": "#f1f1f1",
+                                  "content": "Mix — focus",
+                                  "fontFamily": "$font",
+                                  "fontSize": 11,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "bgT2M",
+                                  "name": "Meta",
+                                  "fill": "#aaaaaa",
+                                  "content": "Various artists",
+                                  "fontFamily": "$font",
+                                  "fontSize": 10
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "rX2lM",
+          "name": "3 · Anything else",
+          "width": 480,
+          "layout": "vertical",
+          "gap": 14,
+          "children": [
+            {
+              "type": "text",
+              "id": "OUims",
+              "name": "Step",
+              "fill": "#ededed",
+              "content": "3 · Anything else is blocked",
+              "fontFamily": "$font",
+              "fontSize": 15,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "FjQ2h",
+              "name": "Note",
+              "fill": "#9a9a9a",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Opening a video that isn't music, or a Short, shows the blocked page: the same design, saying only music is open and until when.",
+              "lineHeight": 1.45,
+              "fontFamily": "$font",
+              "fontSize": 12
+            },
+            {
+              "type": "frame",
+              "id": "BRv2S",
+              "name": "Window",
+              "clip": true,
+              "width": "fill_container",
+              "height": 428,
+              "fill": "#0f0f0f",
+              "cornerRadius": 10,
+              "stroke": "#222222",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "zZMnn",
+                  "name": "Tab row",
+                  "width": "fill_container",
+                  "height": 34,
+                  "fill": "#070707",
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    8
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "nAr9D",
+                      "name": "Active tab",
+                      "width": 120,
+                      "height": 24,
+                      "fill": "#ffffff1a",
+                      "cornerRadius": 6,
+                      "gap": 6,
+                      "padding": [
+                        0,
+                        8
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "hJ0sd",
+                          "name": "Favicon",
+                          "width": 12,
+                          "height": 9,
+                          "fill": "#e5e5e5",
+                          "cornerRadius": 2
+                        },
+                        {
+                          "type": "text",
+                          "id": "dEBCn",
+                          "name": "Title",
+                          "fill": "$text",
+                          "content": "YouTube",
+                          "fontFamily": "$font",
+                          "fontSize": 11
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "yI7iP",
+                      "name": "Spacer",
+                      "width": "fill_container",
+                      "height": 1
+                    },
+                    {
+                      "type": "icon",
+                      "id": "x9jEve",
+                      "name": "Back",
+                      "width": 13,
+                      "height": 13,
+                      "icon": "arrow-left",
+                      "library": "lucide",
+                      "fill": "$text-2"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "TPj3F",
+                      "name": "Address",
+                      "width": 200,
+                      "height": 24,
+                      "fill": "#141414",
+                      "cornerRadius": 12,
+                      "gap": 6,
+                      "padding": [
+                        0,
+                        4,
+                        0,
+                        10
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hhOwD",
+                          "name": "URL",
+                          "fill": "$text",
+                          "content": "youtube.com/watch",
+                          "fontFamily": "$font",
+                          "fontSize": 11
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Xp21l",
+                          "name": "Music only chip",
+                          "height": 18,
+                          "fill": "#ff8f6326",
+                          "cornerRadius": 9,
+                          "gap": 4,
+                          "padding": [
+                            0,
+                            7
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "h1ZrH",
+                              "name": "Icon",
+                              "width": 10,
+                              "height": 10,
+                              "icon": "music",
+                              "library": "lucide",
+                              "fill": "#ff8f63"
+                            },
+                            {
+                              "type": "text",
+                              "id": "Kin3f",
+                              "name": "Label",
+                              "fill": "#ff8f63",
+                              "content": "Music only",
+                              "fontFamily": "$font",
+                              "fontSize": 10,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "icon",
+                      "id": "E7HHv",
+                      "name": "Menu",
+                      "width": 13,
+                      "height": 13,
+                      "icon": "ellipsis-vertical",
+                      "library": "lucide",
+                      "fill": "$text-2"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ygnD3",
+                  "name": "Blocked page",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "fill": "#070707",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "y3RS3T",
+                      "name": "Host",
+                      "fill": "#ededed",
+                      "content": "youtube.com",
+                      "fontFamily": "$font",
+                      "fontSize": 34,
+                      "fontWeight": "600",
+                      "letterSpacing": -0.8
+                    },
+                    {
+                      "type": "frame",
+                      "id": "WIpjN",
+                      "name": "Status",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "ellipse",
+                          "id": "W2IV68",
+                          "name": "Dot",
+                          "fill": "#ff8f63",
+                          "width": 7,
+                          "height": 7
+                        },
+                        {
+                          "type": "text",
+                          "id": "Y3tqj7",
+                          "name": "Line",
+                          "fill": "#ededed",
+                          "content": "Music only until midnight",
+                          "fontFamily": "$font",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "A19EN",
+                      "name": "Left",
+                      "fill": "#9a9a9a",
+                      "content": "6:58:37 left",
+                      "fontFamily": "$font",
+                      "fontSize": 12
+                    },
+                    {
+                      "type": "text",
+                      "id": "ekeJg",
+                      "name": "Back",
+                      "fill": "#9a9a9a",
+                      "content": "← Back",
+                      "fontFamily": "$font",
+                      "fontSize": 11,
+                      "fontWeight": "500"
+                    }
+                  ]
                 }
               ]
             }
