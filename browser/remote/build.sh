@@ -96,7 +96,9 @@ if ((${#OWN[@]})); then
 fi
 say "Building chrome"
 # -k 0: keep going past failures so one pass reports every error.
-time autoninja -C "$OUT" -k 0 chrome
+# chrome_sandbox: the setuid helper the packages install as chrome-sandbox, for distros that
+# restrict unprivileged user namespaces (Ubuntu 24.04+, Linux Mint 22).
+time autoninja -C "$OUT" -k 0 chrome chrome_sandbox
 
 # 6. Package only what the browser needs at runtime
 # The adult and gambling feeds: data files beside the browser, read at startup (mast_feeds.cc).
@@ -106,8 +108,10 @@ python3 "$M/remote/build-feeds.py" "$M/blocklist" "$OUT/mast-feeds" /root/mast-f
 rm -rf "$OUT/mast-wallpapers" && mkdir -p "$OUT/mast-wallpapers" && cp "$M"/wallpapers/*.jpg "$OUT/mast-wallpapers/"
 say "Packaging"
 cd "$OUT"
+# Chromium looks for the helper beside the browser under this name.
+cp -p chrome_sandbox chrome-sandbox
 keep=()
-for f in chrome chrome_crashpad_handler icudtl.dat vk_swiftshader_icd.json locales MEIPreload \
+for f in chrome chrome-sandbox chrome_crashpad_handler icudtl.dat vk_swiftshader_icd.json locales MEIPreload \
 	mast-feeds mast-wallpapers *.pak *.bin *.so *.so.*; do
 	[ -e "$f" ] && keep+=("$f")
 done

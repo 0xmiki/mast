@@ -1,0 +1,104 @@
+#!/bin/sh
+# Install or update Mast on Linux:
+#   curl -fsSL @BASE@/install.sh | sh
+# Uses the .deb (apt) or .rpm (dnf, zypper) when it can, so the system installs missing
+# libraries. Anywhere else it unpacks Mast into ~/.local. Run it again to update.
+# Remove Mast:  curl -fsSL @BASE@/install.sh | sh -s -- --uninstall
+set -eu
+
+BASE=${MAST_BASE:-@BASE@}
+DIR=$HOME/.local/opt/mast # used only when there's no apt, dnf or zypper
+APPS=${XDG_DATA_HOME:-$HOME/.local/share}/applications
+ICONS=${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor
+
+say() { printf '\033[1m› %s\033[0m\n' "$*"; }
+die() { printf 'mast: %s\n' "$*" >&2; exit 1; }
+has() { command -v "$1" >/dev/null 2>&1; }
+
+if [ "$(id -u)" -eq 0 ]; then
+	SUDO=""
+elif has sudo; then
+	SUDO=sudo
+else
+	SUDO=none
+fi
+root() {
+	[ "$SUDO" != none ] || die "this step needs admin rights, and sudo isn't installed: $*"
+	$SUDO "$@"
+}
+
+uninstall() {
+	if has dpkg && dpkg -s mast >/dev/null 2>&1; then
+		say "Removing the mast package"
+		root apt-get remove -y mast
+	elif has rpm && rpm -q mast >/dev/null 2>&1; then
+		say "Removing the mast package"
+		if has dnf; then root dnf remove -y mast; else root zypper --non-interactive remove mast; fi
+	fi
+	rm -rf "$DIR" "$APPS/mast.desktop" "$HOME/.local/bin/mast"
+	rm -f "$ICONS"/*/apps/mast.png
+	say "Mast is removed. Your profile is still in ~/.config/mast; delete it to remove everything."
+}
+
+[ "${1:-}" = --uninstall ] && { uninstall; exit 0; }
+[ "$(uname -m)" = x86_64 ] || die "Mast is only built for 64-bit Intel/AMD PCs (x86_64) so far."
+
+if has curl; then
+	fetch() { curl -fL --retry 3 --progress-bar -o "$2" "$BASE/$1" || die "couldn't download $1"; }
+elif has wget; then
+	fetch() { wget -q --show-progress -O "$2" "$BASE/$1" || die "couldn't download $1"; }
+else
+	die "needs curl or wget to download Mast"
+fi
+
+TMP=$(mktemp -d)
+trap 'rm -rf "$TMP"' EXIT
+chmod 755 "$TMP" # apt reads the .deb as its own user
+fetch SHA256SUMS "$TMP/SHA256SUMS"
+VERSION=$(sed -n 's/^# version //p' "$TMP/SHA256SUMS")
+get() {
+	say "Downloading $1"
+	fetch "$1" "$TMP/$1"
+	(cd "$TMP" && grep "  $1\$" SHA256SUMS | sha256sum -c --quiet -) ||
+		die "the download of $1 is damaged. Please run the installer again."
+}
+
+if has apt-get && has dpkg; then
+	get mast_amd64.deb
+	say "Installing (asks for your password)"
+	root apt-get install -y "$TMP/mast_amd64.deb"
+elif has dnf; then
+	get mast.x86_64.rpm
+	say "Installing (asks for your password)"
+	root dnf install -y --nogpgcheck "$TMP/mast.x86_64.rpm"
+elif has zypper; then
+	get mast.x86_64.rpm
+	say "Installing (asks for your password)"
+	root zypper --non-interactive install --allow-unsigned-rpm "$TMP/mast.x86_64.rpm"
+else
+	get mast-linux-x86_64.tar.xz
+	say "Unpacking into $DIR"
+	mkdir -p "$DIR.new"
+	tar -xJf "$TMP/mast-linux-x86_64.tar.xz" -C "$DIR.new"
+	rm -rf "$DIR"
+	mv "$DIR.new" "$DIR"
+	mkdir -p "$HOME/.local/bin" "$APPS"
+	ln -sf "$DIR/chrome" "$HOME/.local/bin/mast"
+	sed "s|/opt/mast/|$DIR/|g" "$DIR/mast.desktop" > "$APPS/mast.desktop"
+	for s in 24 48 64 128 256; do
+		[ -f "$DIR/product_logo_$s.png" ] || continue
+		mkdir -p "$ICONS/${s}x$s/apps"
+		cp "$DIR/product_logo_$s.png" "$ICONS/${s}x$s/apps/mast.png"
+	done
+	has update-desktop-database && update-desktop-database -q "$APPS" || true
+	# Chromium sandboxes pages with user namespaces. Where the system blocks them, it needs
+	# its setuid helper instead, which only an admin can set up.
+	if ! { has unshare && unshare -Ur true 2>/dev/null; } && [ -e "$DIR/chrome-sandbox" ]; then
+		say "Setting up Mast's security sandbox (asks for your password)"
+		root chown root:root "$DIR/chrome-sandbox"
+		root chmod 4755 "$DIR/chrome-sandbox"
+	fi
+	case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) say "Tip: add ~/.local/bin to your PATH to start Mast with the mast command." ;; esac
+fi
+
+say "Mast ${VERSION:-} is installed. Open it from your app menu, or run: mast"
