@@ -322,6 +322,14 @@ first (4 are colour mixer only; the rest are 1–3 line hooks).
   aren't categorised as Music by their uploaders. YouTube's markup changes, so the
   selectors will need upkeep.
 
+### Before release: rebase on Chromium 157
+
+- Mast is on 156.0.8078.79. Chrome 157.0.8103.38 went stable on 2026-11-03 (213 security
+  fixes); ungoogled-chromium has `157.0.8103.38-1`. Decided 2026-11-09: finish the features
+  on 156 first, then rebase. Steps: bump `chromium_version.txt` / `ungoogled_version.txt`,
+  `./mast check-patches` (free) to see which anchors moved, fix them, then one full build
+  (most of Chromium recompiles: several hours, about $1–2).
+
 ### H. Leftovers from the de-Google pass
 
 - "Your Mast" in the app menu (string). Warm greys in settings (WebUI colour tokens, `DESIGN-PLAN.md` §F).
