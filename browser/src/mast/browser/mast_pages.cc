@@ -135,6 +135,10 @@ constexpr char kDesktopPage[] =
 #include "mast/browser/resources/desktop_html.inc"
     ;
 
+constexpr char kWelcomePage[] =
+#include "mast/browser/resources/welcome_html.inc"
+    ;
+
 // The blocklist (categories, sites, how long), shared by chrome://mast and the
 // new tab page's panel.
 constexpr char kBlocklist[] =
@@ -208,6 +212,10 @@ std::string BlockPageHtml(std::string_view host,
 std::string QuietBlockPageHtml(std::string_view host,
                                const PageBackdrop& backdrop) {
   return BlockPage(host, "null", /*quiet=*/true, "Blocked", backdrop);
+}
+
+std::string WelcomePageHtml() {
+  return Fill(kWelcomePage);
 }
 
 std::string StartPageHtml(bool as_new_tab) {

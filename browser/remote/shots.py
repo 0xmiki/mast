@@ -172,6 +172,23 @@ for _ in range(80):
 time.sleep(4)
 
 p = Page()
+# First run: the welcome page (design C25) takes the place of the lone new tab. Its
+# first step, then the import list (an empty builder has no other browsers).
+time.sleep(1)
+shot("46-welcome")
+p.js("document.querySelector('[data-go=\"1\"]').click()")
+time.sleep(3)
+shot("47-welcome-import")
+# The same step as it looks on a computer with other browsers (sample data), and the
+# done step after an import.
+p.js("""mastWelcome({sources: [
+  {id: 'chrome/Default', browser: 'Google Chrome', profile: 'Miki', bookmarks: 1204, extensions: 14, history: true},
+  {id: 'brave/Default', browser: 'Brave', profile: 'Personal', bookmarks: 312, extensions: 3, history: true},
+  {id: 'firefox/0', browser: 'Firefox', profile: 'default-release', bookmarks: -1, extensions: 0, history: true, firefox: true}]})""")
+shot("47b-welcome-import-list", settle=0.8)
+p.js("mastWelcome({result: {browser: 'Google Chrome', bookmarks: 1204, onNewTab: 18, history: 20000, extensions: 14, ok: true}})")
+shot("48-welcome-done", settle=0.8)
+p.go("chrome://newtab")
 # What a new tab's icon shows while it opens (a Chromium logo was seen for a moment):
 # the tab row, every 60ms for about a second after Ctrl+T.
 keys("ctrl+t")

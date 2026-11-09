@@ -30,6 +30,10 @@ std::string QuietBlockPageHtml(std::string_view host,
 // `as_new_tab` titles it "New Tab" so tabs and history read naturally.
 std::string StartPageHtml(bool as_new_tab);
 
+// mast://mast/welcome: the first-run page (design C25): what Mast is, one-click
+// import from another browser (mast/browser/import), done.
+std::string WelcomePageHtml();
+
 // The new tab page: saved sites as a desktop of icons, plus widgets (clock,
 // and one button that blocks every distraction).
 // `wallpaper` is the Customize image's version (kWallpaperPref; 0 is none).

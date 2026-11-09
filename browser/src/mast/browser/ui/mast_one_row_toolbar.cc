@@ -4,8 +4,13 @@
 
 #include <optional>
 
+#include "base/functional/bind.h"
+#include "base/memory/weak_ptr.h"
+#include "base/task/sequenced_task_runner.h"
+
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
+#include "chrome/browser/ui/tabs/tab_strip_model.h"
 #include "chrome/browser/ui/views/frame/browser_view.h"
 #include "chrome/browser/ui/views/frame/toolbar_button_provider.h"
 #include "chrome/browser/ui/views/location_bar/location_bar_view.h"
@@ -15,6 +20,9 @@
 #include "components/bookmarks/common/bookmark_bar_visibility_state.h"
 #include "components/bookmarks/common/bookmark_pref_names.h"
 #include "components/prefs/pref_service.h"
+#include "content/public/browser/web_contents.h"
+#include "ui/base/window_open_disposition.h"
+#include "url/gurl.h"
 #include "mast/browser/mast_prefs.h"
 #include "mast/browser/mast_theme.h"
 #include "mast/browser/ui/mast_tab_bar.h"
@@ -41,6 +49,41 @@ void HideBookmarksBar(PrefService* prefs) {
   }
 }
 
+// The welcome page (design C25), once per profile, in its first normal window.
+// After the window's startup tabs are in: a lone new tab page becomes the
+// welcome page; otherwise it opens in a new tab.
+void MaybeWelcome(BrowserWindowInterface* browser) {
+  PrefService* prefs = browser->GetProfile()->GetPrefs();
+  if (browser->GetType() != BrowserWindowInterface::TYPE_NORMAL ||
+      browser->GetProfile()->IsOffTheRecord() ||
+      prefs->GetBoolean(kWelcomedPref)) {
+    return;
+  }
+  prefs->SetBoolean(kWelcomedPref, true);
+  base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
+      FROM_HERE, base::BindOnce(
+                     [](base::WeakPtr<BrowserWindowInterface> weak) {
+                       BrowserWindowInterface* browser = weak.get();
+                       if (!browser) {
+                         return;
+                       }
+                       const GURL welcome("chrome://mast/welcome");
+                       TabStripModel* tabs = browser->GetTabStripModel();
+                       content::WebContents* only =
+                           tabs && tabs->count() == 1
+                               ? tabs->GetActiveWebContents()
+                               : nullptr;
+                       const bool lone_new_tab =
+                           only && only->GetVisibleURL().SchemeIs("chrome") &&
+                           only->GetVisibleURL().host() == "newtab";
+                       browser->OpenGURL(welcome,
+                                         lone_new_tab
+                                             ? WindowOpenDisposition::CURRENT_TAB
+                                             : WindowOpenDisposition::NEW_FOREGROUND_TAB);
+                     },
+                     browser->GetWeakPtr()));
+}
+
 }  // namespace
 
 void OnBrowserWindowReady(BrowserWindowInterface* browser) {
@@ -49,6 +92,7 @@ void OnBrowserWindowReady(BrowserWindowInterface* browser) {
   if (browser && browser->GetProfile()) {
     ApplyTheme(browser->GetProfile()->GetPrefs());
     HideBookmarksBar(browser->GetProfile()->GetPrefs());
+    MaybeWelcome(browser);
   }
   if (!IsOneRowWindow() || !browser ||
       browser->GetType() != BrowserWindowInterface::TYPE_NORMAL) {

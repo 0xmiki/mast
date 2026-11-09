@@ -27,6 +27,9 @@ inline constexpr char kWallpaperTonePref[] = "mast.ntp.wallpaper_tone";
 // picture, as on the new tab page) or "theme" (the palette). See
 // mast/browser/ui/mast_tab_bar.h.
 inline constexpr char kTabBarPref[] = "mast.tab_bar";
+// Whether this profile has been shown the welcome page (mast://mast/welcome,
+// design C25). It opens once, in the first window.
+inline constexpr char kWelcomedPref[] = "mast.welcomed";
 
 // Profile prefs: Mast's own, and Mast's defaults for some of Chromium's. Called
 // last in RegisterProfilePrefs(), so every upstream pref is already registered.

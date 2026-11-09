@@ -32,6 +32,7 @@ void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry) {
   registry->RegisterIntegerPref(kWallpaperPref, 0);
   registry->RegisterStringPref(kWallpaperTonePref, "dark");
   registry->RegisterStringPref(kTabBarPref, "site");
+  registry->RegisterBooleanPref(kWelcomedPref, false);
 }
 
 }  // namespace mast

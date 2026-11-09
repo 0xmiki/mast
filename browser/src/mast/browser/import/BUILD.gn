@@ -1,0 +1,27 @@
+# Copyright 2026 The Mast Authors
+# One-click import for the welcome page (design C25). Only the WebUI target
+# depends on this. It includes some //chrome/browser headers (the importer, the
+# Web Store installer) without depending on //chrome/browser, which depends on
+# the WebUI configs and so would make a cycle; everything links into chrome.
+
+source_set("import") {
+  sources = [
+    "mast_import.cc",
+    "mast_import.h",
+  ]
+  deps = [
+    "//base",
+    "//chrome/browser/bookmarks",
+    "//chrome/browser/profiles:profile",
+    "//components/bookmarks/browser",
+    "//components/history/core/browser",
+    "//components/keyed_service/core",
+    "//components/user_data_importer/common",
+    "//content/public/browser",
+    "//extensions/browser",
+    "//mast/browser/desktop",
+    "//sql",
+    "//ui/gfx",
+    "//url",
+  ]
+}

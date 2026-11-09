@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Welcome to Mast</title>
+{{ICON}}
+<style>{{STYLE}}
+/* The welcome page (design C25), opened once on a new install: what Mast is,
+   bring everything over from another browser in one click, done. */
+body { display: grid; place-items: center; min-height: 100vh; margin: 0; padding: 40px 24px; box-sizing: border-box; text-align: center; }
+main { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 760px; }
+.step { display: none; flex-direction: column; align-items: center; width: 100%; animation: in .25s ease; }
+.step.on { display: flex; }
+@keyframes in { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) { .step { animation: none; } }
+h1 { margin: 0; color: var(--text); font-size: 44px; font-weight: 600; letter-spacing: -.027em; line-height: 1.1; }
+h2 { margin: 0; color: var(--text); font-size: 36px; font-weight: 600; letter-spacing: -.025em; }
+.lead { margin: 14px 0 0; color: var(--text-2); font-size: 16px; line-height: 1.55; }
+.logo { width: 72px; height: 72px; margin-bottom: 28px; }
+.points { display: flex; gap: 40px; margin-top: 44px; text-align: left; }
+.points div { width: 220px; }
+.points i { display: grid; place-items: center; width: 32px; height: 32px; margin-bottom: 10px; border-radius: 8px; background: var(--field); color: var(--text); }
+.points b { display: block; color: var(--text); font-size: 14px; font-weight: 600; }
+.points span { display: block; margin-top: 6px; color: var(--text-3); font-size: 13px; line-height: 1.5; }
+button { font: inherit; cursor: pointer; }
+.primary, .secondary { height: 40px; padding: 0 22px; border-radius: 8px; font-size: 14px; font-weight: 600; }
+/* White, not ember: in Mast, ember always means blocked. */
+.primary { border: 0; background: var(--text); color: var(--bg); }
+.primary:hover { filter: brightness(.92); }
+.secondary { border: 1px solid var(--line); background: var(--field); color: var(--text); }
+.secondary:hover { background: var(--pressed); }
+.primary:disabled, .secondary:disabled { cursor: default; opacity: .5; filter: none; }
+.quiet { margin-top: 32px; border: 0; background: none; color: var(--text-2); font-size: 14px; font-weight: 600; }
+.quiet:hover { color: var(--text); }
+.go { margin-top: 52px; }
+.dots { display: flex; gap: 6px; margin-top: 28px; }
+.dots i { width: 6px; height: 6px; border-radius: 3px; background: var(--line); transition: width .2s; }
+.dots i.on { width: 18px; background: var(--text); }
+/* Step 2: the browsers found. */
+.list { width: 600px; max-width: 100%; margin-top: 36px; padding: 6px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); text-align: left; box-sizing: border-box; }
+.row { display: flex; align-items: center; gap: 14px; height: 68px; padding: 0 14px; border-radius: 8px; }
+.row:first-child { background: var(--field); }
+.row .ic { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 50%; color: #fff; font-size: 15px; font-weight: 700; }
+.row .tx { flex: 1; min-width: 0; }
+.row .nm { color: var(--text); font-size: 14px; font-weight: 600; }
+.row .nm small { margin-left: 8px; color: var(--text-3); font-size: 12px; font-weight: 400; }
+.row .meta { margin-top: 4px; color: var(--text-3); font-size: 12px; }
+.row button { height: 32px; padding: 0 16px; font-size: 13px; }
+.empty { padding: 24px; color: var(--text-2); text-align: center; }
+.what { width: 600px; max-width: 100%; margin-top: 16px; text-align: left; }
+.what h4 { margin: 0 0 10px; color: var(--text-2); font-size: 12px; font-weight: 600; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px 0 8px; border: 0; border-radius: 14px; background: var(--field); color: var(--text-2); font-size: 12px; }
+.chip i { display: grid; place-items: center; width: 14px; height: 14px; border-radius: 4px; box-shadow: inset 0 0 0 1.5px var(--text-3); }
+.chip.on { color: var(--text); }
+.chip.on i { background: var(--text); box-shadow: none; color: var(--bg); }
+.what p { margin: 10px 0 0; color: var(--text-3); font-size: 12px; line-height: 1.5; }
+/* Step 3. */
+.done { display: grid; place-items: center; width: 56px; height: 56px; margin-bottom: 24px; border-radius: 50%; background: var(--field); color: var(--text); }
+.sum { display: flex; flex-direction: column; gap: 12px; width: 460px; max-width: 100%; margin-top: 32px; text-align: left; }
+.sum div { display: flex; gap: 12px; }
+.sum i { display: grid; place-items: center; flex: none; width: 18px; height: 18px; margin-top: 1px; border-radius: 50%; background: var(--field); color: var(--text); }
+.sum b { display: block; color: var(--text); font-size: 14px; font-weight: 600; }
+.sum span { display: block; margin-top: 2px; color: var(--text-3); font-size: 13px; }
+.actions { display: flex; gap: 12px; margin-top: 40px; }
+</style>
+</head>
+<body>
+<main>
+  <section class="step on" id="s0">
+    <svg class="logo" viewBox="0 0 32 32" aria-label="Mast"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6a3d"/><stop offset="1" stop-color="#c2300f"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="url(#g)"/><path d="M14 10.5V24.5H6.6Q7.4 16 14 10.5Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/><path d="M17 6V24.5H25.4Q24.7 13 17 6Z" fill="#fff" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>
+    <h1>Tie yourself to the mast.</h1>
+    <p class="lead">A quiet browser that keeps you on course. Block what pulls you away,<br>and once it's set, there's no unblocking until the time runs out.</p>
+    <div class="points">
+      <div><i><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2"/></svg></i><b>Blocks that hold</b><span>Pick how long. A block can be extended, never shortened.</span></div>
+      <div><i><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="6"/><path d="M10.5 5.5l-1.5 3.5-3.5 1.5 1.5-3.5z"/></svg></i><b>The rest stays open</b><span>Everything else on the web is there when you need it.</span></div>
+      <div><i><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 2a6 6 0 100 12c.8 0 1-.6.7-1.2-.5-.9.1-1.8 1.1-1.8H11a3 3 0 003-3c0-3.3-2.7-6-6-6z"/><circle cx="5" cy="7" r=".8" fill="currentColor"/><circle cx="8" cy="5" r=".8" fill="currentColor"/><circle cx="11" cy="7" r=".8" fill="currentColor"/></svg></i><b>Made to be looked at</b><span>Your picture, your colors, or each site's own.</span></div>
+    </div>
+    <button class="primary go" data-go="1">Get started</button>
+  </section>
+
+  <section class="step" id="s1">
+    <h2>Bring everything over</h2>
+    <p class="lead" id="importLead">Looking for your browsers…</p>
+    <div class="list" id="list"></div>
+    <div class="what" id="what">
+      <h4>What comes over</h4>
+      <div class="chips" id="chips"></div>
+      <p>Sites in your bookmarks bar go on your new tab page. Extensions are reinstalled from the Web Store.<br>Passwords stay where they are: export them from your old browser if you want them here.</p>
+    </div>
+    <button class="quiet" data-go="2" id="skip">Skip for now</button>
+  </section>
+
+  <section class="step" id="s2">
+    <div class="done"><svg width="26" height="26" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3.5 8.5l3 3 6-7"/></svg></div>
+    <h2>You're all set</h2>
+    <p class="lead" id="doneLead">Mast is ready.</p>
+    <div class="sum" id="sum"></div>
+    <div class="actions">
+      <button class="secondary" id="default">Make Mast your default browser</button>
+      <button class="primary" id="start">Start browsing</button>
+    </div>
+  </section>
+
+  <div class="dots" id="dots"><i class="on"></i><i></i><i></i></div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const tick = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 5.2l2 2 4-4.4"/></svg>';
+const COLORS = {chrome: '#2f6fe4', brave: '#e2541f', edge: '#0f8fd8', vivaldi: '#d6333a', opera: '#c8102e', arc: '#5b4bdb', chromium: '#4a7fd6', firefox: '#ff8a1f'};
+const what = {bookmarks: true, history: true, extensions: true};
+let sources = null, busy = '', step = 0;
+
+function go(n) {
+  step = n;
+  document.querySelectorAll('.step').forEach((s, i) => s.classList.toggle('on', i === n));
+  document.querySelectorAll('#dots i').forEach((d, i) => d.classList.toggle('on', i === n));
+  if (n === 1 && !sources) chrome.send('welcomeSources');
+}
+const count = (n, one, many) => `${n.toLocaleString()} ${n === 1 ? one : many}`;
+function meta(s) {
+  const parts = [];
+  if (s.bookmarks > 0) parts.push(count(s.bookmarks, 'bookmark', 'bookmarks'));
+  if (s.bookmarks < 0) parts.push('Bookmarks');
+  if (s.extensions > 0) parts.push(count(s.extensions, 'extension', 'extensions'));
+  if (s.history) parts.push('history');
+  return parts.join(' · ');
+}
+function renderList() {
+  if (!sources) return;
+  $('importLead').innerHTML = sources.length
+    ? 'Mast found these browsers on this computer. One click copies your<br>bookmarks, history and extensions. Nothing leaves your computer.'
+    : 'No other browsers were found on this computer.';
+  $('what').style.display = sources.length ? '' : 'none';
+  $('skip').textContent = sources.length ? 'Skip for now' : 'Continue';
+  $('list').style.display = sources.length ? '' : 'none';
+  $('list').innerHTML = sources.map((s, i) => {
+    const key = s.id.split('/')[0].replace(/-.*/, '');
+    return `<div class="row"><span class="ic" style="background:${COLORS[key] || '#555'}">${esc(s.browser[0] || '?')}</span>
+      <span class="tx"><span class="nm">${esc(s.browser)}${s.profile ? `<small>${esc(s.profile)}</small>` : ''}</span><span class="meta">${esc(meta(s))}</span></span>
+      <button class="${i === 0 ? 'primary' : 'secondary'}" data-import="${esc(s.id)}" ${busy ? 'disabled' : ''}>${busy === s.id ? 'Importing…' : 'Import'}</button></div>`;
+  }).join('');
+  $('chips').innerHTML = [['bookmarks', 'Bookmarks'], ['history', 'History'], ['extensions', 'Extensions']].map(([k, label]) =>
+    `<button class="chip ${what[k] ? 'on' : ''}" data-what="${k}" aria-pressed="${what[k]}"><i>${what[k] ? tick : ''}</i>${label}</button>`).join('');
+}
+function renderDone(r) {
+  const items = [];
+  if (r) {
+    $('doneLead').textContent = r.ok ? `Everything from ${r.browser} is here.` : `Some of ${r.browser} couldn't be brought over.`;
+    if (r.bookmarks > 0) items.push([count(r.bookmarks, 'bookmark', 'bookmarks'),
+      r.onNewTab ? `${count(r.onNewTab, 'site', 'sites')} from your bookmarks bar ${r.onNewTab === 1 ? 'is' : 'are'} on your new tab page.` : `In the "From ${r.browser}" folder.`]);
+    if (r.bookmarks < 0) items.push(['Bookmarks', `In your bookmarks.`]);
+    if (r.extensions > 0) items.push([count(r.extensions, 'extension', 'extensions'), 'Reinstalled from the Web Store.']);
+    if (r.history > 0) items.push([count(r.history, 'page of history', 'pages of history'), 'Your sites come up as you type.']);
+    if (r.history < 0) items.push(['History', 'Your sites come up as you type.']);
+  } else {
+    $('doneLead').textContent = 'You can bring your browser over any time from mast://mast/welcome.';
+  }
+  $('sum').style.display = items.length ? '' : 'none';
+  $('sum').innerHTML = items.map(([b, s]) => `<div><i>${tick}</i><span><b>${esc(b)}</b><span>${esc(s)}</span></span></div>`).join('');
+}
+
+window.mastWelcome = (m) => {
+  if (m.sources) { sources = m.sources; renderList(); }
+  if (m.result) { busy = ''; renderDone(m.result); go(2); }
+  if ('isDefault' in m) {
+    const b = $('default');
+    b.disabled = m.isDefault;
+    b.textContent = m.isDefault ? 'Mast is your default browser' : 'Make Mast your default browser';
+  }
+};
+
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('button');
+  if (!t) return;
+  if (t.dataset.go) { if (t.dataset.go === '2') renderDone(null); return go(+t.dataset.go); }
+  if (t.dataset.what) { what[t.dataset.what] = !what[t.dataset.what]; return renderList(); }
+  if (t.dataset.import && !busy) { busy = t.dataset.import; renderList(); return chrome.send('welcomeImport', [busy, what]); }
+  if (t.id === 'default') return chrome.send('welcomeDefault');
+  if (t.id === 'start') location.href = 'chrome://newtab/';
+});
+</script>
+</body>
+</html>

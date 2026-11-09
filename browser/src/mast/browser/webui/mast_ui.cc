@@ -41,7 +41,9 @@
 #include "content/public/browser/web_ui_data_source.h"
 #include "content/public/browser/web_ui_message_handler.h"
 #include "content/public/common/url_constants.h"
+#include "chrome/browser/shell_integration.h"
 #include "mast/browser/desktop/mast_desktop.h"
+#include "mast/browser/import/mast_import.h"
 #include "mast/browser/mast_blocklist.h"
 #include "mast/browser/mast_blocks.h"
 #include "mast/browser/mast_feeds.h"
@@ -197,6 +199,10 @@ class MastHandler : public content::WebUIMessageHandler,
   // content::WebUIMessageHandler:
   void RegisterMessages() override {
     On("getState", &MastHandler::HandleGetState);
+    // The welcome page (resources/welcome.html, design C25).
+    On("welcomeSources", &MastHandler::HandleWelcomeSources);
+    On("welcomeImport", &MastHandler::HandleWelcomeImport);
+    On("welcomeDefault", &MastHandler::HandleWelcomeDefault);
     On("block", &MastHandler::HandleBlock);
     On("undo", &MastHandler::HandleUndo);
     On("addSite", &MastHandler::HandleAddSite);
@@ -237,6 +243,85 @@ class MastHandler : public content::WebUIMessageHandler,
   }
 
   void HandleGetState(const base::ListValue& args) { SendState(); }
+
+  // ["welcomeSources"]: the browsers to import from, and whether Mast is the
+  // default browser. Replies through mastWelcome({sources, isDefault}).
+  void HandleWelcomeSources(const base::ListValue& args) {
+    AllowJavascript();
+    FindImportSources(base::BindOnce(&MastHandler::OnSources,
+                                     weak_factory_.GetWeakPtr()));
+    CheckDefault();
+  }
+
+  void OnSources(std::vector<ImportSource> sources) {
+    sources_ = std::move(sources);
+    base::ListValue list;
+    for (const ImportSource& s : sources_) {
+      list.Append(base::DictValue()
+                      .Set("id", s.id)
+                      .Set("browser", s.browser)
+                      .Set("profile", s.profile)
+                      .Set("bookmarks", s.bookmarks)
+                      .Set("extensions", s.extensions)
+                      .Set("history", s.history)
+                      .Set("firefox", s.firefox)
+                      .Set("lastUsed", s.last_used.InMillisecondsFSinceUnixEpochIgnoringNull()));
+    }
+    CallJavascriptFunction("mastWelcome",
+                           base::Value(base::DictValue().Set("sources", std::move(list))));
+  }
+
+  // ["welcomeImport", id, {bookmarks, history, extensions}]: one click.
+  void HandleWelcomeImport(const base::ListValue& args) {
+    AllowJavascript();
+    const std::string id = StringArg(args);
+    const base::DictValue* what =
+        args.size() > 1 && args[1].is_dict() ? &args[1].GetDict() : nullptr;
+    auto want = [&](const char* key) {
+      return !what || what->FindBool(key).value_or(true);
+    };
+    const auto it = std::ranges::find(sources_, id, &ImportSource::id);
+    if (it == sources_.end()) {
+      return;
+    }
+    RunImport(profile_, *it, want("bookmarks"), want("history"),
+              want("extensions"),
+              base::BindOnce(&MastHandler::OnImported, weak_factory_.GetWeakPtr()));
+  }
+
+  void OnImported(ImportResult r) {
+    CallJavascriptFunction(
+        "mastWelcome",
+        base::Value(base::DictValue().Set(
+            "result", base::DictValue()
+                          .Set("browser", r.browser)
+                          .Set("bookmarks", r.bookmarks)
+                          .Set("onNewTab", r.on_new_tab)
+                          .Set("history", r.history)
+                          .Set("extensions", r.extensions)
+                          .Set("ok", r.ok))));
+  }
+
+  // ["welcomeDefault"]: make Mast the default browser (the OS may ask).
+  void HandleWelcomeDefault(const base::ListValue& args) {
+    AllowJavascript();
+    base::MakeRefCounted<shell_integration::DefaultBrowserWorker>()
+        ->StartSetAsDefault(base::BindOnce(&MastHandler::OnDefault,
+                                           weak_factory_.GetWeakPtr()));
+  }
+
+  void CheckDefault() {
+    base::MakeRefCounted<shell_integration::DefaultBrowserWorker>()
+        ->StartCheckIsDefault(base::BindOnce(&MastHandler::OnDefault,
+                                             weak_factory_.GetWeakPtr()));
+  }
+
+  void OnDefault(shell_integration::DefaultWebClientState state) {
+    CallJavascriptFunction(
+        "mastWelcome",
+        base::Value(base::DictValue().Set(
+            "isDefault", state == shell_integration::IS_DEFAULT)));
+  }
 
   // ["block", [domains...], durationId]
   void HandleBlock(const base::ListValue& args) {
@@ -502,6 +587,7 @@ class MastHandler : public content::WebUIMessageHandler,
 
   const raw_ptr<Profile> profile_;
   const raw_ptr<bookmarks::BookmarkModel> bookmarks_;
+  std::vector<ImportSource> sources_;  // the welcome page's last list
   base::ScopedObservation<bookmarks::BookmarkModel,
                           bookmarks::BookmarkModelObserver>
       observation_{this};
@@ -540,7 +626,7 @@ MastUI::MastUI(content::WebUI* web_ui, std::string_view host)
   source->DisableTrustedTypesCSP();
   source->SetRequestFilter(
       base::BindRepeating([](const std::string& path) {
-        return path.empty() || path == "index.html" ||
+        return path.empty() || path == "index.html" || path == "welcome" ||
                base::StartsWith(path, "wallpaper-");
       }),
       base::BindRepeating(
@@ -554,6 +640,12 @@ MastUI::MastUI(content::WebUI* web_ui, std::string_view host)
                   FROM_HERE, kFileTraits,
                   base::BindOnce(&ReadWallpaper, wallpaper),
                   std::move(callback));
+              return;
+            }
+            // The welcome page, shown once (mast_prefs.h, kWelcomedPref).
+            if (path == "welcome") {
+              std::move(callback).Run(
+                  base::MakeRefCounted<base::RefCountedString>(WelcomePageHtml()));
               return;
             }
             // New tabs open the desktop; chrome://mast is the full blocklist.
