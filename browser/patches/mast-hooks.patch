@@ -369,56 +369,6 @@ diff -ruN a/chrome/browser/ui/views/bookmarks/bookmark_page_action_controller.cc
        features::IsToolbarGlowUpEnabled()
            ? std::make_optional<page_actions::PageActionAnimationParams>(
                  {.resource_id = IDR_STAR_LOTTIE,
-diff -ruN a/chrome/browser/ui/views/page_info/BUILD.gn b/chrome/browser/ui/views/page_info/BUILD.gn
---- a/chrome/browser/ui/views/page_info/BUILD.gn
-+++ b/chrome/browser/ui/views/page_info/BUILD.gn
-@@ -66,6 +66,8 @@
-     "page_info_bubble_view_base.cc",
-     "page_info_cookies_content_view.cc",
-     "page_info_main_view.cc",
-+    "//mast/browser/ui/mast_block_bubble.cc",
-+    "//mast/browser/ui/mast_block_bubble.h",
-     "page_info_merchant_trust_content_view.cc",
-     "page_info_merchant_trust_controller.cc",
-     "page_info_merchant_trust_coordinator.cc",
-@@ -80,6 +82,7 @@
-   ]
- 
-   deps = [
-+    "//mast/browser",
-     ":page_info",
-     "//base",
-     "//chrome/browser:browser_public_dependencies",
-diff -ruN a/chrome/browser/ui/views/page_info/page_info_main_view.cc b/chrome/browser/ui/views/page_info/page_info_main_view.cc
---- a/chrome/browser/ui/views/page_info/page_info_main_view.cc
-+++ b/chrome/browser/ui/views/page_info/page_info_main_view.cc
-@@ -4,6 +4,8 @@
- 
- #include "chrome/browser/ui/views/page_info/page_info_main_view.h"
- 
-+#include "mast/browser/ui/mast_block_bubble.h"
-+
- #include <memory>
- #include <optional>
- 
-@@ -202,6 +204,17 @@
-         views::style::STYLE_BODY_4, kColorPageInfoSubtitleForeground);
-   }
- 
-+  // Mast: "Block this site".
-+  site_settings_view_->AddChildView(mast::CreateBlockSiteRow(
-+      ui_delegate_->GetWebContents(),
-+      base::BindRepeating(
-+          [](PageInfoNavigationHandler* handler) {
-+            if (handler) {
-+              handler->CloseBubble();
-+            }
-+          },
-+          base::Unretained(navigation_handler_))));
-+
-   int link_text_id = 0;
-   int tooltip_text_id = 0;
-   if (ui_delegate_->ShouldShowSiteSettings(&link_text_id, &tooltip_text_id)) {
 diff -ruN a/chrome/browser/ui/views/tabs/tab/BUILD.gn b/chrome/browser/ui/views/tabs/tab/BUILD.gn
 --- a/chrome/browser/ui/views/tabs/tab/BUILD.gn
 +++ b/chrome/browser/ui/views/tabs/tab/BUILD.gn

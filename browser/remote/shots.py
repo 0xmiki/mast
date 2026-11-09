@@ -279,15 +279,10 @@ p.go("https://www.pokerstars.net/", 4)
 shot("30-gambling-feed")
 p.go("https://onlyfans.com/", 4)
 shot("31-quiet-block")
-# Page info -> "Block this site" -> the block bubble -> undo.
+# Page info: Chromium's own panel ("Block this site" was removed from it).
 p.go("https://en.wikipedia.org/wiki/Dieter_Rams", 5)
 native_dump("14-site", click=("LocationIconView", None))
 shot("14-page-info")
-if native_dump("15-page-info", click=(None, "Block this site for a while")):
-    shot("15-block-bubble")
-    native_dump("15-block-bubble")
-    keys("Return")
-    shot("16-undo", settle=0.8)
 keys("Escape")
 # "Edit blocklist" opens the list in a panel on the new tab page.
 p.go("chrome://newtab")

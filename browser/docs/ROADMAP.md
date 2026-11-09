@@ -96,7 +96,9 @@ Design: screen **C7** in the Pencil file.
   - ☆ on a page → it appears on the desktop;
   - delete in the bookmark manager → it disappears from the desktop.
 
-### B. "Block this site" in the page-info bubble · easy
+### B. "Block this site" in the page-info bubble · removed 2026-11-09
+
+- Removed: few would find it in the page-info panel. The bubble (`mast/browser/ui/mast_block_bubble.cc`) is parked, not compiled; a better entry point is still to be found.
 
 Replaces the toolbar Block pill (now removed in the design).
 

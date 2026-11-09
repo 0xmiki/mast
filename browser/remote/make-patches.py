@@ -148,28 +148,12 @@ edit(H, "chrome/browser/ui/views/toolbar/toolbar_view.cc", lambda t: once(t,
     '        AvatarToolbarButtonInterface::CanShowForProfile(browser_->GetProfile());\n',
     '        false;  // Mast: no sign-in, so no profile button.\n'))
 
-# Page info (the icon at the start of the address bar): "Block this site", after the
-# extensions row. It opens Mast's block bubble from the same icon.
-edit(H, "chrome/browser/ui/views/page_info/page_info_main_view.cc", lambda t: once(once(t,
-    '#include "chrome/browser/ui/views/page_info/page_info_main_view.h"\n',
-    '#include "chrome/browser/ui/views/page_info/page_info_main_view.h"\n\n#include "mast/browser/ui/mast_block_bubble.h"\n'),
-    '        views::style::STYLE_BODY_4, kColorPageInfoSubtitleForeground);\n  }\n\n  int link_text_id = 0;\n',
-    '        views::style::STYLE_BODY_4, kColorPageInfoSubtitleForeground);\n  }\n\n'
-    '  // Mast: "Block this site".\n'
-    '  site_settings_view_->AddChildView(mast::CreateBlockSiteRow(\n'
-    '      ui_delegate_->GetWebContents(),\n'
-    '      base::BindRepeating(\n'
-    '          [](PageInfoNavigationHandler* handler) {\n'
-    '            if (handler) {\n              handler->CloseBubble();\n            }\n'
-    '          },\n          base::Unretained(navigation_handler_))));\n\n'
-    '  int link_text_id = 0;\n'))
-edit(H, "chrome/browser/ui/views/page_info/BUILD.gn", lambda t: add_dep(once(t,
-    '    "page_info_main_view.cc",\n',
-    '    "page_info_main_view.cc",\n    "//mast/browser/ui/mast_block_bubble.cc",\n    "//mast/browser/ui/mast_block_bubble.h",\n'),
-    'source_set("impl") {', "//mast/browser"))
+# (Page info's "Block this site" row, opening mast/browser/ui/mast_block_bubble.cc, was
+# removed 2026-11-09: few would find it there. The bubble's code is parked in the repo.)
 
 # Mast's block bubbles subclass BubbleDialogDelegateView, whose constructor is
-# limited to a friend list (like the home button's undo bubble).
+# limited to a friend list (like the home button's undo bubble). Kept while the bubble is
+# parked: the header is included everywhere, so changing it rebuilds most of Chromium.
 edit(H, "ui/views/bubble/bubble_dialog_delegate_view.h", lambda t: once(once(t,
     'class HomePageUndoBubble;\n',
     'class HomePageUndoBubble;\nnamespace mast {\nclass MastBlockBubble;\nclass MastUndoBubble;\n}  // namespace mast\n'),
