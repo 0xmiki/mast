@@ -47,7 +47,7 @@ body { background: var(--surface); }
 .seg button { height: 36px; padding: 0; border: 0; background: none; color: var(--text-2); font-size: 15px; white-space: nowrap; }
 .seg button:hover { color: var(--text); }
 .seg button.on { color: var(--text); font-weight: 700; }
-.dist .primary { height: 32px; padding: 0 16px; }
+.dist .primary { height: 40px; padding: 0 26px; font-size: 14px; }
 .links { display: flex; justify-content: center; gap: 18px; }
 .blocked-status { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .blocked-status .line { display: flex; align-items: center; gap: 10px; color: var(--text); font-size: 16px; font-weight: 600; }
@@ -316,8 +316,8 @@ function distractionWidget() {
 }
 
 function blockButton(d) {
-  return d.services ? '<button class="primary" id="blockAll">Block distractions</button>'
-    : '<button class="primary" disabled>Block distractions</button>';
+  return d.services ? '<button class="primary" id="blockAll">Block</button>'
+    : '<button class="primary" disabled>Block</button>';
 }
 
 // "5:47:12 left" under a day, "6 days, 23 h left" beyond.

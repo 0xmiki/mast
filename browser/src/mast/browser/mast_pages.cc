@@ -32,7 +32,7 @@ button, input { font:inherit; color:inherit }
 button { cursor:pointer }
 :focus-visible { outline:2px solid var(--text-2); outline-offset:2px }
 .primary, .secondary { display:inline-flex; align-items:center; justify-content:center; gap:8px;
-  height:36px; padding:0 18px; border:0; border-radius:var(--r); font-weight:600 }
+  height:36px; padding:0 20px; border:0; border-radius:999px; font-weight:600 }
 /* White (black on a light picture): ember is only for blocked states (the
    dot, "blocked until", the blocked page), so it keeps meaning blocked. */
 .primary { background:var(--text); color:var(--bg) }
