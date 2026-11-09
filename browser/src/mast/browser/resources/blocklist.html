@@ -60,8 +60,56 @@
 .bl-toast.plain { padding-right: 16px; }
 .bl-toast button { height: 28px; padding: 0 12px; border: 0; border-radius: 4px; background: var(--pressed); font-weight: 500; }
 .bl-toast .secs { margin-left: 4px; color: var(--text-3); }
+/* "Block forever?" (design C27b): forever is the one choice that can't be
+   taken back, so it asks, and the button has to be held for 2 seconds. */
+dialog.forever { width: 420px; padding: 24px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--text-2); text-align: left; box-shadow: 0 16px 40px rgb(0 0 0/.7); }
+dialog.forever::backdrop { background: rgb(0 0 0/.5); }
+dialog.forever h3 { margin: 0 0 10px; color: var(--text); font-size: 17px; font-weight: 600; }
+dialog.forever p { margin: 0; font-size: 13px; line-height: 1.55; }
+dialog.forever ul { display: grid; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; font-size: 13px; }
+dialog.forever li { display: flex; align-items: center; gap: 10px; }
+dialog.forever li::before { content: "×"; width: 14px; color: var(--text-3); text-align: center; }
+dialog.forever .acts { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+dialog.forever .acts button { height: 36px; padding: 0 16px; border: 0; border-radius: 999px; font-size: 13px; font-weight: 600; }
+dialog.forever .no { background: rgb(255 255 255/.08); color: var(--text); }
+dialog.forever .hold { position: relative; overflow: hidden; min-width: 200px; background: var(--text); color: var(--bg); user-select: none; touch-action: none; }
+dialog.forever .hold::before { content: ""; position: absolute; inset: 0; background: var(--signal); transform: scaleX(0); transform-origin: left; transition: transform .2s; }
+dialog.forever .hold.holding::before { transform: scaleX(1); transition: transform 2s linear; }
+dialog.forever .hold span { position: relative; }
+dialog.forever .foot { margin-top: 12px; color: var(--text-3); font-size: 11px; }
 </style>
 <script>
+// Asks before a forever block. `what` names it ("YouTube", "These 3 sites",
+// "Your distractions"); `confirm` runs once the button has been held.
+function mastConfirmForever(what, confirm) {
+  const d = document.createElement('dialog');
+  d.className = 'forever';
+  d.innerHTML = `<h3>Block forever?</h3>
+    <p>${String(what).replace(/[&<>"]/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]))} will never open in Mast again. Think it over: this is the one choice Mast won't let you take back.</p>
+    <ul><li>No end date</li><li>No way to lift it, from here or from Settings</li><li>No undo after 10 seconds</li></ul>
+    <div class="acts"><button class="no">Cancel</button><button class="hold"><span>Hold to block forever</span></button></div>
+    <div class="foot">Keep holding for 2 seconds.</div>`;
+  document.body.append(d);
+  const hold = d.querySelector('.hold');
+  let timer = 0;
+  const start = () => {
+    if (timer) return;
+    hold.classList.add('holding');
+    timer = setTimeout(() => { timer = 0; d.close(); confirm(); }, 2000);
+  };
+  const stop = () => { clearTimeout(timer); timer = 0; hold.classList.remove('holding'); };
+  hold.addEventListener('pointerdown', (e) => { e.preventDefault(); hold.setPointerCapture(e.pointerId); start(); });
+  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) hold.addEventListener(ev, stop);
+  hold.addEventListener('keydown', (e) => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); start(); } });
+  hold.addEventListener('keyup', (e) => { if (e.key === ' ' || e.key === 'Enter') stop(); });
+  hold.addEventListener('click', (e) => e.preventDefault());  // a click alone does nothing
+  d.querySelector('.no').addEventListener('click', () => d.close());
+  d.addEventListener('click', (e) => e.stopPropagation());  // not the page's own handlers
+  d.addEventListener('close', () => { stop(); d.remove(); });
+  d.showModal();
+  d.querySelector('.no').focus();
+}
+
 const MastBlocklist = (() => {
   const D = 864e5;
   const DUR = [['1h', '1 hour'], ['4h', '4 hours'], ['today', 'Today'], ['week', '1 week'], ['month', '1 month'], ['forever', 'Forever']];
@@ -237,11 +285,20 @@ const MastBlocklist = (() => {
       return chrome.send('removeSite', [t.dataset.rm]);
     } else if (t.dataset.act === 'block') {
       const domains = selectedDomains();
-      pending = selected.size === 1 ? [...selected][0].split('/').slice(1).join('/') : selected.size + ' sites';
-      if (selected.size === 1 && ytMusic && pending === 'YouTube') pending = 'YouTube (all but music)';
-      selected.clear();
-      asked = true;
-      return chrome.send('block', [domains, dur]);
+      const label = selected.size === 1 ? [...selected][0].split('/').slice(1).join('/') : selected.size + ' sites';
+      const go = () => {
+        pending = label;
+        if (selected.size === 1 && ytMusic && pending === 'YouTube') pending = 'YouTube (all but music)';
+        selected.clear();
+        asked = true;
+        chrome.send('block', [domains, dur]);
+        render();
+      };
+      // Forever asks first (design C27b); timed blocks have their undo.
+      if (dur === 'forever') {
+        return mastConfirmForever(selected.size === 1 ? label : `These ${selected.size} sites`, go);
+      }
+      return go();
     } else if (t.dataset.act === 'undo') {
       clearInterval(toastTimer);
       toastHost.innerHTML = '';

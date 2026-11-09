@@ -527,7 +527,11 @@ document.addEventListener('click', (e) => {
   if (t.id === 'addCancel') return document.getElementById('addDialog').close();
   if (t.dataset.dur) { dur = t.dataset.dur; return renderWidgets(); }
   if (t.id === 'edit') { editing = !editing; return renderWidgets(); }
-  if (t.id === 'blockAll') { deskAsked = true; return chrome.send('blockDistractions', [dur]); }
+  if (t.id === 'blockAll') {
+    const go = () => { deskAsked = true; chrome.send('blockDistractions', [dur]); };
+    // Forever asks first (design C27b, mastConfirmForever in blocklist.html).
+    return dur === 'forever' ? mastConfirmForever('Your distractions', go) : go();
+  }
   if (t.id === 'undo') {
     clearInterval(toastTimer);
     document.getElementById('toast').innerHTML = '';
