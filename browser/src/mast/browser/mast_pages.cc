@@ -33,8 +33,10 @@ button { cursor:pointer }
 :focus-visible { outline:2px solid var(--text-2); outline-offset:2px }
 .primary, .secondary { display:inline-flex; align-items:center; justify-content:center; gap:8px;
   height:36px; padding:0 18px; border:0; border-radius:var(--r); font-weight:600 }
-.primary { background:var(--signal); color:var(--signal-text) }
-.primary:hover:not(:disabled) { filter:brightness(1.06) }
+/* White (black on a light picture): ember is only for blocked states (the
+   dot, "blocked until", the blocked page), so it keeps meaning blocked. */
+.primary { background:var(--text); color:var(--bg) }
+.primary:hover:not(:disabled) { filter:brightness(.9) }
 .primary:active:not(:disabled) { filter:brightness(.94) }
 .primary:disabled { background:var(--field); color:var(--text-3); cursor:default }
 .secondary { background:var(--field) }

@@ -256,11 +256,11 @@ class MastBlockBubble : public views::BubbleDialogDelegateView {
   // views::WidgetDelegate: the dialog buttons exist from here on.
   void OnWidgetInitialized() override {
     BubbleDialogDelegateView::OnWidgetInitialized();
-    // Blocking is the one action in the signal colour. Chromium's other
-    // prominent buttons stay neutral.
+    // Block is white, like Mast's pages' primary buttons: ember is kept for
+    // blocked states, so it keeps meaning blocked.
     if (views::MdTextButton* ok = GetOkButton(); ok && signal_ok_) {
-      ok->SetBgColorOverrideDeprecated(palette::kEmber);
-      ok->SetEnabledTextColors(ui::ColorVariant(palette::kOnEmber));
+      ok->SetBgColorOverrideDeprecated(palette::Current().text);
+      ok->SetEnabledTextColors(ui::ColorVariant(palette::Current().chrome2));
     }
     QuietFocusRings(this);
   }

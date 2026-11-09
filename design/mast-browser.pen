@@ -46610,7 +46610,7 @@
         {
           "type": "image",
           "enabled": true,
-          "url": "assets/space/art002e021278.jpg",
+          "url": "assets/space/iss040e080833.jpg",
           "mode": "cover"
         },
         {
@@ -46677,7 +46677,7 @@
           "height": "fill_container",
           "layout": "vertical",
           "padding": [
-            190,
+            150,
             0,
             0,
             0
@@ -46761,7 +46761,7 @@
               "id": "G6XZY",
               "name": "Text",
               "fill": "#ffffff66",
-              "content": "Earthset, Artemis II · NASA",
+              "content": "Sunrise over Earth, from the Space Station · NASA",
               "fontFamily": "$font",
               "fontSize": 11
             }
@@ -46785,7 +46785,7 @@
         {
           "type": "image",
           "enabled": true,
-          "url": "assets/space/art002e021278.jpg",
+          "url": "assets/space/iss040e080833.jpg",
           "mode": "cover"
         },
         {
@@ -46852,7 +46852,7 @@
           "height": "fill_container",
           "layout": "vertical",
           "padding": [
-            120,
+            110,
             0,
             0,
             0
@@ -47228,7 +47228,7 @@
               "id": "k6KbD",
               "name": "Text",
               "fill": "#ffffff66",
-              "content": "Earthset, Artemis II · NASA",
+              "content": "Sunrise over Earth, from the Space Station · NASA",
               "fontFamily": "$font",
               "fontSize": 11
             }
@@ -47252,7 +47252,7 @@
         {
           "type": "image",
           "enabled": true,
-          "url": "assets/space/art002e021278.jpg",
+          "url": "assets/space/iss040e080833.jpg",
           "mode": "cover"
         },
         {
@@ -48762,7 +48762,7 @@
                   "name": "Block",
                   "width": "fit_content",
                   "cornerRadius": 6,
-                  "fill": "#ff9063ff",
+                  "fill": "#f2f2f2ff",
                   "height": 32,
                   "padding": [
                     0,
@@ -48903,8 +48903,8 @@
                   "children": [
                     {
                       "type": "frame",
-                      "id": "TD5ai",
-                      "name": "Earthset",
+                      "id": "X4YbTj",
+                      "name": "Sunrise",
                       "width": "fill_container",
                       "layout": "vertical",
                       "gap": 6,
@@ -48912,14 +48912,14 @@
                       "children": [
                         {
                           "type": "frame",
-                          "id": "t6bLaC",
+                          "id": "PJl4F",
                           "name": "Thumb",
                           "width": "fill_container",
                           "height": 52,
                           "fill": {
                             "type": "image",
                             "enabled": true,
-                            "url": "assets/space/art002e021278.jpg",
+                            "url": "assets/space/iss040e080833.jpg",
                             "mode": "cover"
                           },
                           "cornerRadius": 7,
@@ -48929,10 +48929,10 @@
                         },
                         {
                           "type": "text",
-                          "id": "vNusq",
+                          "id": "PVd9t",
                           "name": "Label",
                           "fill": "$text",
-                          "content": "Earthset",
+                          "content": "Sunrise",
                           "fontFamily": "$font",
                           "fontSize": 11,
                           "fontWeight": "600"
@@ -48971,43 +48971,6 @@
                           "name": "Label",
                           "fill": "$text-2",
                           "content": "Aurora",
-                          "fontFamily": "$font",
-                          "fontSize": 11
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "X4YbTj",
-                      "name": "Sunrise",
-                      "width": "fill_container",
-                      "layout": "vertical",
-                      "gap": 6,
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "PJl4F",
-                          "name": "Thumb",
-                          "width": "fill_container",
-                          "height": 52,
-                          "fill": {
-                            "type": "image",
-                            "enabled": true,
-                            "url": "assets/space/iss040e080833.jpg",
-                            "mode": "cover"
-                          },
-                          "cornerRadius": 7,
-                          "stroke": "#2a2a2a",
-                          "strokeWidth": 1,
-                          "strokeAlignment": "inner"
-                        },
-                        {
-                          "type": "text",
-                          "id": "PVd9t",
-                          "name": "Label",
-                          "fill": "$text-2",
-                          "content": "Sunrise",
                           "fontFamily": "$font",
                           "fontSize": 11
                         }
@@ -49114,7 +49077,7 @@
                   "id": "KuhhL",
                   "name": "Credit",
                   "fill": "$text-3",
-                  "content": "Photos: NASA (Artemis II, ISS, Webb). Public domain.",
+                  "content": "Photos: NASA (ISS, Webb). Public domain.",
                   "fontFamily": "$font",
                   "fontSize": 11
                 }
@@ -49268,7 +49231,7 @@
                           "fill": {
                             "type": "image",
                             "enabled": true,
-                            "url": "assets/space/art002e021278.jpg",
+                            "url": "assets/space/iss040e080833.jpg",
                             "mode": "cover"
                           },
                           "gap": 4,
@@ -50242,6 +50205,3638 @@
               "fontFamily": "$font",
               "fontSize": 12,
               "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "fk5sE",
+      "x": 36300,
+      "y": 7720,
+      "name": "C27a Confirm — timed block",
+      "theme": {
+        "palette": "onyx"
+      },
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": [
+        {
+          "type": "image",
+          "enabled": true,
+          "url": "assets/space/iss040e080833.jpg",
+          "mode": "cover"
+        },
+        {
+          "type": "gradient",
+          "gradientType": "linear",
+          "enabled": true,
+          "rotation": 180,
+          "size": {
+            "height": 1
+          },
+          "colors": [
+            {
+              "color": "#000000a6",
+              "position": 0
+            },
+            {
+              "color": "#00000040",
+              "position": 0.3
+            },
+            {
+              "color": "#00000026",
+              "position": 0.65
+            },
+            {
+              "color": "#00000073",
+              "position": 1
+            }
+          ]
+        }
+      ],
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "q12Cd0",
+          "type": "ref",
+          "ref": "C9dwap",
+          "fill": "#00000000",
+          "stroke": "#00000000",
+          "name": "Compact Chrome",
+          "width": "fill_container",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "effect": [],
+          "descendants": {
+            "zLBFD": {
+              "fill": "#ffffff26"
+            },
+            "zLBFD/Kf0pw": {
+              "content": "New Tab"
+            },
+            "y03hiF": {
+              "fill": "#0a0a0a99"
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "NRtP1",
+          "name": "Desktop",
+          "width": "fill_container",
+          "height": "fill_container",
+          "gap": 48,
+          "padding": [
+            40,
+            48
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "wQ9lH",
+              "name": "Apps",
+              "width": "fill_container",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "viCrB",
+                  "name": "Column 1",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "HUx2d",
+                      "name": "GitHub",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "eLqox",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#24292f",
+                          "cornerRadius": 22,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "l0rjWN",
+                              "name": "Glyph",
+                              "fill": "#ffffff",
+                              "content": "G",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "bnqkG",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "GitHub",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ecpLg",
+                      "name": "Linear",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "k7Pkxl",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#5e6ad2",
+                          "cornerRadius": 11,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "a2wQa",
+                              "name": "Glyph",
+                              "fill": "#ffffff",
+                              "content": "L",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "U0M0l8",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Linear",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "zqT19",
+                      "name": "Figma",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "yUlxZ",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#1e1e1e",
+                          "cornerRadius": 11,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "OJv7C",
+                              "name": "Glyph",
+                              "fill": "#a259ff",
+                              "content": "F",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "NcV51",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Figma",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "BRpEJ",
+                      "name": "Notion",
+                      "width": 84,
+                      "height": 92,
+                      "fill": "#ffffff1a",
+                      "cornerRadius": 8,
+                      "stroke": "#ffffff26",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "EZ8n3",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#ffffff",
+                          "cornerRadius": 9,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "J8SEsS",
+                              "name": "Glyph",
+                              "fill": "#111111",
+                              "content": "N",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "ZpFno",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Notion",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "S4bBTz",
+                      "name": "Hetzner",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "V3PZGi",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#d50c2d",
+                          "cornerRadius": 9,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "S2dPEl",
+                              "name": "Glyph",
+                              "fill": "#ffffff",
+                              "content": "H",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "mBMAO",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Hetzner",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "XbeGD",
+                      "name": "Svelte",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "QEJqE",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#ff3e00",
+                          "cornerRadius": 11,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Tl5Oq",
+                              "name": "Glyph",
+                              "fill": "#ffffff",
+                              "content": "S",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "oFBJ7",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Svelte",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "gBZzt",
+                      "name": "MDN",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "H0WdEy",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#000000",
+                          "cornerRadius": 9,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "S68Psu",
+                              "name": "Glyph",
+                              "fill": "#ffffff",
+                              "content": "M",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "aefbI",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "MDN",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "UwlAW",
+                  "name": "Column 2",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "pHRTd",
+                      "name": "Rust Book",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "iYIVG",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#f2f2f2",
+                          "cornerRadius": 22,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "UoEfT",
+                              "name": "Glyph",
+                              "fill": "#a72145",
+                              "content": "R",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "r0UZs4",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Rust Book",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "AvnIi",
+                      "name": "Hugging Face",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "BNQii",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#ffd21e",
+                          "cornerRadius": 22,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "qj7bO",
+                              "name": "Glyph",
+                              "fill": "#3a2d00",
+                              "content": "H",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "VqoQL",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Hugging Face",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "GPBg4",
+                      "name": "Paul Graham",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Iandj",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#ff6600",
+                          "cornerRadius": 4,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "cWXzk",
+                              "name": "Glyph",
+                              "fill": "#ffffff",
+                              "content": "P",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "efbD3",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Paul Graham",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "W3omg",
+                      "name": "Vitsœ",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "usx4l",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#e30613",
+                          "cornerRadius": 22,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "TwtsH",
+                              "name": "Glyph",
+                              "fill": "#ffffff",
+                              "content": "V",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "xeMiV",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Vitsœ",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "QSVWc",
+                      "name": "Inter",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "wDMcv",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#000000",
+                          "cornerRadius": 11,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "m3J0fF",
+                              "name": "Glyph",
+                              "fill": "#ffffff",
+                              "content": "I",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "V3lmwq",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Inter",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "xZbkV",
+                      "name": "Chromium",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "qFiP7",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#4285f4",
+                          "cornerRadius": 22,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "g5xRan",
+                              "name": "Glyph",
+                              "fill": "#ffffff",
+                              "content": "C",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "GdkiZ",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Chromium",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "FLS6m",
+                      "name": "Wikipedia",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "bmrcg",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#ffffff",
+                          "cornerRadius": 22,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "fVAZi",
+                              "name": "Glyph",
+                              "fill": "#111111",
+                              "content": "W",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "oII2J",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Wikipedia",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "A1xx2V",
+                  "name": "Column 3",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "eI7X4",
+                      "name": "Add site",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "PUOXb",
+                          "name": "Plus",
+                          "width": 44,
+                          "height": 44,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "BH7EV",
+                              "name": "Glyph",
+                              "fill": "$text",
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "#000000b3",
+                                "offset": {
+                                  "x": 0,
+                                  "y": 1
+                                },
+                                "blur": 4
+                              },
+                              "content": "+",
+                              "fontFamily": "$font",
+                              "fontSize": 30,
+                              "fontWeight": "300"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "PrAaf",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Add site",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "AAZmY",
+              "name": "Center (empty)",
+              "width": "fill_container",
+              "height": 1,
+              "layout": "vertical",
+              "gap": 44,
+              "alignItems": "center"
+            },
+            {
+              "type": "frame",
+              "id": "M0qe0z",
+              "name": "Right",
+              "width": "fill_container",
+              "layout": "vertical",
+              "padding": [
+                12,
+                0,
+                0,
+                0
+              ],
+              "alignItems": "end",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "MhczK",
+                  "name": "Add Widget",
+                  "width": "fill_container",
+                  "height": 20,
+                  "fill": "#00000000",
+                  "cornerRadius": 14,
+                  "stroke": "#00000000",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "gap": 6,
+                  "justifyContent": "end",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "sBsRx",
+                      "name": "Plus",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "plus",
+                      "library": "lucide",
+                      "fill": "#f2f2f2b3"
+                    },
+                    {
+                      "type": "text",
+                      "id": "g1BwX",
+                      "name": "Label",
+                      "fill": "#f2f2f2d9",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#00000080",
+                        "offset": {
+                          "x": 0,
+                          "y": 1
+                        },
+                        "blur": 6
+                      },
+                      "content": "Add widget",
+                      "fontFamily": "$font",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "MkrHQ",
+          "name": "Bottom Dock",
+          "width": "fill_container",
+          "layout": "vertical",
+          "padding": [
+            0,
+            0,
+            56,
+            0
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "oDsqc",
+              "name": "Distractions Widget",
+              "width": 420,
+              "fill": "#00000000",
+              "cornerRadius": 14,
+              "stroke": "#00000000",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "nZXXI",
+                  "name": "Duration",
+                  "height": 36,
+                  "fill": "#00000000",
+                  "cornerRadius": "$radius",
+                  "gap": 24,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "X1YGP",
+                      "name": "1 h",
+                      "height": "fill_container",
+                      "cornerRadius": 4,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "NYrZj",
+                          "name": "Label",
+                          "fill": "#f2f2f2b3",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000080",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 6
+                          },
+                          "content": "1 h",
+                          "fontFamily": "$font",
+                          "fontSize": 15,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "dZitV",
+                      "name": "4 h",
+                      "height": "fill_container",
+                      "cornerRadius": 4,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "X6WfZ6",
+                          "name": "Label",
+                          "fill": "#f2f2f2b3",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000080",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 6
+                          },
+                          "content": "4 h",
+                          "fontFamily": "$font",
+                          "fontSize": 15,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "j7hid",
+                      "name": "Today",
+                      "height": "fill_container",
+                      "fill": "#00000000",
+                      "cornerRadius": 4,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "x4aFwW",
+                          "name": "Label",
+                          "fill": "#f2f2f2",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000080",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 6
+                          },
+                          "content": "Today",
+                          "fontFamily": "$font",
+                          "fontSize": 15,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "PeApF",
+                      "name": "Week",
+                      "height": "fill_container",
+                      "cornerRadius": 4,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Cv33P",
+                          "name": "Label",
+                          "fill": "#f2f2f2b3",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000080",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 6
+                          },
+                          "content": "Week",
+                          "fontFamily": "$font",
+                          "fontSize": 15,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "DMN74",
+                      "name": "Month",
+                      "height": "fill_container",
+                      "cornerRadius": 4,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "W51Sv",
+                          "name": "Label",
+                          "fill": "#f2f2f2b3",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000080",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 6
+                          },
+                          "content": "Month",
+                          "fontFamily": "$font",
+                          "fontSize": 15,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "pPTYt",
+                      "name": "∞",
+                      "height": "fill_container",
+                      "cornerRadius": 4,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "ZBHwl",
+                          "name": "Label",
+                          "fill": "#f2f2f2b3",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000080",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 6
+                          },
+                          "content": "∞",
+                          "fontFamily": "$font",
+                          "fontSize": 15,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "DyEXw",
+                  "type": "ref",
+                  "ref": "H6hKSm",
+                  "name": "Block",
+                  "width": "fit_content",
+                  "cornerRadius": 6,
+                  "fill": "#f2f2f2ff",
+                  "height": 32,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "descendants": {
+                    "YXYCA": {
+                      "content": "Block distractions"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "irkNr",
+                  "name": "Edit",
+                  "width": "fill_container",
+                  "justifyContent": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "XqJcX",
+                      "name": "Link",
+                      "fill": "#f2f2f2d9",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#00000080",
+                        "offset": {
+                          "x": 0,
+                          "y": 1
+                        },
+                        "blur": 6
+                      },
+                      "content": "Edit blocklist",
+                      "fontFamily": "$font",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "JOugj",
+          "layoutPosition": "absolute",
+          "x": 0,
+          "y": 0,
+          "name": "Scrim",
+          "width": 1440,
+          "height": 900,
+          "fill": "#00000080"
+        },
+        {
+          "type": "frame",
+          "id": "elTsr",
+          "layoutPosition": "absolute",
+          "x": 510,
+          "y": 300,
+          "name": "Confirm",
+          "theme": {
+            "palette": "onyx"
+          },
+          "width": 420,
+          "fill": "$chrome-2",
+          "cornerRadius": 14,
+          "stroke": "$line",
+          "strokeWidth": 1,
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#000000b3",
+            "offset": {
+              "x": 0,
+              "y": 16
+            },
+            "blur": 40
+          },
+          "layout": "vertical",
+          "padding": 24,
+          "children": [
+            {
+              "type": "text",
+              "id": "k8Htm",
+              "name": "Title",
+              "fill": "$text",
+              "content": "Block distractions until midnight?",
+              "fontFamily": "$font",
+              "fontSize": 17,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "slyfa",
+              "name": "Gap",
+              "width": 1,
+              "height": 10
+            },
+            {
+              "type": "text",
+              "id": "u8l9ap",
+              "name": "Body",
+              "fill": "$text-2",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Once it starts there's no way back: it can be made longer, never shorter, and it can't be lifted. (A mis-click? You get 10 seconds to undo.)",
+              "lineHeight": 1.55,
+              "fontFamily": "$font",
+              "fontSize": 13
+            },
+            {
+              "type": "frame",
+              "id": "N7FZm",
+              "name": "Gap",
+              "width": 1,
+              "height": 20
+            },
+            {
+              "type": "frame",
+              "id": "s1U8F",
+              "name": "Actions",
+              "width": "fill_container",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "FmrKU",
+                  "name": "Spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "TxmWP",
+                  "name": "Cancel",
+                  "height": 36,
+                  "fill": "#ffffff14",
+                  "cornerRadius": 18,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "QiP20",
+                      "name": "Label",
+                      "fill": "$text",
+                      "content": "Cancel",
+                      "fontFamily": "$font",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "UdUUw",
+                  "name": "OK",
+                  "clip": true,
+                  "width": 180,
+                  "height": 36,
+                  "fill": "#f2f2f2",
+                  "cornerRadius": 18,
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "kqaZg",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Text",
+                      "width": 180,
+                      "height": 36,
+                      "gap": 6,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "wQawl",
+                          "name": "Label",
+                          "fill": "#111111",
+                          "content": "Block until midnight",
+                          "fontFamily": "$font",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "w5XXV",
+              "name": "Gap",
+              "width": 1,
+              "height": 14
+            },
+            {
+              "type": "frame",
+              "id": "w08Wv",
+              "name": "Don't ask",
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "qBWiJ",
+                  "name": "Box",
+                  "width": 14,
+                  "height": 14,
+                  "cornerRadius": 4,
+                  "stroke": "$text-3",
+                  "strokeWidth": 1.5
+                },
+                {
+                  "type": "text",
+                  "id": "PMuPS",
+                  "name": "Label",
+                  "fill": "$text-3",
+                  "content": "Don't ask again for timed blocks",
+                  "fontFamily": "$font",
+                  "fontSize": 12
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "uV1oN",
+      "x": 37860,
+      "y": 7720,
+      "name": "C27b Confirm — forever",
+      "theme": {
+        "palette": "onyx"
+      },
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": [
+        {
+          "type": "image",
+          "enabled": true,
+          "url": "assets/space/iss040e080833.jpg",
+          "mode": "cover"
+        },
+        {
+          "type": "gradient",
+          "gradientType": "linear",
+          "enabled": true,
+          "rotation": 180,
+          "size": {
+            "height": 1
+          },
+          "colors": [
+            {
+              "color": "#000000a6",
+              "position": 0
+            },
+            {
+              "color": "#00000040",
+              "position": 0.3
+            },
+            {
+              "color": "#00000026",
+              "position": 0.65
+            },
+            {
+              "color": "#00000073",
+              "position": 1
+            }
+          ]
+        }
+      ],
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "fqI6C",
+          "type": "ref",
+          "ref": "C9dwap",
+          "fill": "#00000000",
+          "stroke": "#00000000",
+          "name": "Compact Chrome",
+          "width": "fill_container",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "effect": [],
+          "descendants": {
+            "zLBFD": {
+              "fill": "#ffffff26"
+            },
+            "zLBFD/Kf0pw": {
+              "content": "New Tab"
+            },
+            "y03hiF": {
+              "fill": "#0a0a0a99"
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "tVsc7",
+          "name": "Desktop",
+          "width": "fill_container",
+          "height": "fill_container",
+          "gap": 48,
+          "padding": [
+            40,
+            48
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "i3mrQW",
+              "name": "Apps",
+              "width": "fill_container",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "YAV0q",
+                  "name": "Column 1",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "z71A0q",
+                      "name": "GitHub",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "bSIbd",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#24292f",
+                          "cornerRadius": 22,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "O2KBB",
+                              "name": "Glyph",
+                              "fill": "#ffffff",
+                              "content": "G",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "e6Ybsi",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "GitHub",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "g8n2hb",
+                      "name": "Linear",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "rl1E3",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#5e6ad2",
+                          "cornerRadius": 11,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "SHUh1",
+                              "name": "Glyph",
+                              "fill": "#ffffff",
+                              "content": "L",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "UEDvs",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Linear",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "eA0H6",
+                      "name": "Figma",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "DIkmB",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#1e1e1e",
+                          "cornerRadius": 11,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "TldOi",
+                              "name": "Glyph",
+                              "fill": "#a259ff",
+                              "content": "F",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "fRSVD",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Figma",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "xDfmN",
+                      "name": "Notion",
+                      "width": 84,
+                      "height": 92,
+                      "fill": "#ffffff1a",
+                      "cornerRadius": 8,
+                      "stroke": "#ffffff26",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "w4CIUv",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#ffffff",
+                          "cornerRadius": 9,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "ZDQLM",
+                              "name": "Glyph",
+                              "fill": "#111111",
+                              "content": "N",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "W3iQc",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Notion",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "cB5wc",
+                      "name": "Hetzner",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "lIQ8e",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#d50c2d",
+                          "cornerRadius": 9,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Ag48w",
+                              "name": "Glyph",
+                              "fill": "#ffffff",
+                              "content": "H",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "V9H2Gm",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Hetzner",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "oPZLX",
+                      "name": "Svelte",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "k6F0t1",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#ff3e00",
+                          "cornerRadius": 11,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "c7v5nI",
+                              "name": "Glyph",
+                              "fill": "#ffffff",
+                              "content": "S",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "fJtSi",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Svelte",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "gW4Ii",
+                      "name": "MDN",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "p0jWr",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#000000",
+                          "cornerRadius": 9,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "S2YoTW",
+                              "name": "Glyph",
+                              "fill": "#ffffff",
+                              "content": "M",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "wdLPK",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "MDN",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "yeB7x",
+                  "name": "Column 2",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "s8v9wF",
+                      "name": "Rust Book",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "c7Koi",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#f2f2f2",
+                          "cornerRadius": 22,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "o083eV",
+                              "name": "Glyph",
+                              "fill": "#a72145",
+                              "content": "R",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "Xdd71",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Rust Book",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "FO0Gd",
+                      "name": "Hugging Face",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "dtu2k",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#ffd21e",
+                          "cornerRadius": 22,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "atLFa",
+                              "name": "Glyph",
+                              "fill": "#3a2d00",
+                              "content": "H",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "Z9aFm",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Hugging Face",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "l6njoh",
+                      "name": "Paul Graham",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "fZFmZ",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#ff6600",
+                          "cornerRadius": 4,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "OSQXA",
+                              "name": "Glyph",
+                              "fill": "#ffffff",
+                              "content": "P",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "pILTp",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Paul Graham",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "bP7X7",
+                      "name": "Vitsœ",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "NJkiG",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#e30613",
+                          "cornerRadius": 22,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Muh1x",
+                              "name": "Glyph",
+                              "fill": "#ffffff",
+                              "content": "V",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "ln2nP",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Vitsœ",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "FcAq8",
+                      "name": "Inter",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "aReOk",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#000000",
+                          "cornerRadius": 11,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "I1w1C",
+                              "name": "Glyph",
+                              "fill": "#ffffff",
+                              "content": "I",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "PfeTN",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Inter",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "p6s46e",
+                      "name": "Chromium",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "vyCfK",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#4285f4",
+                          "cornerRadius": 22,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "C9EfDo",
+                              "name": "Glyph",
+                              "fill": "#ffffff",
+                              "content": "C",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "ht8vb",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Chromium",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "NvUK9",
+                      "name": "Wikipedia",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "tXdvW",
+                          "name": "Favicon",
+                          "width": 44,
+                          "height": 44,
+                          "fill": "#ffffff",
+                          "cornerRadius": 22,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000073",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "f7rEl",
+                              "name": "Glyph",
+                              "fill": "#111111",
+                              "content": "W",
+                              "fontFamily": "$font",
+                              "fontSize": 20,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "GtBVd",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Wikipedia",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "j6ogV",
+                  "name": "Column 3",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "xxqEj",
+                      "name": "Add site",
+                      "width": 84,
+                      "height": 92,
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "ZiJOY",
+                          "name": "Plus",
+                          "width": 44,
+                          "height": 44,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "LECDo",
+                              "name": "Glyph",
+                              "fill": "$text",
+                              "effect": {
+                                "type": "shadow",
+                                "shadowType": "outer",
+                                "color": "#000000b3",
+                                "offset": {
+                                  "x": 0,
+                                  "y": 1
+                                },
+                                "blur": 4
+                              },
+                              "content": "+",
+                              "fontFamily": "$font",
+                              "fontSize": 30,
+                              "fontWeight": "300"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "MvwMs",
+                          "name": "Label",
+                          "fill": "$text",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#000000b3",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 4
+                          },
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Add site",
+                          "textAlign": "center",
+                          "fontFamily": "$font",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "OWmbn",
+              "name": "Center (empty)",
+              "width": "fill_container",
+              "height": 1,
+              "layout": "vertical",
+              "gap": 44,
+              "alignItems": "center"
+            },
+            {
+              "type": "frame",
+              "id": "jKzaB",
+              "name": "Right",
+              "width": "fill_container",
+              "layout": "vertical",
+              "padding": [
+                12,
+                0,
+                0,
+                0
+              ],
+              "alignItems": "end",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "f3nlN",
+                  "name": "Add Widget",
+                  "width": "fill_container",
+                  "height": 20,
+                  "fill": "#00000000",
+                  "cornerRadius": 14,
+                  "stroke": "#00000000",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "gap": 6,
+                  "justifyContent": "end",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "V33sv",
+                      "name": "Plus",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "plus",
+                      "library": "lucide",
+                      "fill": "#f2f2f2b3"
+                    },
+                    {
+                      "type": "text",
+                      "id": "QEcYT",
+                      "name": "Label",
+                      "fill": "#f2f2f2d9",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#00000080",
+                        "offset": {
+                          "x": 0,
+                          "y": 1
+                        },
+                        "blur": 6
+                      },
+                      "content": "Add widget",
+                      "fontFamily": "$font",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "t9a7j",
+          "name": "Bottom Dock",
+          "width": "fill_container",
+          "layout": "vertical",
+          "padding": [
+            0,
+            0,
+            56,
+            0
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "BOlmY",
+              "name": "Distractions Widget",
+              "width": 420,
+              "fill": "#00000000",
+              "cornerRadius": 14,
+              "stroke": "#00000000",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "uimix",
+                  "name": "Duration",
+                  "height": 36,
+                  "fill": "#00000000",
+                  "cornerRadius": "$radius",
+                  "gap": 24,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Fd5MO",
+                      "name": "1 h",
+                      "height": "fill_container",
+                      "cornerRadius": 4,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "WcUQ3",
+                          "name": "Label",
+                          "fill": "#f2f2f2b3",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000080",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 6
+                          },
+                          "content": "1 h",
+                          "fontFamily": "$font",
+                          "fontSize": 15,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "xShNk",
+                      "name": "4 h",
+                      "height": "fill_container",
+                      "cornerRadius": 4,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "eHxV6",
+                          "name": "Label",
+                          "fill": "#f2f2f2b3",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000080",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 6
+                          },
+                          "content": "4 h",
+                          "fontFamily": "$font",
+                          "fontSize": 15,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "t4Iw1z",
+                      "name": "Today",
+                      "height": "fill_container",
+                      "fill": "#00000000",
+                      "cornerRadius": 4,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "SCV1y",
+                          "name": "Label",
+                          "fill": "#f2f2f2",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000080",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 6
+                          },
+                          "content": "Today",
+                          "fontFamily": "$font",
+                          "fontSize": 15,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "F2MevV",
+                      "name": "Week",
+                      "height": "fill_container",
+                      "cornerRadius": 4,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "XHXAP",
+                          "name": "Label",
+                          "fill": "#f2f2f2b3",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000080",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 6
+                          },
+                          "content": "Week",
+                          "fontFamily": "$font",
+                          "fontSize": 15,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Snw5a",
+                      "name": "Month",
+                      "height": "fill_container",
+                      "cornerRadius": 4,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "MjXtN",
+                          "name": "Label",
+                          "fill": "#f2f2f2b3",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000080",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 6
+                          },
+                          "content": "Month",
+                          "fontFamily": "$font",
+                          "fontSize": 15,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Hamm1",
+                      "name": "∞",
+                      "height": "fill_container",
+                      "cornerRadius": 4,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "eIPWm",
+                          "name": "Label",
+                          "fill": "#f2f2f2b3",
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000080",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 6
+                          },
+                          "content": "∞",
+                          "fontFamily": "$font",
+                          "fontSize": 15,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "ON0c7",
+                  "type": "ref",
+                  "ref": "H6hKSm",
+                  "name": "Block",
+                  "width": "fit_content",
+                  "cornerRadius": 6,
+                  "fill": "#f2f2f2ff",
+                  "height": 32,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "descendants": {
+                    "YXYCA": {
+                      "content": "Block distractions"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "RVI5S",
+                  "name": "Edit",
+                  "width": "fill_container",
+                  "justifyContent": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "TFaTi",
+                      "name": "Link",
+                      "fill": "#f2f2f2d9",
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#00000080",
+                        "offset": {
+                          "x": 0,
+                          "y": 1
+                        },
+                        "blur": 6
+                      },
+                      "content": "Edit blocklist",
+                      "fontFamily": "$font",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "DqTHA",
+          "layoutPosition": "absolute",
+          "x": 0,
+          "y": 0,
+          "name": "Scrim",
+          "width": 1440,
+          "height": 900,
+          "fill": "#00000080"
+        },
+        {
+          "type": "frame",
+          "id": "o3g7hw",
+          "layoutPosition": "absolute",
+          "x": 510,
+          "y": 250,
+          "name": "Confirm",
+          "theme": {
+            "palette": "onyx"
+          },
+          "width": 420,
+          "fill": "$chrome-2",
+          "cornerRadius": 14,
+          "stroke": "$line",
+          "strokeWidth": 1,
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#000000b3",
+            "offset": {
+              "x": 0,
+              "y": 16
+            },
+            "blur": 40
+          },
+          "layout": "vertical",
+          "padding": 24,
+          "children": [
+            {
+              "type": "text",
+              "id": "GHs3O",
+              "name": "Title",
+              "fill": "$text",
+              "content": "Block forever?",
+              "fontFamily": "$font",
+              "fontSize": 17,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "RT16C",
+              "name": "Gap",
+              "width": 1,
+              "height": 10
+            },
+            {
+              "type": "text",
+              "id": "oiV4K",
+              "name": "Body",
+              "fill": "$text-2",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "YouTube will never open in Mast again. Think it over: this is the one choice Mast won't let you take back.",
+              "lineHeight": 1.55,
+              "fontFamily": "$font",
+              "fontSize": 13
+            },
+            {
+              "type": "frame",
+              "id": "b7DYfY",
+              "name": "Gap",
+              "width": 1,
+              "height": 14
+            },
+            {
+              "type": "frame",
+              "id": "maMhp",
+              "name": "Facts",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "bbBnD",
+                  "name": "Fact",
+                  "gap": 10,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "mp8ti",
+                      "name": "Icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "x",
+                      "library": "lucide",
+                      "fill": "$text-3"
+                    },
+                    {
+                      "type": "text",
+                      "id": "LF8jz",
+                      "name": "Text",
+                      "fill": "$text-2",
+                      "content": "No end date",
+                      "fontFamily": "$font",
+                      "fontSize": 13
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "yhcSH",
+                  "name": "Fact",
+                  "gap": 10,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "a3UjVn",
+                      "name": "Icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "x",
+                      "library": "lucide",
+                      "fill": "$text-3"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Ty5tp",
+                      "name": "Text",
+                      "fill": "$text-2",
+                      "content": "No way to lift it, from here or from Settings",
+                      "fontFamily": "$font",
+                      "fontSize": 13
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "AGhQv",
+                  "name": "Fact",
+                  "gap": 10,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "HegYr",
+                      "name": "Icon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "x",
+                      "library": "lucide",
+                      "fill": "$text-3"
+                    },
+                    {
+                      "type": "text",
+                      "id": "L1LnwC",
+                      "name": "Text",
+                      "fill": "$text-2",
+                      "content": "No undo after 10 seconds",
+                      "fontFamily": "$font",
+                      "fontSize": 13
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "WCLtm",
+              "name": "Gap",
+              "width": 1,
+              "height": 20
+            },
+            {
+              "type": "frame",
+              "id": "RFwEI",
+              "name": "Actions",
+              "width": "fill_container",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "GZHOB",
+                  "name": "Spacer",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "R3rSM4",
+                  "name": "Cancel",
+                  "height": 36,
+                  "fill": "#ffffff14",
+                  "cornerRadius": 18,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "hD0pn",
+                      "name": "Label",
+                      "fill": "$text",
+                      "content": "Cancel",
+                      "fontFamily": "$font",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "lgu7v",
+                  "name": "OK",
+                  "clip": true,
+                  "width": 200,
+                  "height": 36,
+                  "fill": "#f2f2f2",
+                  "cornerRadius": 18,
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "kKYLg",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Progress",
+                      "width": 90,
+                      "height": 36,
+                      "fill": "#ff8f63"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "TQNRy",
+                      "x": 0,
+                      "y": 0,
+                      "name": "Text",
+                      "width": 200,
+                      "height": 36,
+                      "gap": 6,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "bgtJK",
+                          "name": "Icon",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "lock",
+                          "library": "lucide",
+                          "fill": "#111111"
+                        },
+                        {
+                          "type": "text",
+                          "id": "SAHw0",
+                          "name": "Label",
+                          "fill": "#111111",
+                          "content": "Hold to block forever",
+                          "fontFamily": "$font",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "xLR4b",
+              "name": "Gap",
+              "width": 1,
+              "height": 12
+            },
+            {
+              "type": "text",
+              "id": "sbJWq",
+              "name": "Foot",
+              "fill": "$text-3",
+              "content": "Keep holding for 2 seconds.",
+              "fontFamily": "$font",
+              "fontSize": 11
             }
           ]
         }
