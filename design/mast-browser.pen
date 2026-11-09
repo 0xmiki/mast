@@ -43587,7 +43587,8 @@
               "content": "YouTube's row in the blocklist gets one extra choice. Picking Music only blocks every other video and Shorts, for as long as the block lasts.",
               "lineHeight": 1.45,
               "fontFamily": "$font",
-              "fontSize": 12
+              "fontSize": 12,
+              "fontWeight": "normal"
             },
             {
               "type": "frame",
@@ -43699,7 +43700,8 @@
                           "fill": "$text",
                           "content": "YouTube",
                           "fontFamily": "$font",
-                          "fontSize": 13
+                          "fontSize": 13,
+                          "fontWeight": "normal"
                         },
                         {
                           "type": "text",
@@ -43708,7 +43710,8 @@
                           "fill": "$text-3",
                           "content": "youtube.com, youtu.be",
                           "fontFamily": "$font",
-                          "fontSize": 12
+                          "fontSize": 12,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -43719,7 +43722,8 @@
                       "fill": "$text-3",
                       "content": "Open",
                       "fontFamily": "$font",
-                      "fontSize": 12
+                      "fontSize": 12,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -43777,7 +43781,8 @@
                               "fill": "$text-2",
                               "content": "Whole site",
                               "fontFamily": "$font",
-                              "fontSize": 12
+                              "fontSize": 12,
+                              "fontWeight": "normal"
                             }
                           ]
                         },
@@ -43824,7 +43829,8 @@
                       "fill": "$text-3",
                       "content": "Mixes and songs stay open. Every other video and Shorts are blocked.",
                       "fontFamily": "$font",
-                      "fontSize": 11
+                      "fontSize": 11,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -43865,7 +43871,8 @@
                           "fill": "$text",
                           "content": "Twitch",
                           "fontFamily": "$font",
-                          "fontSize": 13
+                          "fontSize": 13,
+                          "fontWeight": "normal"
                         },
                         {
                           "type": "text",
@@ -43874,7 +43881,8 @@
                           "fill": "$text-3",
                           "content": "twitch.tv",
                           "fontFamily": "$font",
-                          "fontSize": 12
+                          "fontSize": 12,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -43885,7 +43893,8 @@
                       "fill": "$text-3",
                       "content": "Open",
                       "fontFamily": "$font",
-                      "fontSize": 12
+                      "fontSize": 12,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -43926,7 +43935,8 @@
                           "fill": "$text",
                           "content": "Vimeo",
                           "fontFamily": "$font",
-                          "fontSize": 13
+                          "fontSize": 13,
+                          "fontWeight": "normal"
                         },
                         {
                           "type": "text",
@@ -43935,7 +43945,8 @@
                           "fill": "$text-3",
                           "content": "vimeo.com",
                           "fontFamily": "$font",
-                          "fontSize": 12
+                          "fontSize": 12,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -43946,7 +43957,8 @@
                       "fill": "$text-3",
                       "content": "Open",
                       "fontFamily": "$font",
-                      "fontSize": 12
+                      "fontSize": 12,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -43987,7 +43999,8 @@
                           "fill": "$text",
                           "content": "Dailymotion",
                           "fontFamily": "$font",
-                          "fontSize": 13
+                          "fontSize": 13,
+                          "fontWeight": "normal"
                         },
                         {
                           "type": "text",
@@ -43996,7 +44009,8 @@
                           "fill": "$text-3",
                           "content": "dailymotion.com",
                           "fontFamily": "$font",
-                          "fontSize": 12
+                          "fontSize": 12,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -44007,7 +44021,8 @@
                       "fill": "$text-3",
                       "content": "Open",
                       "fontFamily": "$font",
-                      "fontSize": 12
+                      "fontSize": 12,
+                      "fontWeight": "normal"
                     }
                   ]
                 }
@@ -44043,7 +44058,8 @@
               "content": "Only mixes (the Mix badge) and songs (the ♪ badge) are left on YouTube's pages, and the Shorts shelf is gone. A small ember chip in the address bar says what's on.",
               "lineHeight": 1.45,
               "fontFamily": "$font",
-              "fontSize": 12
+              "fontSize": 12,
+              "fontWeight": "normal"
             },
             {
               "type": "frame",
@@ -44102,7 +44118,8 @@
                           "fill": "$text",
                           "content": "YouTube",
                           "fontFamily": "$font",
-                          "fontSize": 11
+                          "fontSize": 11,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -44147,7 +44164,8 @@
                           "fill": "$text",
                           "content": "youtube.com",
                           "fontFamily": "$font",
-                          "fontSize": 11
+                          "fontSize": 11,
+                          "fontWeight": "normal"
                         },
                         {
                           "type": "frame",
@@ -44400,7 +44418,8 @@
                                   "fill": "#aaaaaa",
                                   "content": "Various artists",
                                   "fontFamily": "$font",
-                                  "fontSize": 10
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
                                 }
                               ]
                             },
@@ -44488,7 +44507,8 @@
                                   "fill": "#aaaaaa",
                                   "content": "Artist · 2.1M views",
                                   "fontFamily": "$font",
-                                  "fontSize": 10
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
                                 }
                               ]
                             }
@@ -44585,7 +44605,8 @@
                                   "fill": "#aaaaaa",
                                   "content": "Band · 880K views",
                                   "fontFamily": "$font",
-                                  "fontSize": 10
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
                                 }
                               ]
                             },
@@ -44683,7 +44704,8 @@
                                   "fill": "#aaaaaa",
                                   "content": "Various artists",
                                   "fontFamily": "$font",
-                                  "fontSize": 10
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
                                 }
                               ]
                             }
@@ -44725,7 +44747,8 @@
               "content": "Opening a video that isn't music, or a Short, shows the blocked page: the same design, saying only music is open and until when.",
               "lineHeight": 1.45,
               "fontFamily": "$font",
-              "fontSize": 12
+              "fontSize": 12,
+              "fontWeight": "normal"
             },
             {
               "type": "frame",
@@ -44785,7 +44808,8 @@
                           "fill": "$text",
                           "content": "YouTube",
                           "fontFamily": "$font",
-                          "fontSize": 11
+                          "fontSize": 11,
+                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -44830,7 +44854,8 @@
                           "fill": "$text",
                           "content": "youtube.com/watch",
                           "fontFamily": "$font",
-                          "fontSize": 11
+                          "fontSize": 11,
+                          "fontWeight": "normal"
                         },
                         {
                           "type": "frame",
@@ -44939,7 +44964,8 @@
                       "fill": "#9a9a9a",
                       "content": "6:58:37 left",
                       "fontFamily": "$font",
-                      "fontSize": 12
+                      "fontSize": 12,
+                      "fontWeight": "normal"
                     },
                     {
                       "type": "text",
@@ -44952,6 +44978,1775 @@
                       "fontWeight": "500"
                     }
                   ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "j3usw",
+      "x": 30100,
+      "y": 5452,
+      "name": "Mast Logo",
+      "reusable": true,
+      "width": 64,
+      "height": 64,
+      "fill": {
+        "type": "gradient",
+        "gradientType": "linear",
+        "enabled": true,
+        "rotation": 135,
+        "size": {
+          "height": 1
+        },
+        "colors": [
+          {
+            "color": "#ff6a3d",
+            "position": 0
+          },
+          {
+            "color": "#c2300f",
+            "position": 1
+          }
+        ]
+      },
+      "cornerRadius": 16,
+      "layout": "none",
+      "children": [
+        {
+          "type": "path",
+          "id": "KAMto",
+          "x": 13,
+          "y": 21,
+          "name": "Jib",
+          "geometry": "M14 10.5v14h-7.4q0.8-8.5 7.4-14z",
+          "fill": "#ffffff",
+          "width": 15,
+          "height": 28
+        },
+        {
+          "type": "path",
+          "id": "o5GrY",
+          "x": 34,
+          "y": 12,
+          "name": "Main",
+          "geometry": "M17 6v18.5h8.4q-0.7-11.5-8.4-18.5z",
+          "fill": "#ffffff",
+          "width": 17,
+          "height": 37
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "R0V3fn",
+      "x": 30100,
+      "y": 5600,
+      "name": "C25a Onboarding — Welcome",
+      "theme": {
+        "palette": "onyx"
+      },
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "#070707",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "W09ZL",
+          "type": "ref",
+          "ref": "C9dwap",
+          "name": "Compact Chrome",
+          "fill": "#00000000",
+          "stroke": "#00000000",
+          "width": "fill_container",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "effect": [],
+          "descendants": {
+            "zLBFD": {
+              "fill": "#ffffff26"
+            },
+            "zLBFD/Kf0pw": {
+              "content": "Welcome to Mast"
+            },
+            "D4qlI": {
+              "enabled": false
+            },
+            "YAnlB": {
+              "enabled": false
+            },
+            "y03hiF": {
+              "fill": "#0a0a0a99"
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "zwx4W",
+          "name": "Page",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "padding": [
+            0,
+            0,
+            40,
+            0
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "id": "vH6WW",
+              "type": "ref",
+              "ref": "j3usw",
+              "name": "Logo",
+              "width": 72,
+              "height": 72
+            },
+            {
+              "type": "frame",
+              "id": "F9HYdb",
+              "name": "Gap",
+              "width": 1,
+              "height": 28
+            },
+            {
+              "type": "text",
+              "id": "IJsQA",
+              "name": "Headline",
+              "fill": "$text",
+              "content": "Tie yourself to the mast.",
+              "fontFamily": "$font",
+              "fontSize": 44,
+              "fontWeight": "600",
+              "letterSpacing": -1.2
+            },
+            {
+              "type": "frame",
+              "id": "mJpv9",
+              "name": "Gap",
+              "width": 1,
+              "height": 14
+            },
+            {
+              "type": "text",
+              "id": "xvmKG",
+              "name": "Lead",
+              "fill": "#9a9a9a",
+              "content": "A quiet browser that keeps you on course. Block what pulls you away,\nand once it's set, there's no unblocking until the time runs out.",
+              "lineHeight": 1.55,
+              "textAlign": "center",
+              "fontFamily": "$font",
+              "fontSize": 16
+            },
+            {
+              "type": "frame",
+              "id": "zvvts",
+              "name": "Gap",
+              "width": 1,
+              "height": 44
+            },
+            {
+              "type": "frame",
+              "id": "JR1xf",
+              "name": "Points",
+              "gap": 40,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "QlNcq",
+                  "name": "Blocks that hold",
+                  "width": 220,
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "IAsiY",
+                      "name": "Icon",
+                      "width": 32,
+                      "height": 32,
+                      "fill": "#141414",
+                      "cornerRadius": 8,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "Npmko",
+                          "name": "Glyph",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "lock",
+                          "library": "lucide",
+                          "fill": "$text"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "o9aNE",
+                      "name": "Title",
+                      "fill": "$text",
+                      "content": "Blocks that hold",
+                      "fontFamily": "$font",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "a5rWF",
+                      "name": "Text",
+                      "fill": "#8a8a8a",
+                      "content": "Pick how long. A block can be\nextended, never shortened.",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font",
+                      "fontSize": 13
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "yIyp8",
+                  "name": "The rest stays open",
+                  "width": 220,
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "HKnU3",
+                      "name": "Icon",
+                      "width": 32,
+                      "height": 32,
+                      "fill": "#141414",
+                      "cornerRadius": 8,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "hfdr4",
+                          "name": "Glyph",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "compass",
+                          "library": "lucide",
+                          "fill": "$text"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "aQW7M",
+                      "name": "Title",
+                      "fill": "$text",
+                      "content": "The rest stays open",
+                      "fontFamily": "$font",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "I6mhLJ",
+                      "name": "Text",
+                      "fill": "#8a8a8a",
+                      "content": "Everything else on the web\nis there when you need it.",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font",
+                      "fontSize": 13
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "I9o8Cc",
+                  "name": "Made to be looked at",
+                  "width": 220,
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "U8Cqw",
+                      "name": "Icon",
+                      "width": 32,
+                      "height": 32,
+                      "fill": "#141414",
+                      "cornerRadius": 8,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "J6EvM",
+                          "name": "Glyph",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "palette",
+                          "library": "lucide",
+                          "fill": "$text"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "MFT9M",
+                      "name": "Title",
+                      "fill": "$text",
+                      "content": "Made to be looked at",
+                      "fontFamily": "$font",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "O2Vlbs",
+                      "name": "Text",
+                      "fill": "#8a8a8a",
+                      "content": "Your picture, your colors,\nor each site's own.",
+                      "lineHeight": 1.5,
+                      "fontFamily": "$font",
+                      "fontSize": 13
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "EnQPg",
+              "name": "Gap",
+              "width": 1,
+              "height": 52
+            },
+            {
+              "type": "frame",
+              "id": "iXBHu",
+              "name": "Get started",
+              "height": 40,
+              "fill": "$text",
+              "cornerRadius": 8,
+              "padding": [
+                0,
+                22
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "BI44v",
+                  "name": "Label",
+                  "fill": "#141414",
+                  "content": "Get started",
+                  "fontFamily": "$font",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "hvTzp",
+              "name": "Gap",
+              "width": 1,
+              "height": 28
+            },
+            {
+              "type": "frame",
+              "id": "qoiZs",
+              "name": "Steps",
+              "gap": 6,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Nw9Oc",
+                  "name": "Step",
+                  "width": 18,
+                  "height": 6,
+                  "fill": "$text",
+                  "cornerRadius": 3
+                },
+                {
+                  "type": "frame",
+                  "id": "Y1pD2E",
+                  "name": "Step",
+                  "width": 6,
+                  "height": 6,
+                  "fill": "#2a2a2a",
+                  "cornerRadius": 3
+                },
+                {
+                  "type": "frame",
+                  "id": "jx47M",
+                  "name": "Step",
+                  "width": 6,
+                  "height": 6,
+                  "fill": "#2a2a2a",
+                  "cornerRadius": 3
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "ab0tU",
+      "x": 31640,
+      "y": 5600,
+      "name": "C25b Onboarding — Bring everything over",
+      "theme": {
+        "palette": "onyx"
+      },
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "#070707",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "UySVt",
+          "type": "ref",
+          "ref": "C9dwap",
+          "name": "Compact Chrome",
+          "fill": "#00000000",
+          "stroke": "#00000000",
+          "width": "fill_container",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "effect": [],
+          "descendants": {
+            "zLBFD": {
+              "fill": "#ffffff26"
+            },
+            "zLBFD/Kf0pw": {
+              "content": "Welcome to Mast"
+            },
+            "D4qlI": {
+              "enabled": false
+            },
+            "YAnlB": {
+              "enabled": false
+            },
+            "y03hiF": {
+              "fill": "#0a0a0a99"
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "FycyS",
+          "name": "Page",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "padding": [
+            0,
+            0,
+            40,
+            0
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "G9Y20N",
+              "name": "Headline",
+              "fill": "$text",
+              "content": "Bring everything over",
+              "fontFamily": "$font",
+              "fontSize": 36,
+              "fontWeight": "600",
+              "letterSpacing": -0.9
+            },
+            {
+              "type": "frame",
+              "id": "UjFKo",
+              "name": "Gap",
+              "width": 1,
+              "height": 12
+            },
+            {
+              "type": "text",
+              "id": "Dh15d",
+              "name": "Lead",
+              "fill": "#9a9a9a",
+              "content": "Mast found these browsers on this computer. One click copies your\nbookmarks, passwords, history and extensions. Nothing leaves your computer.",
+              "lineHeight": 1.55,
+              "textAlign": "center",
+              "fontFamily": "$font",
+              "fontSize": 15
+            },
+            {
+              "type": "frame",
+              "id": "ZRDPy",
+              "name": "Gap",
+              "width": 1,
+              "height": 36
+            },
+            {
+              "type": "frame",
+              "id": "tgHTk",
+              "name": "Browsers",
+              "width": 600,
+              "fill": "#0e0e0e",
+              "cornerRadius": 12,
+              "stroke": "#1c1c1c",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 2,
+              "padding": 6,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "ab0KK",
+                  "name": "Google Chrome",
+                  "width": "fill_container",
+                  "height": 68,
+                  "fill": "#161616",
+                  "cornerRadius": 8,
+                  "gap": 14,
+                  "padding": [
+                    0,
+                    14
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Pv0RX",
+                      "name": "Icon",
+                      "width": 36,
+                      "height": 36,
+                      "fill": "#2f6fe4",
+                      "cornerRadius": 18,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "RSyiX",
+                          "name": "Letter",
+                          "fill": "#ffffff",
+                          "content": "C",
+                          "fontFamily": "$font",
+                          "fontSize": 15,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "eB7x4",
+                      "name": "Text",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "FH1UI",
+                          "name": "Name",
+                          "gap": 8,
+                          "alignItems": "end",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "owSva",
+                              "name": "Browser",
+                              "fill": "$text",
+                              "content": "Google Chrome",
+                              "fontFamily": "$font",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "h4Gt8",
+                              "name": "Profile",
+                              "fill": "#6a6a6a",
+                              "content": "Miki · used today",
+                              "fontFamily": "$font",
+                              "fontSize": 12
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "R87CW",
+                          "name": "Meta",
+                          "fill": "#8a8a8a",
+                          "content": "1,204 bookmarks · 86 passwords · 14 extensions",
+                          "fontFamily": "$font",
+                          "fontSize": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "sJO8g",
+                      "name": "Import",
+                      "height": 32,
+                      "fill": "$text",
+                      "cornerRadius": 8,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "x0DUtf",
+                          "name": "Label",
+                          "fill": "#141414",
+                          "content": "Import",
+                          "fontFamily": "$font",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "XybXO",
+                  "name": "Brave",
+                  "width": "fill_container",
+                  "height": 68,
+                  "fill": "#00000000",
+                  "cornerRadius": 8,
+                  "gap": 14,
+                  "padding": [
+                    0,
+                    14
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "VUN2z",
+                      "name": "Icon",
+                      "width": 36,
+                      "height": 36,
+                      "fill": "#e2541f",
+                      "cornerRadius": 18,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "L7Lw0S",
+                          "name": "Letter",
+                          "fill": "#ffffff",
+                          "content": "B",
+                          "fontFamily": "$font",
+                          "fontSize": 15,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "f7WH0P",
+                      "name": "Text",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "eJqrA",
+                          "name": "Name",
+                          "gap": 8,
+                          "alignItems": "end",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "hboUr",
+                              "name": "Browser",
+                              "fill": "$text",
+                              "content": "Brave",
+                              "fontFamily": "$font",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "ViiTm",
+                              "name": "Profile",
+                              "fill": "#6a6a6a",
+                              "content": "Personal",
+                              "fontFamily": "$font",
+                              "fontSize": 12
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "w648nb",
+                          "name": "Meta",
+                          "fill": "#8a8a8a",
+                          "content": "312 bookmarks · 21 passwords · 3 extensions",
+                          "fontFamily": "$font",
+                          "fontSize": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "E1O0vL",
+                      "name": "Import",
+                      "height": 32,
+                      "fill": "#1a1a1a",
+                      "cornerRadius": 8,
+                      "stroke": "#2a2a2a",
+                      "strokeWidth": 1,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "E2easw",
+                          "name": "Label",
+                          "fill": "$text",
+                          "content": "Import",
+                          "fontFamily": "$font",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "toRmC",
+                  "name": "Firefox",
+                  "width": "fill_container",
+                  "height": 68,
+                  "fill": "#00000000",
+                  "cornerRadius": 8,
+                  "gap": 14,
+                  "padding": [
+                    0,
+                    14
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "rY504",
+                      "name": "Icon",
+                      "width": 36,
+                      "height": 36,
+                      "fill": "#ff8a1f",
+                      "cornerRadius": 18,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Y9wZh",
+                          "name": "Letter",
+                          "fill": "#ffffff",
+                          "content": "F",
+                          "fontFamily": "$font",
+                          "fontSize": 15,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "JNNul",
+                      "name": "Text",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "FuEKR",
+                          "name": "Name",
+                          "gap": 8,
+                          "alignItems": "end",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Wk0vg",
+                              "name": "Browser",
+                              "fill": "$text",
+                              "content": "Firefox",
+                              "fontFamily": "$font",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "fVznz",
+                              "name": "Profile",
+                              "fill": "#6a6a6a",
+                              "content": "default-release",
+                              "fontFamily": "$font",
+                              "fontSize": 12
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "Xxqoh",
+                          "name": "Meta",
+                          "fill": "#8a8a8a",
+                          "content": "96 bookmarks · 40 passwords",
+                          "fontFamily": "$font",
+                          "fontSize": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "gYpq7",
+                      "name": "Import",
+                      "height": 32,
+                      "fill": "#1a1a1a",
+                      "cornerRadius": 8,
+                      "stroke": "#2a2a2a",
+                      "strokeWidth": 1,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "H3wjD",
+                          "name": "Label",
+                          "fill": "$text",
+                          "content": "Import",
+                          "fontFamily": "$font",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "qFd8d",
+              "name": "Gap",
+              "width": 1,
+              "height": 14
+            },
+            {
+              "type": "frame",
+              "id": "oOfe7",
+              "name": "What",
+              "width": 600,
+              "layout": "vertical",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "N8noI",
+                  "name": "Header",
+                  "gap": 6,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "VBDmA",
+                      "name": "Label",
+                      "fill": "#9a9a9a",
+                      "content": "What comes over",
+                      "fontFamily": "$font",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "rNx26",
+                      "name": "Chevron",
+                      "width": 12,
+                      "height": 12,
+                      "icon": "chevron-up",
+                      "library": "lucide",
+                      "fill": "#6a6a6a"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "vS0ih",
+                  "name": "Chips",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "ElSjN",
+                      "name": "Bookmarks",
+                      "height": 28,
+                      "fill": "#141414",
+                      "cornerRadius": 14,
+                      "gap": 6,
+                      "padding": [
+                        0,
+                        10,
+                        0,
+                        8
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "B7CspO",
+                          "name": "Check",
+                          "width": 14,
+                          "height": 14,
+                          "fill": "$text",
+                          "cornerRadius": 4,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "b7ZOgf",
+                              "name": "Tick",
+                              "width": 10,
+                              "height": 10,
+                              "icon": "check",
+                              "library": "lucide",
+                              "fill": "#141414"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "BG3jg",
+                          "name": "Label",
+                          "fill": "$text",
+                          "content": "Bookmarks",
+                          "fontFamily": "$font",
+                          "fontSize": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "tnjHI",
+                      "name": "Passwords",
+                      "height": 28,
+                      "fill": "#141414",
+                      "cornerRadius": 14,
+                      "gap": 6,
+                      "padding": [
+                        0,
+                        10,
+                        0,
+                        8
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Gm6Hh",
+                          "name": "Check",
+                          "width": 14,
+                          "height": 14,
+                          "fill": "$text",
+                          "cornerRadius": 4,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "Vhy9h",
+                              "name": "Tick",
+                              "width": 10,
+                              "height": 10,
+                              "icon": "check",
+                              "library": "lucide",
+                              "fill": "#141414"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "QQSap",
+                          "name": "Label",
+                          "fill": "$text",
+                          "content": "Passwords",
+                          "fontFamily": "$font",
+                          "fontSize": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Z9WuS0",
+                      "name": "History",
+                      "height": 28,
+                      "fill": "#141414",
+                      "cornerRadius": 14,
+                      "gap": 6,
+                      "padding": [
+                        0,
+                        10,
+                        0,
+                        8
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "MHDXT",
+                          "name": "Check",
+                          "width": 14,
+                          "height": 14,
+                          "fill": "$text",
+                          "cornerRadius": 4,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "swba2",
+                              "name": "Tick",
+                              "width": 10,
+                              "height": 10,
+                              "icon": "check",
+                              "library": "lucide",
+                              "fill": "#141414"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "nlRig",
+                          "name": "Label",
+                          "fill": "$text",
+                          "content": "History",
+                          "fontFamily": "$font",
+                          "fontSize": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "BlD5T",
+                      "name": "Extensions",
+                      "height": 28,
+                      "fill": "#141414",
+                      "cornerRadius": 14,
+                      "gap": 6,
+                      "padding": [
+                        0,
+                        10,
+                        0,
+                        8
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "zEcB0",
+                          "name": "Check",
+                          "width": 14,
+                          "height": 14,
+                          "fill": "$text",
+                          "cornerRadius": 4,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "r2E1x",
+                              "name": "Tick",
+                              "width": 10,
+                              "height": 10,
+                              "icon": "check",
+                              "library": "lucide",
+                              "fill": "#141414"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "kmoFo",
+                          "name": "Label",
+                          "fill": "$text",
+                          "content": "Extensions",
+                          "fontFamily": "$font",
+                          "fontSize": 12
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "o51UVn",
+                      "name": "Open tabs",
+                      "height": 28,
+                      "fill": "#141414",
+                      "cornerRadius": 14,
+                      "gap": 6,
+                      "padding": [
+                        0,
+                        10,
+                        0,
+                        8
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "YTrm6",
+                          "name": "Check",
+                          "width": 14,
+                          "height": 14,
+                          "fill": "$text",
+                          "cornerRadius": 4,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "C0fft",
+                              "name": "Tick",
+                              "width": 10,
+                              "height": 10,
+                              "icon": "check",
+                              "library": "lucide",
+                              "fill": "#141414"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "cWEaF",
+                          "name": "Label",
+                          "fill": "$text",
+                          "content": "Open tabs",
+                          "fontFamily": "$font",
+                          "fontSize": 12
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "bCLae",
+                  "name": "Note",
+                  "fill": "#6a6a6a",
+                  "content": "Your bookmarks bar becomes your new tab page. Extensions are reinstalled from the Web Store.",
+                  "fontFamily": "$font",
+                  "fontSize": 12
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "CBDlh",
+              "name": "Gap",
+              "width": 1,
+              "height": 36
+            },
+            {
+              "type": "frame",
+              "id": "Ybgzc",
+              "name": "Nav",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "i2L1O3",
+                  "name": "Skip for now",
+                  "height": 40,
+                  "fill": "#00000000",
+                  "cornerRadius": 8,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    22
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "O2NyZ",
+                      "name": "Label",
+                      "fill": "#9a9a9a",
+                      "content": "Skip for now",
+                      "fontFamily": "$font",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "fsmcf",
+              "name": "Gap",
+              "width": 1,
+              "height": 24
+            },
+            {
+              "type": "frame",
+              "id": "UcUSO",
+              "name": "Steps",
+              "gap": 6,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "GJfFi",
+                  "name": "Step",
+                  "width": 6,
+                  "height": 6,
+                  "fill": "#2a2a2a",
+                  "cornerRadius": 3
+                },
+                {
+                  "type": "frame",
+                  "id": "rwYvr",
+                  "name": "Step",
+                  "width": 18,
+                  "height": 6,
+                  "fill": "$text",
+                  "cornerRadius": 3
+                },
+                {
+                  "type": "frame",
+                  "id": "HWsrF",
+                  "name": "Step",
+                  "width": 6,
+                  "height": 6,
+                  "fill": "#2a2a2a",
+                  "cornerRadius": 3
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "awLAa",
+      "x": 33180,
+      "y": 5600,
+      "name": "C25c Onboarding — You're set",
+      "theme": {
+        "palette": "onyx"
+      },
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "#070707",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "naKwB",
+          "type": "ref",
+          "ref": "C9dwap",
+          "name": "Compact Chrome",
+          "fill": "#00000000",
+          "stroke": "#00000000",
+          "width": "fill_container",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "effect": [],
+          "descendants": {
+            "zLBFD": {
+              "fill": "#ffffff26"
+            },
+            "zLBFD/Kf0pw": {
+              "content": "Welcome to Mast"
+            },
+            "D4qlI": {
+              "enabled": false
+            },
+            "YAnlB": {
+              "enabled": false
+            },
+            "y03hiF": {
+              "fill": "#0a0a0a99"
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "V1wdTd",
+          "name": "Page",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "padding": [
+            0,
+            0,
+            40,
+            0
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "t8gyiT",
+              "name": "Done",
+              "width": 56,
+              "height": 56,
+              "fill": "#161616",
+              "cornerRadius": 28,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "o4e0XQ",
+                  "name": "Check",
+                  "width": 26,
+                  "height": 26,
+                  "icon": "check",
+                  "library": "lucide",
+                  "fill": "$text"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "SZcPO",
+              "name": "Gap",
+              "width": 1,
+              "height": 24
+            },
+            {
+              "type": "text",
+              "id": "y4410c",
+              "name": "Headline",
+              "fill": "$text",
+              "content": "You're all set",
+              "fontFamily": "$font",
+              "fontSize": 36,
+              "fontWeight": "600",
+              "letterSpacing": -0.9
+            },
+            {
+              "type": "frame",
+              "id": "h2sur",
+              "name": "Gap",
+              "width": 1,
+              "height": 12
+            },
+            {
+              "type": "text",
+              "id": "eac8G",
+              "name": "Lead",
+              "fill": "#9a9a9a",
+              "content": "Everything from Chrome is here.",
+              "fontFamily": "$font",
+              "fontSize": 15
+            },
+            {
+              "type": "frame",
+              "id": "j6DNh",
+              "name": "Gap",
+              "width": 1,
+              "height": 32
+            },
+            {
+              "type": "frame",
+              "id": "WQGCs",
+              "name": "Summary",
+              "width": 460,
+              "layout": "vertical",
+              "gap": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "sXALX",
+                  "name": "1,204 bookmarks",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "U9xMZK",
+                      "name": "Tick",
+                      "width": 18,
+                      "height": 18,
+                      "fill": "#1a1a1a",
+                      "cornerRadius": 9,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "Aba8M",
+                          "name": "Icon",
+                          "width": 11,
+                          "height": 11,
+                          "icon": "check",
+                          "library": "lucide",
+                          "fill": "$text"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "uCQdg",
+                      "name": "Text",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "G76KRI",
+                          "name": "Title",
+                          "fill": "$text",
+                          "content": "1,204 bookmarks",
+                          "fontFamily": "$font",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "R1wVe",
+                          "name": "Text",
+                          "fill": "#8a8a8a",
+                          "content": "The ones in your bookmarks bar are on your new tab page.",
+                          "fontFamily": "$font",
+                          "fontSize": 13
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "EaR4A",
+                  "name": "86 passwords",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "k19AOG",
+                      "name": "Tick",
+                      "width": 18,
+                      "height": 18,
+                      "fill": "#1a1a1a",
+                      "cornerRadius": 9,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "ZcxQZ",
+                          "name": "Icon",
+                          "width": 11,
+                          "height": 11,
+                          "icon": "check",
+                          "library": "lucide",
+                          "fill": "$text"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "uAk0K",
+                      "name": "Text",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "FM5nE",
+                          "name": "Title",
+                          "fill": "$text",
+                          "content": "86 passwords",
+                          "fontFamily": "$font",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "ZfC54",
+                          "name": "Text",
+                          "fill": "#8a8a8a",
+                          "content": "Filled in as you sign in to sites.",
+                          "fontFamily": "$font",
+                          "fontSize": 13
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Zk4xX",
+                  "name": "14 extensions",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "rVlbf",
+                      "name": "Tick",
+                      "width": 18,
+                      "height": 18,
+                      "fill": "#1a1a1a",
+                      "cornerRadius": 9,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "jiyTK",
+                          "name": "Icon",
+                          "width": 11,
+                          "height": 11,
+                          "icon": "check",
+                          "library": "lucide",
+                          "fill": "$text"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "c5Fzn2",
+                      "name": "Text",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "p8EhGe",
+                          "name": "Title",
+                          "fill": "$text",
+                          "content": "14 extensions",
+                          "fontFamily": "$font",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "un3yQ",
+                          "name": "Text",
+                          "fill": "#8a8a8a",
+                          "content": "Reinstalled from the Web Store.",
+                          "fontFamily": "$font",
+                          "fontSize": 13
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "xjE8p",
+                  "name": "History",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "ilWq4",
+                      "name": "Tick",
+                      "width": 18,
+                      "height": 18,
+                      "fill": "#1a1a1a",
+                      "cornerRadius": 9,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "KGeUB",
+                          "name": "Icon",
+                          "width": 11,
+                          "height": 11,
+                          "icon": "check",
+                          "library": "lucide",
+                          "fill": "$text"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "lpd6E",
+                      "name": "Text",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "CPah2",
+                          "name": "Title",
+                          "fill": "$text",
+                          "content": "History",
+                          "fontFamily": "$font",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "f2XdV",
+                          "name": "Text",
+                          "fill": "#8a8a8a",
+                          "content": "Your sites come up as you type.",
+                          "fontFamily": "$font",
+                          "fontSize": 13
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "gemWy",
+              "name": "Gap",
+              "width": 1,
+              "height": 40
+            },
+            {
+              "type": "frame",
+              "id": "K9NzqZ",
+              "name": "Actions",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "tAMh1",
+                  "name": "Make Mast your default browser",
+                  "height": 40,
+                  "fill": "#1a1a1a",
+                  "cornerRadius": 8,
+                  "stroke": "#2a2a2a",
+                  "strokeWidth": 1,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    22
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "AhyLc",
+                      "name": "Label",
+                      "fill": "$text",
+                      "content": "Make Mast your default browser",
+                      "fontFamily": "$font",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "OIk4t",
+                  "name": "Start browsing",
+                  "height": 40,
+                  "fill": "$text",
+                  "cornerRadius": 8,
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    22
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "s1aEO",
+                      "name": "Label",
+                      "fill": "#141414",
+                      "content": "Start browsing",
+                      "fontFamily": "$font",
+                      "fontSize": 14,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "oVu69",
+              "name": "Gap",
+              "width": 1,
+              "height": 24
+            },
+            {
+              "type": "frame",
+              "id": "eeixM",
+              "name": "Steps",
+              "gap": 6,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "ZxSmA",
+                  "name": "Step",
+                  "width": 6,
+                  "height": 6,
+                  "fill": "#2a2a2a",
+                  "cornerRadius": 3
+                },
+                {
+                  "type": "frame",
+                  "id": "lJCDl",
+                  "name": "Step",
+                  "width": 6,
+                  "height": 6,
+                  "fill": "#2a2a2a",
+                  "cornerRadius": 3
+                },
+                {
+                  "type": "frame",
+                  "id": "sPJoj",
+                  "name": "Step",
+                  "width": 18,
+                  "height": 6,
+                  "fill": "$text",
+                  "cornerRadius": 3
                 }
               ]
             }
