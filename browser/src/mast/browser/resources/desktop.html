@@ -142,6 +142,16 @@ dialog.cz { width: 400px; padding: 18px 20px 20px; }
 .bgs .up { background: none; box-shadow: inset 0 0 0 1px var(--text-3); }
 .bgs .up:hover { box-shadow: inset 0 0 0 1px var(--text-2); }
 .bgs .up[disabled] { cursor: default; opacity: .6; }
+/* Built-in pictures (design C26): a row of thumbnails with names, then None and
+   your own picture. */
+.bgs.presets { margin-bottom: 8px; }
+.bgs.presets button { display: flex; flex-direction: column; gap: 6px; aspect-ratio: auto; background: none; box-shadow: none; font-size: 11px; }
+.bgs.presets button i { display: block; width: 100%; aspect-ratio: 16 / 10; border-radius: 7px; background: var(--surface) center/cover; box-shadow: inset 0 0 0 1px var(--line); }
+.bgs.presets button.on { box-shadow: none; color: var(--text); font-weight: 600; }
+.bgs.presets button.on i { box-shadow: inset 0 0 0 2px var(--text); }
+.bgs.own { grid-template-columns: repeat(3, 1fr); margin-bottom: 6px; }
+.bgs.own button { aspect-ratio: auto; height: 34px; }
+.credit { margin: 0 0 20px; color: var(--text-3); font-size: 11px; }
 /* Tab bar on websites (design C23): each choice shows a tiny window on a light
    website, so the difference is visible before picking. */
 .bars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
@@ -202,7 +212,9 @@ dialog.cz { width: 400px; padding: 18px 20px 20px; }
 <dialog id="czDialog" class="cz" aria-label="Customize">
   <header><h3>Customize</h3><button class="x" id="czClose" aria-label="Close"><svg width="12" height="12" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.4"><path d="M2 2l6 6M8 2l-6 6"/></svg></button></header>
   <h4>Background</h4>
-  <div class="bgs" id="czBgs"></div>
+  <div class="bgs presets" id="czPresets"></div>
+  <div class="bgs own" id="czBgs"></div>
+  <p class="credit" id="czCredit"></p>
   <div id="czTone"></div>
   <div id="czBar"></div>
   <h4>Colors</h4>
@@ -400,10 +412,18 @@ function guessTone(bmp) {
 function renderCustomize() {
   if (!state || !document.getElementById('czDialog').open) return;
   const t = state.theme || {};
+  // Built-in pictures first (NASA photos), then none or your own.
+  const presets = t.presets || [];
+  const preset = wallpaper ? (t.preset || '') : '';
+  const own = wallpaper && !preset;
+  document.getElementById('czPresets').innerHTML = presets.map((p) =>
+    `<button data-preset="${esc(p.id)}" class="${preset === p.id ? 'on' : ''}" aria-pressed="${preset === p.id}"><i style="background-image:url(preset-${esc(p.id)}.jpg)"></i>${esc(p.name)}</button>`).join('');
   document.getElementById('czBgs').innerHTML =
     `<button data-bg="none" class="${wallpaper ? '' : 'on'}" aria-pressed="${!wallpaper}">None</button>` +
-    (wallpaper ? `<button data-bg="image" class="on" aria-pressed="true" aria-label="Your image" style="background-image:url(wallpaper-${wallpaper}.jpg)"></button>` : '') +
-    `<button data-bg="upload" class="up" ${czBusy ? 'disabled' : ''}>${czBusy ? 'Saving…' : wallpaper ? 'Replace' : 'Upload image'}</button>`;
+    (own ? `<button data-bg="image" class="on" aria-pressed="true" aria-label="Your image" style="background-image:url(wallpaper-${wallpaper}.jpg)"></button>` : '') +
+    `<button data-bg="upload" class="up" ${czBusy ? 'disabled' : ''}>${czBusy ? 'Saving…' : own ? 'Replace' : 'Upload your own'}</button>`;
+  const shown = presets.find((p) => p.id === preset);
+  document.getElementById('czCredit').textContent = shown ? shown.credit : 'Built-in photos: NASA. Public domain.';
   // Dark or Light only means something with a picture: it sets the text and
   // icons on it (tab row included) to light or dark.
   document.getElementById('czTone').innerHTML = !wallpaper ? '' : `<h4>Image</h4>
@@ -520,6 +540,7 @@ document.addEventListener('click', (e) => {
   if (t.id === 'blClose') return document.getElementById('blocklistDialog').close();
   if (t.id === 'customize') { document.getElementById('czDialog').showModal(); return renderCustomize(); }
   if (t.id === 'czClose') return document.getElementById('czDialog').close();
+  if (t.dataset.preset) return chrome.send('setWallpaperPreset', [t.dataset.preset]);
   if (t.dataset.bg === 'none') return wallpaper && chrome.send('clearWallpaper');
   if (t.dataset.bg === 'upload') return document.getElementById('czFile').click();
   if (t.dataset.palette) return chrome.send('setPalette', [t.dataset.palette]);

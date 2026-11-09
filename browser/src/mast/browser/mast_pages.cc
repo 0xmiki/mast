@@ -214,8 +214,13 @@ std::string QuietBlockPageHtml(std::string_view host,
   return BlockPage(host, "null", /*quiet=*/true, "Blocked", backdrop);
 }
 
-std::string WelcomePageHtml() {
-  return Fill(kWelcomePage);
+std::string WelcomePageHtml(int wallpaper, std::string_view credit) {
+  std::string page = Fill(kWelcomePage);
+  base::ReplaceSubstringsAfterOffset(&page, 0, "{{WALLPAPER}}",
+                                     base::NumberToString(wallpaper));
+  base::ReplaceSubstringsAfterOffset(&page, 0, "{{CREDIT}}",
+                                     base::EscapeForHTML(credit));
+  return page;
 }
 
 std::string StartPageHtml(bool as_new_tab) {

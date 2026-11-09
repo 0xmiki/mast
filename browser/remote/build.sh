@@ -102,11 +102,13 @@ time autoninja -C "$OUT" -k 0 chrome
 # The adult and gambling feeds: data files beside the browser, read at startup (mast_feeds.cc).
 say "Feeds"
 python3 "$M/remote/build-feeds.py" "$M/blocklist" "$OUT/mast-feeds" /root/mast-feeds-cache
+# Customize's built-in pictures (wallpapers/CREDITS.md), beside the browser too.
+rm -rf "$OUT/mast-wallpapers" && mkdir -p "$OUT/mast-wallpapers" && cp "$M"/wallpapers/*.jpg "$OUT/mast-wallpapers/"
 say "Packaging"
 cd "$OUT"
 keep=()
 for f in chrome chrome_crashpad_handler icudtl.dat vk_swiftshader_icd.json locales MEIPreload \
-	mast-feeds *.pak *.bin *.so *.so.*; do
+	mast-feeds mast-wallpapers *.pak *.bin *.so *.so.*; do
 	[ -e "$f" ] && keep+=("$f")
 done
 mkdir -p "$M/dist"

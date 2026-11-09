@@ -30,6 +30,9 @@ inline constexpr char kTabBarPref[] = "mast.tab_bar";
 // Whether this profile has been shown the welcome page (mast://mast/welcome,
 // design C25). It opens once, in the first window.
 inline constexpr char kWelcomedPref[] = "mast.welcomed";
+// Which built-in picture is the wallpaper (mast_wallpapers.h); empty for an
+// uploaded one or none.
+inline constexpr char kWallpaperPresetPref[] = "mast.ntp.wallpaper_preset";
 
 // Profile prefs: Mast's own, and Mast's defaults for some of Chromium's. Called
 // last in RegisterProfilePrefs(), so every upstream pref is already registered.

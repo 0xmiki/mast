@@ -51,6 +51,7 @@
 #include "mast/browser/mast_pages.h"
 #include "mast/browser/mast_prefs.h"
 #include "mast/browser/mast_theme.h"
+#include "mast/browser/mast_wallpapers.h"
 #include "mast/common/mast_features.h"
 #include "mast/ui/color/mast_palette.h"
 #include "components/prefs/pref_service.h"
@@ -79,6 +80,18 @@ base::Value BlockValue(const Block& block) {
     v.Set("until", base::Value());
   }
   return base::Value(std::move(v));
+}
+
+// Customize's built-in pictures (mast_wallpapers.h), served as preset-<id>.jpg.
+base::ListValue PresetsValue() {
+  base::ListValue list;
+  for (const WallpaperPreset& p : kWallpaperPresets) {
+    list.Append(base::DictValue()
+                    .Set("id", p.id)
+                    .Set("name", p.name)
+                    .Set("credit", p.credit));
+  }
+  return list;
 }
 
 // The curated categories never change while the browser runs; build them once.
@@ -216,6 +229,7 @@ class MastHandler : public content::WebUIMessageHandler,
     On("setWallpaper", &MastHandler::HandleSetWallpaper);
     On("clearWallpaper", &MastHandler::HandleClearWallpaper);
     On("setWallpaperTone", &MastHandler::HandleSetWallpaperTone);
+    On("setWallpaperPreset", &MastHandler::HandleSetWallpaperPreset);
     On("setTabBar", &MastHandler::HandleSetTabBar);
   }
 
@@ -502,14 +516,28 @@ class MastHandler : public content::WebUIMessageHandler,
     PrefService* prefs = profile_->GetPrefs();
     prefs->SetInteger(kWallpaperPref,
                       std::abs(prefs->GetInteger(kWallpaperPref)) + 1);
+    prefs->SetString(kWallpaperPresetPref, std::string());  // the user's own
     if (!ApplyTheme(prefs)) {
       RepaintBrowser();  // same colours, new picture
     }
     SendState();
   }
 
+  // ["setWallpaperPreset", id]: one of Customize's built-in pictures.
+  void HandleSetWallpaperPreset(const base::ListValue& args) {
+    UseWallpaperPreset(profile_, StringArg(args),
+                       base::BindOnce(
+                           [](base::WeakPtr<MastHandler> self, bool ok) {
+                             if (self) {
+                               self->SendState();
+                             }
+                           },
+                           weak_factory_.GetWeakPtr()));
+  }
+
   void HandleClearWallpaper(const base::ListValue& args) {
     PrefService* prefs = profile_->GetPrefs();
+    prefs->SetString(kWallpaperPresetPref, std::string());
     prefs->SetInteger(kWallpaperPref,
                       -std::abs(prefs->GetInteger(kWallpaperPref)));
     if (!ApplyTheme(prefs)) {
@@ -579,7 +607,10 @@ class MastHandler : public content::WebUIMessageHandler,
                   .Set("tone", profile_->GetPrefs()->GetString(
                                    kWallpaperTonePref))
                   .Set("tabBar",
-                       profile_->GetPrefs()->GetString(kTabBarPref)));
+                       profile_->GetPrefs()->GetString(kTabBarPref))
+                  .Set("preset",
+                       profile_->GetPrefs()->GetString(kWallpaperPresetPref))
+                  .Set("presets", PresetsValue()));
     state.Set("palettes", PalettesValue());
     state.Set("result", std::move(result));
     CallJavascriptFunction("mastState", base::Value(std::move(state)));
@@ -627,7 +658,8 @@ MastUI::MastUI(content::WebUI* web_ui, std::string_view host)
   source->SetRequestFilter(
       base::BindRepeating([](const std::string& path) {
         return path.empty() || path == "index.html" || path == "welcome" ||
-               base::StartsWith(path, "wallpaper-");
+               base::StartsWith(path, "wallpaper-") ||
+               base::StartsWith(path, "preset-");
       }),
       base::BindRepeating(
           [](bool as_new_tab, PrefService* prefs,
@@ -642,10 +674,31 @@ MastUI::MastUI(content::WebUI* web_ui, std::string_view host)
                   std::move(callback));
               return;
             }
-            // The welcome page, shown once (mast_prefs.h, kWelcomedPref).
+            // A built-in picture, preset-<id>.jpg (Customize's thumbnails).
+            if (base::StartsWith(path, "preset-")) {
+              std::string id = path.substr(7);
+              if (base::EndsWith(id, ".jpg")) {
+                id.resize(id.size() - 4);
+              }
+              const WallpaperPreset* preset = FindWallpaperPreset(id);
+              if (!preset) {
+                std::move(callback).Run(nullptr);
+                return;
+              }
+              base::ThreadPool::PostTaskAndReplyWithResult(
+                  FROM_HERE, kFileTraits,
+                  base::BindOnce(&ReadWallpaper, WallpaperPresetPath(*preset)),
+                  std::move(callback));
+              return;
+            }
+            // The welcome page, shown once (mast_prefs.h, kWelcomedPref), on
+            // the picture.
             if (path == "welcome") {
-              std::move(callback).Run(
-                  base::MakeRefCounted<base::RefCountedString>(WelcomePageHtml()));
+              const WallpaperPreset* preset =
+                  FindWallpaperPreset(prefs->GetString(kWallpaperPresetPref));
+              std::move(callback).Run(base::MakeRefCounted<base::RefCountedString>(
+                  WelcomePageHtml(std::max(0, prefs->GetInteger(kWallpaperPref)),
+                                  preset ? preset->credit : "")));
               return;
             }
             // New tabs open the desktop; chrome://mast is the full blocklist.

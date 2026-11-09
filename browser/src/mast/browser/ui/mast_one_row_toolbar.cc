@@ -25,6 +25,7 @@
 #include "url/gurl.h"
 #include "mast/browser/mast_prefs.h"
 #include "mast/browser/mast_theme.h"
+#include "mast/browser/mast_wallpapers.h"
 #include "mast/browser/ui/mast_tab_bar.h"
 #include "mast/common/mast_features.h"
 #include "ui/gfx/geometry/size.h"
@@ -49,39 +50,46 @@ void HideBookmarksBar(PrefService* prefs) {
   }
 }
 
-// The welcome page (design C25), once per profile, in its first normal window.
-// After the window's startup tabs are in: a lone new tab page becomes the
-// welcome page; otherwise it opens in a new tab.
+// Opens the welcome page: a lone new tab page becomes it; otherwise it opens
+// in a new tab.
+void OpenWelcome(base::WeakPtr<BrowserWindowInterface> weak) {
+  BrowserWindowInterface* browser = weak.get();
+  if (!browser) {
+    return;
+  }
+  TabStripModel* tabs = browser->GetTabStripModel();
+  content::WebContents* only =
+      tabs && tabs->count() == 1 ? tabs->GetActiveWebContents() : nullptr;
+  const bool lone_new_tab = only && only->GetVisibleURL().SchemeIs("chrome") &&
+                            only->GetVisibleURL().host() == "newtab";
+  browser->OpenGURL(GURL("chrome://mast/welcome"),
+                    lone_new_tab ? WindowOpenDisposition::CURRENT_TAB
+                                 : WindowOpenDisposition::NEW_FOREGROUND_TAB);
+}
+
+// The welcome page (designs C25, C26), once per profile, in its first normal
+// window, after the window's startup tabs are in. A profile that never had a
+// picture starts on the default built-in one (mast_wallpapers.h), so the
+// welcome page and the new tab page open on it.
 void MaybeWelcome(BrowserWindowInterface* browser) {
-  PrefService* prefs = browser->GetProfile()->GetPrefs();
+  Profile* profile = browser->GetProfile();
+  PrefService* prefs = profile->GetPrefs();
   if (browser->GetType() != BrowserWindowInterface::TYPE_NORMAL ||
-      browser->GetProfile()->IsOffTheRecord() ||
-      prefs->GetBoolean(kWelcomedPref)) {
+      profile->IsOffTheRecord() || prefs->GetBoolean(kWelcomedPref)) {
     return;
   }
   prefs->SetBoolean(kWelcomedPref, true);
+  if (prefs->GetInteger(kWallpaperPref) == 0) {
+    UseWallpaperPreset(profile, kDefaultWallpaperPreset,
+                       base::BindOnce(
+                           [](base::WeakPtr<BrowserWindowInterface> weak, bool) {
+                             OpenWelcome(weak);
+                           },
+                           browser->GetWeakPtr()));
+    return;
+  }
   base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
-      FROM_HERE, base::BindOnce(
-                     [](base::WeakPtr<BrowserWindowInterface> weak) {
-                       BrowserWindowInterface* browser = weak.get();
-                       if (!browser) {
-                         return;
-                       }
-                       const GURL welcome("chrome://mast/welcome");
-                       TabStripModel* tabs = browser->GetTabStripModel();
-                       content::WebContents* only =
-                           tabs && tabs->count() == 1
-                               ? tabs->GetActiveWebContents()
-                               : nullptr;
-                       const bool lone_new_tab =
-                           only && only->GetVisibleURL().SchemeIs("chrome") &&
-                           only->GetVisibleURL().host() == "newtab";
-                       browser->OpenGURL(welcome,
-                                         lone_new_tab
-                                             ? WindowOpenDisposition::CURRENT_TAB
-                                             : WindowOpenDisposition::NEW_FOREGROUND_TAB);
-                     },
-                     browser->GetWeakPtr()));
+      FROM_HERE, base::BindOnce(&OpenWelcome, browser->GetWeakPtr()));
 }
 
 }  // namespace

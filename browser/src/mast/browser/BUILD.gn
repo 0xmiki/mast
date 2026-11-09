@@ -23,10 +23,13 @@ source_set("browser") {
     "mast_youtube.cc",
     "mast_youtube.h",
     "mast_theme.h",
+    "mast_wallpapers.cc",
+    "mast_wallpapers.h",
   ]
   deps = [
     "//base",
     "//chrome/browser:browser_process",
+    "//chrome/browser/profiles:profile",
     "//chrome/common:constants",
     "//components/pref_registry",
     "//components/prefs",

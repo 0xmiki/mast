@@ -2,6 +2,7 @@
 
 #include "mast/browser/mast_prefs.h"
 
+#include <string>
 #include <utility>
 
 #include "base/values.h"
@@ -33,6 +34,7 @@ void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry) {
   registry->RegisterStringPref(kWallpaperTonePref, "dark");
   registry->RegisterStringPref(kTabBarPref, "site");
   registry->RegisterBooleanPref(kWelcomedPref, false);
+  registry->RegisterStringPref(kWallpaperPresetPref, std::string());
 }
 
 }  // namespace mast
