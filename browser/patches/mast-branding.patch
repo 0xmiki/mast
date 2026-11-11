@@ -1,7 +1,7 @@
 diff -ruN a/chrome/app/generated_resources.grd b/chrome/app/generated_resources.grd
 --- a/chrome/app/generated_resources.grd
 +++ b/chrome/app/generated_resources.grd
-@@ -7424,7 +7424,7 @@
+@@ -7433,7 +7433,7 @@
  
        <!-- Omnibox -->
        <message name="IDS_OMNIBOX_PLACEHOLDER_TEXT" desc="The text displayed in the Omnibox when it is empty and unfocused.">

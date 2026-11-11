@@ -13,7 +13,7 @@ diff -ruN a/chrome/app/extensions_strings.grdp b/chrome/app/extensions_strings.g
 diff -ruN a/chrome/browser/extensions/chrome_content_browser_client_extensions_part.cc b/chrome/browser/extensions/chrome_content_browser_client_extensions_part.cc
 --- a/chrome/browser/extensions/chrome_content_browser_client_extensions_part.cc
 +++ b/chrome/browser/extensions/chrome_content_browser_client_extensions_part.cc
-@@ -684,6 +684,12 @@
+@@ -702,6 +702,12 @@
      GetOriginsRequiringDedicatedProcess() {
    std::vector<url::Origin> list;
  
@@ -93,7 +93,7 @@ diff -ruN a/chrome/browser/extensions/extension_migrator.h b/chrome/browser/exte
 diff -ruN a/chrome/browser/resources/settings/appearance_page/appearance_page.ts b/chrome/browser/resources/settings/appearance_page/appearance_page.ts
 --- a/chrome/browser/resources/settings/appearance_page/appearance_page.ts
 +++ b/chrome/browser/resources/settings/appearance_page/appearance_page.ts
-@@ -551,7 +551,7 @@
+@@ -567,7 +567,7 @@
          this.themeSublabel_ = info.name;
        });
  
@@ -217,7 +217,7 @@ diff -ruN a/extensions/browser/updater/extension_downloader.cc b/extensions/brow
 diff -ruN a/extensions/common/api/_api_features.json b/extensions/common/api/_api_features.json
 --- a/extensions/common/api/_api_features.json
 +++ b/extensions/common/api/_api_features.json
-@@ -331,7 +331,7 @@
+@@ -355,7 +355,7 @@
    }, {
      "channel": "stable",
      "contexts": ["web_page"],
@@ -226,7 +226,7 @@ diff -ruN a/extensions/common/api/_api_features.json b/extensions/common/api/_ap
    }, {
      // Used for webstore testing. See comment in
      // chrome/common/extensions/webstore_override.cc
-@@ -967,7 +967,7 @@
+@@ -991,7 +991,7 @@
    "webstorePrivate": [{
      "channel": "stable",
      "contexts": ["web_page"],

@@ -4,10 +4,12 @@ One entry per release we check or move to. Record what `./mast check-rebase` fou
 build and screenshots found that it didn't (then teach the check, if it can be taught), and how
 long it took. Reports: `docs/rebase/<version>.md`. What is checked: [UPSTREAM.md](UPSTREAM.md).
 
-## 157.0.8103.50 (ungoogled 157.0.8103.50-1): checked 2026-11-11, not moved yet
+## 157.0.8103.50 (ungoogled 157.0.8103.50-1): moved 2026-11-11
 
-Still on 156: features first, then move to whatever Stable ungoogled has tagged by then
-(158 reaches Stable on 2026-11-17), skipping 157.
+Moved once the features were in, to the newest release both projects had (158 reaches
+Stable on 2026-11-17; ungoogled tags it days later). The last 156 commit is tagged
+`v156-last`, and its builder snapshot is kept, labelled `mast=builder-156`.
+Built unattended (`./mast unattended`).
 
 **Check:** 1 of 87 patch edits failed: the appearance page's auto-pin toggle, where upstream
 moved `label=` onto the `pref-key=` line. Fixed in make-patches.py to match both releases.
@@ -33,4 +35,4 @@ No headers, names, overridden methods or GN deps gone. Report:
 **ungoogled series:** `disable-tos-dialog.patch` and `wasm-interpreter-fixes.patch` left the
 series. On first run after the move, check that no terms-of-service dialog appears.
 
-**Build:** not yet.
+**Build:** started unattended 2026-11-11; results via `./mast collect`.

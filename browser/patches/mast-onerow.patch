@@ -23,7 +23,7 @@ diff -ruN a/chrome/browser/ui/browser_window/internal/BUILD.gn b/chrome/browser/
 +      "//mast/browser/ui/mast_tab_bar.h",
        "global_browser_collection_platform_delegate_non_android.cc",
      ]
-     public_deps = [
+     public_deps = [ "//chrome/browser/ui:browser_live_tab_context" ]
 diff -ruN a/chrome/browser/ui/browser_window/internal/embedder_browser_window_features.cc b/chrome/browser/ui/browser_window/internal/embedder_browser_window_features.cc
 --- a/chrome/browser/ui/browser_window/internal/embedder_browser_window_features.cc
 +++ b/chrome/browser/ui/browser_window/internal/embedder_browser_window_features.cc
@@ -47,7 +47,7 @@ diff -ruN a/chrome/browser/ui/browser_window/internal/embedder_browser_window_fe
 diff -ruN a/chrome/browser/ui/tabs/BUILD.gn b/chrome/browser/ui/tabs/BUILD.gn
 --- a/chrome/browser/ui/tabs/BUILD.gn
 +++ b/chrome/browser/ui/tabs/BUILD.gn
-@@ -133,6 +133,7 @@
+@@ -139,6 +139,7 @@
      ]
  
      deps = [
@@ -112,7 +112,7 @@ diff -ruN a/chrome/browser/ui/views/frame/browser_widget.cc b/chrome/browser/ui/
  #include <memory>
  #include <utility>
  
-@@ -509,6 +511,10 @@
+@@ -501,6 +503,10 @@
            web_app::AppBrowserController::From(browser_view_->browser())) {
      key.app_controller = app_controller;
      key.app_background_color = app_controller->GetBackgroundColor();
@@ -126,7 +126,7 @@ diff -ruN a/chrome/browser/ui/views/frame/browser_widget.cc b/chrome/browser/ui/
 diff -ruN a/chrome/browser/ui/views/frame/BUILD.gn b/chrome/browser/ui/views/frame/BUILD.gn
 --- a/chrome/browser/ui/views/frame/BUILD.gn
 +++ b/chrome/browser/ui/views/frame/BUILD.gn
-@@ -847,12 +847,19 @@
+@@ -1256,12 +1256,19 @@
  }
  
  source_set("themed_background_impl") {
@@ -147,7 +147,7 @@ diff -ruN a/chrome/browser/ui/views/frame/BUILD.gn b/chrome/browser/ui/views/fra
      ":top_container_view",
      "//base",
      "//chrome/app/theme:theme_resources",
-@@ -2444,6 +2451,7 @@
+@@ -3107,6 +3114,7 @@
      "//ui/views",
    ]
    deps = [
@@ -155,7 +155,7 @@ diff -ruN a/chrome/browser/ui/views/frame/BUILD.gn b/chrome/browser/ui/views/fra
      ":custom_corners",
      ":custom_corners_background",
      ":custom_floating_corner",
-@@ -2732,6 +2740,7 @@
+@@ -3396,6 +3404,7 @@
      "//chrome/browser:browser_public_dependencies",
    ]
    deps = [
@@ -175,7 +175,7 @@ diff -ruN a/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl
  #include <algorithm>
  #include <memory>
  #include <optional>
-@@ -803,8 +805,16 @@
+@@ -869,8 +871,16 @@
        const int leading_margin = GetHorizontalTabStripLeadingMargin(params);
        tabstrip_bounds = GetBoundsWithExclusion(
            params, views().horizontal_tab_strip_region_view, leading_margin);
@@ -192,7 +192,7 @@ diff -ruN a/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl
        needs_exclusion = false;
      }
      layout.AddChild(views().horizontal_tab_strip_region_view, tabstrip_bounds,
-@@ -1138,7 +1148,7 @@
+@@ -1217,7 +1227,7 @@
    // the required top padding.
    const auto& separator_info = layout_data_->separator_info;
    views().multi_contents_view->SetShouldShowTopSeparator(
@@ -201,7 +201,7 @@ diff -ruN a/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl
  
    // Updating the top, left and right insets for contents container view when
    // in split view. This is dependent on a number of other browser states.
-@@ -1367,6 +1377,28 @@
+@@ -1427,6 +1437,28 @@
      bool needs_exclusion) const {
    const int original_top = params.visual_client_area.y();
  
@@ -255,7 +255,7 @@ diff -ruN a/chrome/browser/ui/views/frame/themed_background.cc b/chrome/browser/
 diff -ruN a/chrome/browser/ui/views/omnibox/BUILD.gn b/chrome/browser/ui/views/omnibox/BUILD.gn
 --- a/chrome/browser/ui/views/omnibox/BUILD.gn
 +++ b/chrome/browser/ui/views/omnibox/BUILD.gn
-@@ -115,6 +115,7 @@
+@@ -116,6 +116,7 @@
    ]
  
    deps = [
@@ -275,7 +275,7 @@ diff -ruN a/chrome/browser/ui/views/omnibox/omnibox_popup_presenter_base.cc b/ch
  #include <optional>
  
  #include "base/auto_reset.h"
-@@ -355,6 +357,10 @@
+@@ -374,6 +376,10 @@
      // The width is known, and is the basis for consistent web content rendering
      // so width is specified exactly; then only height adjusts dynamically.
      gfx::Rect widget_bounds = location_bar_->BoundsInScreen();
@@ -308,7 +308,7 @@ diff -ruN a/chrome/browser/ui/views/tabs/BUILD.gn b/chrome/browser/ui/views/tabs
 diff -ruN a/chrome/browser/ui/views/tabs/common/BUILD.gn b/chrome/browser/ui/views/tabs/common/BUILD.gn
 --- a/chrome/browser/ui/views/tabs/common/BUILD.gn
 +++ b/chrome/browser/ui/views/tabs/common/BUILD.gn
-@@ -87,6 +87,7 @@
+@@ -89,6 +89,7 @@
    ]
  
    deps = [

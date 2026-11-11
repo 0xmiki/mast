@@ -29,8 +29,8 @@ diff -ruN a/chrome/browser/autocomplete/chrome_autocomplete_scheme_classifier.cc
 diff -ruN a/chrome/browser/bookmarks/BUILD.gn b/chrome/browser/bookmarks/BUILD.gn
 --- a/chrome/browser/bookmarks/BUILD.gn
 +++ b/chrome/browser/bookmarks/BUILD.gn
-@@ -59,6 +59,7 @@
-   public_deps = [ "//chrome/browser:browser_public_dependencies" ]
+@@ -57,6 +57,7 @@
+   ]
  
    deps = [
 +    "//mast/browser/desktop",
@@ -67,7 +67,7 @@ diff -ruN a/chrome/browser/bookmarks/chrome_bookmark_client.cc b/chrome/browser/
 diff -ruN a/chrome/browser/BUILD.gn b/chrome/browser/BUILD.gn
 --- a/chrome/browser/BUILD.gn
 +++ b/chrome/browser/BUILD.gn
-@@ -881,6 +881,7 @@
+@@ -1046,6 +1046,7 @@
    }
  
    deps = [
@@ -87,7 +87,7 @@ diff -ruN a/chrome/browser/chrome_content_browser_client.cc b/chrome/browser/chr
  #include <algorithm>
  #include <iterator>
  #include <map>
-@@ -5132,6 +5134,10 @@
+@@ -5171,6 +5173,10 @@
  
  void ChromeContentBrowserClient::BrowserURLHandlerCreated(
      BrowserURLHandler* handler) {
@@ -101,7 +101,7 @@ diff -ruN a/chrome/browser/chrome_content_browser_client.cc b/chrome/browser/chr
 diff -ruN a/chrome/browser/chrome_content_browser_client_navigation_throttles.cc b/chrome/browser/chrome_content_browser_client_navigation_throttles.cc
 --- a/chrome/browser/chrome_content_browser_client_navigation_throttles.cc
 +++ b/chrome/browser/chrome_content_browser_client_navigation_throttles.cc
-@@ -38,6 +38,7 @@
+@@ -39,6 +39,7 @@
  #include "chrome/browser/ssl/https_upgrades_navigation_throttle.h"
  #include "chrome/browser/ssl/typed_navigation_upgrade_throttle.h"
  #include "chrome/browser/supervised_user/classify_url_navigation_throttle.h"
@@ -109,7 +109,7 @@ diff -ruN a/chrome/browser/chrome_content_browser_client_navigation_throttles.cc
  #include "chrome/browser/supervised_user/supervised_user_google_auth_navigation_throttle.h"
  #include "chrome/browser/ui/blocked_content/tab_under_navigation_throttle.h"
  #include "chrome/browser/ui/login/login_navigation_throttle.h"
-@@ -402,6 +403,7 @@
+@@ -403,6 +404,7 @@
  
    SupervisedUserGoogleAuthNavigationThrottle::MaybeCreateAndAdd(registry);
    supervised_user::ClassifyUrlNavigationThrottle::MaybeCreateAndAdd(registry);
@@ -120,7 +120,7 @@ diff -ruN a/chrome/browser/chrome_content_browser_client_navigation_throttles.cc
 diff -ruN a/chrome/browser/prefs/browser_prefs.cc b/chrome/browser/prefs/browser_prefs.cc
 --- a/chrome/browser/prefs/browser_prefs.cc
 +++ b/chrome/browser/prefs/browser_prefs.cc
-@@ -62,6 +62,8 @@
+@@ -61,6 +61,8 @@
  #include "chrome/browser/platform_experience/prefs.h"
  #include "chrome/browser/prefs/chrome_pref_service_factory.h"
  #include "chrome/browser/prefs/incognito_mode_prefs.h"
@@ -129,7 +129,7 @@ diff -ruN a/chrome/browser/prefs/browser_prefs.cc b/chrome/browser/prefs/browser
  #include "chrome/browser/prefs/session_startup_pref.h"
  #include "chrome/browser/preloading/prefetch/prefetch_service/prefetch_origin_decider.h"
  #include "chrome/browser/preloading/prefetch/search_prefetch/search_prefetch_service.h"
-@@ -1530,6 +1532,7 @@
+@@ -1665,6 +1667,7 @@
    breadcrumbs::RegisterPrefs(registry);
    browser_shutdown::RegisterPrefs(registry);
    BrowserProcessImpl::RegisterPrefs(registry);
@@ -137,7 +137,7 @@ diff -ruN a/chrome/browser/prefs/browser_prefs.cc b/chrome/browser/prefs/browser
    ChromeContentBrowserClient::RegisterLocalStatePrefs(registry);
  #if BUILDFLAG(CHROME_FOR_TESTING)
    chrome_for_testing::RegisterPrefs(registry);
-@@ -2376,6 +2379,7 @@
+@@ -2518,6 +2521,7 @@
  #endif  // BUILDFLAG(IS_ANDROID)
  
    registry->RegisterBooleanPref(prefs::kStaticStorageQuotaEnabled, false);
@@ -148,7 +148,7 @@ diff -ruN a/chrome/browser/prefs/browser_prefs.cc b/chrome/browser/prefs/browser
 diff -ruN a/chrome/browser/prefs/BUILD.gn b/chrome/browser/prefs/BUILD.gn
 --- a/chrome/browser/prefs/BUILD.gn
 +++ b/chrome/browser/prefs/BUILD.gn
-@@ -58,6 +58,7 @@
+@@ -57,6 +57,7 @@
    ]
  
    deps = [
@@ -159,7 +159,7 @@ diff -ruN a/chrome/browser/prefs/BUILD.gn b/chrome/browser/prefs/BUILD.gn
 diff -ruN a/chrome/browser/resources/settings/appearance_page/appearance_page.html.ts b/chrome/browser/resources/settings/appearance_page/appearance_page.html.ts
 --- a/chrome/browser/resources/settings/appearance_page/appearance_page.html.ts
 +++ b/chrome/browser/resources/settings/appearance_page/appearance_page.html.ts
-@@ -218,13 +218,13 @@
+@@ -217,12 +217,12 @@
      <settings-toggle-button class="hr" id="showSavedTabGroups"
          pref-key="bookmark_bar.show_tab_groups"
          label="$i18n{showTabGroupsInBookmarksBar}"
@@ -168,8 +168,7 @@ diff -ruN a/chrome/browser/resources/settings/appearance_page/appearance_page.ht
      </settings-toggle-button>
  
      <settings-toggle-button class="hr" id="autoPinNewTabGroups"
-         pref-key="auto_pin_new_tab_groups"
-         label="$i18n{autoPinNewTabGroups}"
+         pref-key="auto_pin_new_tab_groups" label="$i18n{autoPinNewTabGroups}"
 -        ?hidden="${this.showOrganizerPanelEnabled_}">
 +        hidden>
      </settings-toggle-button>
@@ -220,7 +219,7 @@ diff -ruN a/chrome/browser/themes/theme_service.cc b/chrome/browser/themes/theme
 diff -ruN a/chrome/browser/ui/browser_command_controller.cc b/chrome/browser/ui/browser_command_controller.cc
 --- a/chrome/browser/ui/browser_command_controller.cc
 +++ b/chrome/browser/ui/browser_command_controller.cc
-@@ -2316,10 +2316,8 @@
+@@ -2381,10 +2381,8 @@
        !profile()->GetPrefs()->IsManagedPreference(
            bookmarks::prefs::kShowBookmarkBar);
  
@@ -236,7 +235,7 @@ diff -ruN a/chrome/browser/ui/browser_command_controller.cc b/chrome/browser/ui/
 diff -ruN a/chrome/browser/ui/BUILD.gn b/chrome/browser/ui/BUILD.gn
 --- a/chrome/browser/ui/BUILD.gn
 +++ b/chrome/browser/ui/BUILD.gn
-@@ -204,6 +204,7 @@
+@@ -237,6 +237,7 @@
        "//ui/base/unowned_user_data",
      ]
      deps = [
@@ -399,7 +398,7 @@ diff -ruN a/chrome/browser/ui/views/tabs/tab/tab_icon.cc b/chrome/browser/ui/vie
 diff -ruN a/chrome/browser/ui/views/toolbar/toolbar_view.cc b/chrome/browser/ui/views/toolbar/toolbar_view.cc
 --- a/chrome/browser/ui/views/toolbar/toolbar_view.cc
 +++ b/chrome/browser/ui/views/toolbar/toolbar_view.cc
-@@ -612,7 +612,7 @@
+@@ -602,7 +602,7 @@
    if (!features::IsWebUIAvatarButtonEnabled()) {
      avatar_ = AddChildView(std::make_unique<AvatarToolbarButton>(browser_));
      bool show_avatar_toolbar_button =
@@ -411,8 +410,8 @@ diff -ruN a/chrome/browser/ui/views/toolbar/toolbar_view.cc b/chrome/browser/ui/
 diff -ruN a/chrome/browser/ui/webui/BUILD.gn b/chrome/browser/ui/webui/BUILD.gn
 --- a/chrome/browser/ui/webui/BUILD.gn
 +++ b/chrome/browser/ui/webui/BUILD.gn
-@@ -47,6 +47,7 @@
-   }
+@@ -41,6 +41,7 @@
+   ]
  
    deps = [
 +    "//mast/browser/webui",
@@ -430,7 +429,7 @@ diff -ruN a/chrome/browser/ui/webui/chrome_web_ui_configs.cc b/chrome/browser/ui
  #include "extensions/buildflags/buildflags.h"
  #include "printing/buildflags/buildflags.h"
  #include "ui/webui/buildflags.h"
-@@ -263,6 +264,7 @@
+@@ -269,6 +270,7 @@
  #endif  // BUILDFLAG(IS_CHROMEOS)
  
    auto& map = content::WebUIConfigMap::GetInstance();
@@ -438,26 +437,19 @@ diff -ruN a/chrome/browser/ui/webui/chrome_web_ui_configs.cc b/chrome/browser/ui
    map.AddWebUIConfig(std::make_unique<AccessibilityUIConfig>());
    map.AddWebUIConfig(std::make_unique<AutofillInternalsUIConfig>());
    map.AddWebUIConfig(std::make_unique<BluetoothInternalsUIConfig>());
-@@ -330,7 +332,8 @@
+@@ -336,8 +338,10 @@
    map.AddWebUIConfig(std::make_unique<WebRtcLogsUIConfig>());
    map.AddWebUIConfig(std::make_unique<RegionalCapabilitiesInternalsUIConfig>());
  #if BUILDFLAG(ENABLE_WEBUI_NTP)
 -  map.AddWebUIConfig(std::make_unique<NewTabPageUIConfig>());
+-  map.AddWebUIConfig(std::make_unique<NewTabPageThirdPartyUIConfig>());
 +  map.AddWebUIConfig(
 +      std::make_unique<mast::MastUIConfig>(chrome::kChromeUINewTabPageHost));
++  map.AddWebUIConfig(std::make_unique<mast::MastUIConfig>(
++      chrome::kChromeUINewTabPageThirdPartyHost));
    map.AddWebUIConfig(std::make_unique<CustomizeChromeUIConfig>());
  #endif  // BUILDFLAG(ENABLE_WEBUI_NTP)
  
-@@ -383,7 +386,8 @@
-           multistep_filter_internals::MultistepFilterInternalsUIConfig>());
- #if BUILDFLAG(ENABLE_WEBUI_NTP)
-   map.AddWebUIConfig(std::make_unique<NewTabFooterUIConfig>());
--  map.AddWebUIConfig(std::make_unique<NewTabPageThirdPartyUIConfig>());
-+  map.AddWebUIConfig(std::make_unique<mast::MastUIConfig>(
-+      chrome::kChromeUINewTabPageThirdPartyHost));
- #endif  // BUILDFLAG(ENABLE_WEBUI_NTP)
-   map.AddWebUIConfig(std::make_unique<NewTabUIConfig>());
-   map.AddWebUIConfig(std::make_unique<OmniboxEverywhereUIConfig>());
 diff -ruN a/chrome/browser/ui/webui/ntp/new_tab_ui.cc b/chrome/browser/ui/webui/ntp/new_tab_ui.cc
 --- a/chrome/browser/ui/webui/ntp/new_tab_ui.cc
 +++ b/chrome/browser/ui/webui/ntp/new_tab_ui.cc
@@ -475,8 +467,8 @@ diff -ruN a/chrome/browser/ui/webui/ntp/new_tab_ui.cc b/chrome/browser/ui/webui/
 diff -ruN a/chrome/browser/ui/webui/settings/settings_ui.cc b/chrome/browser/ui/webui/settings/settings_ui.cc
 --- a/chrome/browser/ui/webui/settings/settings_ui.cc
 +++ b/chrome/browser/ui/webui/settings/settings_ui.cc
-@@ -721,6 +721,12 @@
-                 kGlicOsWidgetKeyboardShortcutElementId,
+@@ -748,6 +748,12 @@
+                 kTabStylingSettingElementId,
              });
  
 +  // Mast: no AI or Google pages in Settings.
@@ -530,7 +522,7 @@ diff -ruN a/ui/views/bubble/bubble_dialog_delegate_view.h b/ui/views/bubble/bubb
  class MediaDialogView;
  class HatsNextWebDialog;
  class IncognitoClearBrowsingDataDialog;
-@@ -883,6 +887,8 @@
+@@ -900,6 +904,8 @@
    friend class ::FlyingIndicator;
    friend class ::GlobalErrorBubbleView;
    friend class ::HomePageUndoBubble;
