@@ -236,9 +236,20 @@ p.js("window.scrollTo(0, 0)")
 # YouTube, music only (design C24), before "Block distractions" blocks all of YouTube: the
 # choice on YouTube's row, then YouTube with it on. A search keeps mixes and songs; a Short
 # and a video that isn't music get the blocked page; a song plays.
-p.js("""(() => { const q = (s) => document.querySelector(s);
-  q('[data-toggle=video]').click(); q('[data-svc="video/YouTube"]').click();
-  q('[data-yt=music]').click(); q('[data-dur="1h"]').click(); })()""")
+# The blocklist is a picked set (design C28a): un-pick every category, then YouTube on
+# its own as Music only, for an hour. (Re-picked after the YouTube scenes.)
+def pick_all(on):
+    for _ in range(30):
+        sel = '[data-cat][aria-pressed="true"],[data-cat][aria-pressed="mixed"]' if not on else '[data-cat][aria-pressed="false"],[data-cat][aria-pressed="mixed"]'
+        r = p.js(f"(() => {{ const b = document.querySelector('.cats {sel}'.replace('.cats ', '') ); if (!b) return false; b.click(); return true; }})()")
+        if not r.get("result", {}).get("result", {}).get("value"):
+            break
+        time.sleep(0.3)
+pick_all(False)
+p.js("document.querySelector('[data-yt=music]').click()")
+time.sleep(0.3)
+p.js("document.querySelector('[data-dur=\"1h\"]').click()")
+time.sleep(0.3)
 shot("40-yt-choice")
 p.js("document.querySelector('[data-act=block]').click()")
 time.sleep(1)
@@ -262,6 +273,11 @@ print("44 ended at", p.js("location.href"), flush=True)
 p.go("https://www.youtube.com/watch?v=K5KAc5CoCuk", 10)
 shot("45-yt-song-direct", settle=2)
 print("45 ended at", p.js("location.href"), flush=True)
+# Back to every category picked, YouTube blocked whole, for the scenes below.
+p.go("chrome://mast")
+pick_all(True)
+p.js("document.querySelector('[data-yt=site]')?.click()")
+time.sleep(0.5)
 # Block distractions for today, and one site forever.
 p.go("chrome://newtab")
 p.js("chrome.send('blockDistractions', ['today'])")
