@@ -13,6 +13,7 @@
 #   ./mast package          turn the download into tester installers (.deb, .rpm, tarball) -> dist/release/
 #   ./mast shots            screenshot fixed UI scenes on the builder (Xvfb) -> shots/<time>/
 #   ./mast check-patches    check every make-patches.py anchor locally (no builder, no cost)
+#   ./mast check-rebase <v> what moving to Chromium <v> breaks, before building (local, no cost)
 #   ./mast status | ssh | logs [job] | destroy
 set -euo pipefail
 
@@ -349,14 +350,37 @@ cmd_run() {
 
 # Validate make-patches.py anchors against base files rebuilt locally (tools/base-file.mjs),
 # so a wrong anchor costs nothing instead of a builder session.
+make_patches() {
+	MAST_LOCAL_BASE="$ROOT" nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#python3 -c \
+		python3 "$ROOT/remote/make-patches.py"
+}
+
 cmd_check-patches() {
 	need node
 	local work
 	work=$(mktemp -d)
-	MAST_LOCAL_BASE="$ROOT" MAST_PATCH_WORK="$work" \
-		nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#python3 -c \
-		python3 "$ROOT/remote/make-patches.py"
+	MAST_PATCH_WORK="$work" make_patches
+	node "$ROOT/tools/rebase-check.mjs" inventory "$work"
 	log "anchors OK; patches written to $work"
+}
+
+# Before moving to another Chromium release: every patch edit, Chromium header, overridden
+# method and GN dep Mast relies on (docs/UPSTREAM.md), checked against that release.
+# Writes docs/rebase/<version>.md. Changes nothing else; the pinned version stays.
+cmd_check-rebase() {
+	need node
+	local to=${1:?usage: ./mast check-rebase <chromium version> [ungoogled tag, default <version>-1]}
+	local tag=${2:-$1-1} work
+	work=$(mktemp -d)
+	MAST_CHROMIUM_VERSION=$to MAST_UNGOOGLED_TAG=$tag node "$ROOT/tools/base-file.mjs" --series >/dev/null ||
+		die "no ungoogled-chromium tag $tag (see github.com/ungoogled-software/ungoogled-chromium/tags)"
+	log "patch edits on the pinned release ($(cat "$ROOT/chromium_version.txt"))"
+	MAST_PATCH_WORK="$work/from" make_patches >/dev/null || die "they fail already; run ./mast check-patches"
+	log "patch edits on $to"
+	MAST_PATCH_WORK="$work/to" MAST_KEEP_GOING=1 MAST_CHROMIUM_VERSION=$to MAST_UNGOOGLED_TAG=$tag \
+		make_patches | grep -E '^FAIL|edits fail' || true
+	log "headers, overrides, GN deps, ungoogled's series"
+	node "$ROOT/tools/rebase-check.mjs" report "$work" "$to" "$tag"
 }
 
 cmd=${1:-help}
@@ -366,8 +390,9 @@ case $cmd in
 	run) cmd_run "$@" ;;
 	package) bash "$ROOT/packaging/package.sh" "$@" ;;
 	check-patches) cmd_check-patches "$@" ;;
+	check-rebase) cmd_check-rebase "$@" ;;
 	ssh) HOST=$(server_ip); ssh "${SSH_OPTS[@]}" -t "root@$HOST" "$@" ;;
 	logs) HOST=$(server_ip); follow "${1:-build}" ;;
 	job) HOST=$(server_ip); job "${1:?usage: ./mast job bootstrap|build}" ;;
-	*) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//' ;;
+	*) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//' ;;
 esac

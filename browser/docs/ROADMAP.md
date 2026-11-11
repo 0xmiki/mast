@@ -49,13 +49,25 @@ point releases (no 156.0.8078.88). Verified on the GitHub tags list.
 - **After launch:** follow ungoogled's tags, which means the current Stable with their patches
   already rebased. Cost isn't the constraint then; rebase *time* is. That's why the hook rules
   in §0 matter more than the build bill.
+- **What we depend on** is listed in [UPSTREAM.md](UPSTREAM.md): every edit to an upstream
+  file and why, the Chromium headers `src/mast` includes, the methods it overrides, its GN deps,
+  and what we change in ungoogled's series. `./mast check-patches` regenerates it, so it can't
+  drift from the code.
 - **Each rebase:**
-  1. Free check **before renting the server**: run ungoogled's `devutils/validate_patches.py -r`
-     with our series appended against the new tag. It fetches only the files the patches touch.
-  2. On the server, compile just the hooked files first (`autoninja -C out/Mast ../../path/file.cc^`).
-  3. Only then the full build.
-- Keep `docs/REBASE-LOG.md`: per release, which patch broke, why, and how long it took. After
-  three releases this tells us which hooks to redesign.
+  1. Free, local, **before renting the server**: `./mast check-rebase <version>` (ungoogled tag
+     defaults to `<version>-1`). It runs every patch edit against that release and compares
+     everything in UPSTREAM.md, then writes `docs/rebase/<version>.md`: what must be fixed (edits
+     that fail, headers, names or GN targets that are gone, ungoogled patches we list that are
+     gone), what to review (upstream changes right next to our edits, with the diff; changed
+     declarations of methods we override; ungoogled series changes) and what's just changed.
+     Fix anchors so they match both releases where possible, so the pinned build keeps working.
+  2. Bump `chromium_version.txt` and `ungoogled_version.txt`.
+  3. On the server, compile just the hooked files first (`autoninja -C out/Mast ../../path/file.cc^`).
+  4. Then the full build and `./mast shots`; the screenshots cover what the check can't
+     (behaviour, menu order).
+- Keep [REBASE-LOG.md](REBASE-LOG.md): per release, what the check found, what the build found
+  that the check didn't, and how long it took. After three releases this tells us which hooks to
+  redesign, and what the check should learn to catch.
 - Overlap to watch: ungoogled's core patches also edit `browser_prefs.cc` (`disable-ai`,
   `remove-unused-preferences-fields`) and `settings_ui.cc` (2 hunks in
   `remove-unused-preferences-fields`). Our hooks there must sit away from their hunks. Our other

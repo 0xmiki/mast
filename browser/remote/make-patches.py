@@ -5,13 +5,17 @@ Run on the builder: python3 ~/mast/remote/make-patches.py  -> /root/pw/*.patch
 Each edit asserts its anchor is found exactly once, so a Chromium upgrade that
 moves code fails loudly here instead of silently producing a broken patch.
 """
-import os, re, shutil, subprocess, tempfile
+import json, os, re, shutil, subprocess, sys, tempfile
 
 SRC = "/root/chromium/src"
 WORK = os.environ.get("MAST_PATCH_WORK", "/root/pw")
 # Local mode (./mast check-patches): read base files rebuilt from Chromium's source site plus
 # ungoogled's patches by tools/base-file.mjs, so anchors are checked without the builder.
 LOCAL = os.environ.get("MAST_LOCAL_BASE")
+# ./mast check-rebase: report every edit that fails on another release instead of stopping at
+# the first (MAST_KEEP_GOING=1). Every run writes edits.json next to the patches: each edit's
+# patch, upstream file and line here, which tools/rebase-check.mjs reads.
+KEEP_GOING = os.environ.get("MAST_KEEP_GOING") == "1"
 shutil.rmtree(WORK, ignore_errors=True)
 
 
@@ -30,8 +34,8 @@ def once(text, old, new):
     return text.replace(old, new)
 
 
-UG_TAG = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
-                           "ungoogled_version.txt")).read().strip()
+UG_TAG = os.environ.get("MAST_UNGOOGLED_TAG") or open(os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "ungoogled_version.txt")).read().strip()
 
 
 def ungoogled_patch(name):
@@ -74,18 +78,29 @@ def add_dep(text, target_header, dep):
 
 
 PATCHES = {}
+EDITS = []  # {patch, path, line, error}
 
 
 def edit(patch, path, fn):
+    record = {"patch": patch, "path": path, "line": sys._getframe(1).f_lineno}
+    EDITS.append(record)
     a, b = (os.path.join(WORK, patch + ".d", side, path) for side in ("a", "b"))
     for p in (a, b):
         os.makedirs(os.path.dirname(p), exist_ok=True)
-    base = pristine(path)
-    # A file edited twice in one patch: the second edit builds on the first
-    # (starting from the pristine file again silently dropped the first).
-    text = open(b).read() if path in PATCHES.get(patch, []) else base
-    new = fn(text)
-    assert new != text, f"no change in {path}"
+    try:
+        base = pristine(path)
+        # A file edited twice in one patch: the second edit builds on the first
+        # (starting from the pristine file again silently dropped the first).
+        text = open(b).read() if path in PATCHES.get(patch, []) else base
+        new = fn(text)
+        assert new != text, f"no change in {path}"
+    except (AssertionError, subprocess.CalledProcessError, ValueError, FileNotFoundError) as e:
+        if not KEEP_GOING:
+            raise
+        missing = isinstance(e, subprocess.CalledProcessError) and "404" in (e.stderr or "")
+        record["error"] = "file not in this release" if missing else str(e).splitlines()[0][:240]
+        print(f"FAIL {patch} {path} (make-patches.py:{record['line']}): {record['error']}")
+        return
     open(a, "w").write(base)
     open(b, "w").write(new)
     if path not in PATCHES.setdefault(patch, []):
@@ -95,6 +110,8 @@ def edit(patch, path, fn):
 # ---------------------------------------------------------------- hooks
 H = "mast-hooks.patch"
 
+# Every navigation passes Mast's throttle: blocked sites, the always-blocked feeds, YouTube's
+# Music only (mast_navigation_throttle.h).
 edit(H, "chrome/browser/chrome_content_browser_client_navigation_throttles.cc", lambda t: once(once(t,
     '#include "chrome/browser/supervised_user/classify_url_navigation_throttle.h"\n',
     '#include "chrome/browser/supervised_user/classify_url_navigation_throttle.h"\n#include "mast/browser/mast_navigation_throttle.h"\n'),
@@ -102,6 +119,8 @@ edit(H, "chrome/browser/chrome_content_browser_client_navigation_throttles.cc", 
     '  supervised_user::ClassifyUrlNavigationThrottle::MaybeCreateAndAdd(registry);\n  mast::MastNavigationThrottle::MaybeCreateAndAdd(registry);\n'))
 edit(H, "chrome/browser/BUILD.gn", lambda t: add_dep(t, 'source_set("core") {', "//mast/browser"))
 
+# Mast's prefs: blocks in Local State (shared by every profile, incognito too), the rest per
+# profile, registered last so Mast can change upstream defaults.
 edit(H, "chrome/browser/prefs/browser_prefs.cc", lambda t: once(once(once(t,
     '#include "chrome/browser/prefs/incognito_mode_prefs.h"\n',
     '#include "chrome/browser/prefs/incognito_mode_prefs.h"\n#include "mast/browser/mast_blocks.h"\n#include "mast/browser/mast_prefs.h"\n'),
@@ -347,9 +366,10 @@ edit(H, "chrome/browser/resources/settings/appearance_page/appearance_page.html.
     '        ?hidden="${this.showOrganizerPanelEnabled_}">\n',
     '        label="$i18n{showTabGroupsInBookmarksBar}"\n'
     '        hidden>\n'),
-    '        label="$i18n{autoPinNewTabGroups}"\n'
+    # No leading indent: 157 moved the label onto the pref-key line.
+    'label="$i18n{autoPinNewTabGroups}"\n'
     '        ?hidden="${this.showOrganizerPanelEnabled_}">\n',
-    '        label="$i18n{autoPinNewTabGroups}"\n'
+    'label="$i18n{autoPinNewTabGroups}"\n'
     '        hidden>\n'))
 
 # ---------------------------------------------------------------- theme
@@ -840,6 +860,7 @@ edit(U, "chrome/browser/preloading/preloading_prefs.cc", lambda t: once(t,
 W = "mast-webstore.patch"
 DWU = "core/ungoogled-chromium/disable-webstore-urls.patch"
 
+# Undo disable-webstore-urls.patch in these files.
 for path in ("chrome/browser/extensions/chrome_content_browser_client_extensions_part.cc",
              "chrome/browser/extensions/chrome_content_verifier_delegate.cc",
              "chrome/browser/extensions/extension_migrator.cc",
@@ -847,6 +868,7 @@ for path in ("chrome/browser/extensions/chrome_content_browser_client_extensions
              "extensions/browser/updater/extension_downloader.cc"):
     edit(W, path, lambda t, path=path: unpatch(t, path, DWU))
 
+# The store's real URLs, and no utm_source tag on store links.
 edit(W, "extensions/common/extension_urls.cc", lambda t: once(once(once(once(once(
     unpatch(t, "extensions/common/extension_urls.cc", DWU),
     'const char kChromeWebstoreBaseURL[] = "https://chrome.9oo91e.qjz9zk/webstore";\n',
@@ -873,6 +895,13 @@ edit(W, "chrome/app/extensions_strings.grdp", lambda t: once(t,
 edit(W, "chrome/browser/resources/settings/appearance_page/appearance_page.ts", lambda t: once(t,
     "this.themeUrl_ = 'https://chrome.9oo91e.qjz9zk/webstore/detail/' + themeId;",
     "this.themeUrl_ = 'https://chromewebstore.google.com/detail/' + themeId;"))
+
+os.makedirs(WORK, exist_ok=True)
+json.dump(EDITS, open(os.path.join(WORK, "edits.json"), "w"), indent=1)
+failed = [e for e in EDITS if "error" in e]
+if failed:
+    print(f"{len(failed)} of {len(EDITS)} edits fail")
+    sys.exit(1)
 
 for patch in PATCHES:
     out = subprocess.run(["diff", "-ruN", "a", "b"], cwd=os.path.join(WORK, patch + ".d"),

@@ -7,6 +7,12 @@
 //
 //   node tools/base-file.mjs chrome/browser/prefs/browser_prefs.cc ...
 //   -> prints the local path of each file (cached under ~/.cache/mast/base/<version>/)
+//   node tools/base-file.mjs --series   -> the ungoogled patches applied, in order
+//
+// MAST_CHROMIUM_VERSION and MAST_UNGOOGLED_TAG pick another release than the pinned one
+// (./mast check-rebase uses them to look at the next release before moving to it).
+// MAST_ALLOW_MISSING=1 prints "-" for a file Chromium's source doesn't have (generated or
+// from another repo) instead of failing.
 //
 // Used by `./mast check-patches` to validate make-patches.py anchors before renting the server.
 import { execFileSync } from 'node:child_process';
@@ -16,8 +22,10 @@ import path from 'node:path';
 
 const here = path.dirname(new URL(import.meta.url).pathname);
 const root = path.resolve(here, '..');
-const version = fs.readFileSync(path.join(root, 'chromium_version.txt'), 'utf8').trim();
-const ugTag = fs.readFileSync(path.join(root, 'ungoogled_version.txt'), 'utf8').trim();
+const version = process.env.MAST_CHROMIUM_VERSION
+  || fs.readFileSync(path.join(root, 'chromium_version.txt'), 'utf8').trim();
+const ugTag = process.env.MAST_UNGOOGLED_TAG
+  || fs.readFileSync(path.join(root, 'ungoogled_version.txt'), 'utf8').trim();
 const cache = path.join(os.homedir(), '.cache/mast');
 const baseDir = path.join(cache, 'base', `${version}+${ugTag}-sub`);
 const ugDir = path.join(cache, 'ungoogled', ugTag);
@@ -29,10 +37,11 @@ async function get(url) {
   for (let i = 0; ; i++) {
     try {
       const r = await fetch(url, { signal: AbortSignal.timeout(30000) });
+      if (r.status === 404) throw Object.assign(new Error(`404 ${url}`), { missing: true });
       if (!r.ok) throw new Error(`${r.status} ${url}`);
       return r;
     } catch (e) {
-      if (i >= 3) throw e;
+      if (e.missing || i >= 3) throw e;
       await new Promise((res) => setTimeout(res, 1000 * (i + 1)));
     }
   }
@@ -120,4 +129,16 @@ async function baseFile(file) {
   return out;
 }
 
-for (const f of process.argv.slice(2)) console.log(await baseFile(f));
+const args = process.argv.slice(2);
+if (args[0] === '--series') {
+  for (const n of await ungoogledSeries()) console.log(n);
+} else {
+  for (const f of args) {
+    try {
+      console.log(await baseFile(f));
+    } catch (e) {
+      if (!(e.missing && process.env.MAST_ALLOW_MISSING)) throw e;
+      console.log('-');
+    }
+  }
+}
