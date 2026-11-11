@@ -230,9 +230,6 @@ shot("09-distractions-change")
 p.go("chrome://mast")
 p.js("document.querySelector('[data-toggle=shopping]').click()")
 shot("10-blocklist")
-p.js("document.querySelector('.always').scrollIntoView({block: 'center'})")
-shot("32-always-blocked-note")
-p.js("window.scrollTo(0, 0)")
 # YouTube, music only (design C24), before "Block distractions" blocks all of YouTube: the
 # choice on YouTube's row, then YouTube with it on. A search keeps mixes and songs; a Short
 # and a video that isn't music get the blocked page; a song plays.

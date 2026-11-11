@@ -99,9 +99,8 @@
 .bl .foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 16px; font-size: 12px; }
 .bl .foot .end { color: var(--text-2); }
 .bl .foot .end.warn { color: var(--signal); }
-/* Adult and gambling sites aren't in the list: they're always blocked (mast_feeds.h). */
-.bl .always { display: flex; align-items: center; gap: 8px; color: var(--text-3); }
-.bl .always i { width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--signal); }
+/* Adult and gambling sites aren't in the list, and it doesn't mention them: they're always
+   blocked (mast_feeds.h); opening one shows a plain "Blocked" page. */
 @media (max-width: 640px) {
   .bl .tiles { grid-template-columns: repeat(2, 1fr); }
   .bl .sites { grid-template-columns: 1fr; }
@@ -482,8 +481,7 @@ const MastBlocklist = (() => {
         <div class="seg">${DUR.map(([id, label]) => `<button data-dur="${id}" class="${id === dur ? 'on' : ''}">${label}</button>`).join('')}</div>
         <button class="primary" data-act="block" ${sum.open ? '' : 'disabled'}>${esc(sum.label || 'Block')}</button>
       </div>
-      <div class="foot"><span class="end ${sum.open && u === null ? 'warn' : ''}">${end}</span>
-        <span class="always"><i></i>Adult and gambling sites are always blocked.</span></div>`;
+      <div class="foot"><span class="end ${sum.open && u === null ? 'warn' : ''}">${end}</span></div>`;
   }
 
   function render() {
