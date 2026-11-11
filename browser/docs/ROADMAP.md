@@ -296,8 +296,9 @@ first (4 are colour mixer only; the rest are 1–3 line hooks).
 
 ### J. YouTube, music only (built, design C24)
 
-- **The choice:** YouTube's row in the blocklist offers "Whole site" or "Music only". Music
-  only is a block entry (`music:youtube.com`) with the usual rules: a duration, lengthened
+- **The choice:** YouTube has its own row at the top of the blocklist, always on show (design
+  C28a): Open, Music only or Block. It is part of the distraction set, so the new tab's Block
+  button honours it. Music only is a block entry (`music:youtube.com`) with the usual rules: a duration, lengthened
   but never shortened, a 10-second undo. A whole-site block on youtube.com wins over it.
 - **Where it runs:** `mast_youtube.cc` (a tab helper the navigation throttle attaches)
   runs `resources/youtube_music.js` in Mast's own isolated world on every YouTube page
@@ -321,6 +322,31 @@ first (4 are colour mixer only; the rest are 1–3 line hooks).
 - **Known limits:** live streams have no ♪ badge, so they're hidden. Some music videos
   aren't categorised as Music by their uploaders. YouTube's markup changes, so the
   selectors will need upkeep.
+
+### K. Blocklist tiles and several blocks at once (written 2026-11-11, design C28a/C28d/C29)
+
+- **The panel** (`resources/blocklist.html`): YouTube's three choices, then the categories as
+  tiles that name a couple of their sites. A tile picks the whole category; its › opens the
+  sites. The search box finds a site or adds one of your own. Status shows only when
+  something is blocked (ember lock, end time); "Open" is gone from every row.
+- **The distraction set** is what's picked there, saved as it changes (`MastBlocks::Distractions`:
+  `mast.distractions` category ids, `mast.distractions_skipped` sites left out,
+  `mast.distractions_youtube_music`). Every category is in it by default. Your own sites are in
+  unless left out, so a new one starts out picked.
+- **Block** (the new tab's and the panel's) blocks what the set still has open, and never
+  touches a block already running. It says how much: "Block all", "Block 10 categories",
+  "Block 10 more", or the category's name when there is one.
+- **The new tab's dock**: one row per block in force, soonest to end first, each with its own
+  countdown. A single block keeps the centred line. More than three fold into "+ N more". Hover
+  or Tab onto a row to extend it (longer only). "Change what's blocked" is gone, and "Edit
+  blocklist" is the round settings button beside Block.
+- Check, once built:
+  - a fresh profile says "Block all"; untick two tiles and it says "Block 10 categories";
+  - YouTube on Music only, then Block: YouTube's row says music only and music still plays;
+  - block one category, then Block again: "Block N more" adds the rest and leaves the first
+    block's end time alone;
+  - extend a row from the new tab; Undo puts it back;
+  - chrome://mast shows the same panel full page.
 
 ### Before release: rebase on Chromium 157
 

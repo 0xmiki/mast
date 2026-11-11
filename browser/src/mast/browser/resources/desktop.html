@@ -48,21 +48,45 @@ body { background: var(--surface); }
 .seg button:hover { color: var(--text); }
 .seg button.on { color: var(--text); font-weight: 700; }
 .dist .primary { height: 40px; padding: 0 26px; font-size: 14px; }
-.links { display: flex; justify-content: center; gap: 18px; }
-.blocked-status { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.blocked-status .line { display: flex; align-items: center; gap: 10px; color: var(--text); font-size: 16px; font-weight: 600; }
-.blocked-status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--signal); flex: none; }
-.blocked-status .left { color: var(--text-2); font-size: 14px; font-variant-numeric: tabular-nums; }
-.link { padding: 0; border: 0; background: none; color: var(--text-2); font-size: 12px; font-weight: 500; text-decoration: none; }
-.link:hover { color: var(--text); }
-.cats { display: flex; flex-direction: column; align-self: stretch; margin: -4px -8px 0; text-align: left; }
-.cats label { display: flex; align-items: center; gap: 10px; height: 28px; padding: 0 8px; border-radius: 5px; cursor: pointer; }
-.cats label:hover { background: var(--field); }
-.cats input { appearance: none; display: grid; place-items: center; width: 14px; height: 14px; margin: 0; border: 1.5px solid var(--text-3); border-radius: 3px; }
-.cats input:checked { border-color: var(--signal); background: var(--signal); }
-.cats input:checked::after { content: ''; width: 7px; height: 4px; margin-top: -2px; border: solid var(--signal-text); border-width: 0 0 1.5px 1.5px; transform: rotate(-45deg); }
-.cats .nm { flex: 1; }
-.cats .ct { color: var(--text-3); font-size: 12px; }
+/* Block, centred, and the blocklist's settings button beside it (design C29a);
+   a 40 px spacer on the other side keeps Block in the middle. */
+.acts { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.acts .bal { width: 40px; flex: none; }
+.gear { position: relative; display: grid; place-items: center; width: 40px; height: 40px; flex: none; padding: 0; border: 0; border-radius: 50%;
+  background: var(--field); box-shadow: inset 0 0 0 1px var(--line); color: var(--text); }
+.gear:hover { background: var(--pressed); }
+.gear::after { content: attr(data-tip); position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%); padding: 6px 10px;
+  border-radius: 6px; background: rgb(20 20 20/.95); box-shadow: inset 0 0 0 1px rgb(255 255 255/.1); color: #f2f2f2; font-size: 12px; font-weight: 500;
+  white-space: nowrap; text-shadow: none; pointer-events: none; opacity: 0; transition: opacity .12s; }
+.gear:hover::after, .gear:focus-visible::after { opacity: 1; transition-delay: .3s; }
+/* The blocks in force, a row each, soonest to end first (design C29b/C29c).
+   One block is a centred line with its countdown under it, as before. */
+.runs { display: flex; flex-direction: column; gap: 2px; width: 100%; }
+.run { display: flex; flex-direction: column; padding: 6px 12px; border-radius: 8px; outline: none; }
+.run .line { display: flex; align-items: center; gap: 10px; min-height: 20px; }
+.run .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--signal); flex: none; }
+.run .nm { color: var(--text); font-size: 14px; font-weight: 600; white-space: nowrap; }
+.run .ct, .run .until { color: var(--text-2); font-size: 13px; white-space: nowrap; }
+.run .mo { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 9px; background: color-mix(in srgb, var(--signal) 15%, transparent);
+  color: var(--signal); font-size: 11px; font-weight: 600; white-space: nowrap; }
+.run .left { margin-left: auto; color: var(--text); font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.run .ext { display: none; align-items: center; gap: 18px; padding: 6px 0 2px 17px; }
+.run .ext span { color: var(--text-2); font-size: 12px; font-weight: 500; }
+.run .ext button { height: 24px; padding: 0; border: 0; background: none; color: var(--text); font-size: 14px; font-weight: 500; }
+.run .ext button:hover { text-decoration: underline; text-underline-offset: 4px; }
+/* Hover or Tab onto a row: it offers longer blocks only. */
+.run.can:hover, .run.can:focus-within { background: rgb(255 255 255/.08); }
+.run.can:hover .ext, .run.can:focus-within .ext { display: flex; }
+.run.one { align-items: center; gap: 8px; text-align: center; }
+.run.one .line { justify-content: center; }
+.run.one .nm { font-size: 16px; }
+.run.one .left { margin: 0; color: var(--text-2); font-weight: 400; }
+.run.one .ext { padding-left: 0; }
+.runs .more { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border: 0; border-radius: 8px; background: none;
+  color: var(--text-2); font-size: 13px; font-weight: 500; text-align: left; }
+.runs .more span { overflow: hidden; color: var(--text-3); font-weight: 400; white-space: nowrap; text-overflow: ellipsis; }
+.runs .more:hover { color: var(--text); }
+.dist .sep { width: 120px; height: 1px; background: var(--line); }
 dialog { width: 340px; padding: 18px; border: 0; border-radius: 10px; background: var(--field); color: var(--text); box-shadow: var(--shadow); }
 dialog::backdrop { background: rgb(0 0 0/.35); }
 dialog h3 { margin: 0 0 12px; font-size: 14px; font-weight: 600; }
@@ -230,7 +254,6 @@ const D = 864e5;
 const DUR = [['1h', '1 h'], ['4h', '4 h'], ['today', 'Today'], ['week', 'Week'], ['month', 'Month'], ['forever', '∞']];
 let state = null;
 let dur = null;
-let editing = false;  // the distraction category list is open
 let toastTimer = 0;
 let dragId = null;
 
@@ -255,21 +278,6 @@ const plus = '<svg width="26" height="26" viewBox="0 0 20 20" fill="none" stroke
 const cross = '<svg width="8" height="8" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.6"><path d="M2 2l6 6M8 2l-6 6"/></svg>';
 const icon = (url) => 'chrome://favicon2/?size=32&scaleFactor=2x&showFallbackMonogram=&pageUrl=' + encodeURIComponent(url);
 
-// The distraction set as services, so the widget speaks the page's language.
-function distraction() {
-  const on = new Set(state.distractions);
-  const services = [];
-  for (const c of state.categories) if (on.has(c.id)) services.push(...c.services);
-  for (const d of state.custom) services.push({name: d, domains: [d]});
-  const blocks = services.map((s) => {
-    const bs = s.domains.map((d) => state.blocks[d]).filter(Boolean);
-    return bs.length === s.domains.length ? bs.reduce((a, b) => (a.until === null ? b : b.until === null ? a : b.until < a.until ? b : a)) : null;
-  });
-  const blocked = blocks.filter(Boolean);
-  const first = blocked.length ? blocked.reduce((a, b) => (a.until === null ? b : b.until === null ? a : b.until < a.until ? b : a)) : null;
-  return {cats: on.size, services: services.length, blocked: blocked.length, first};
-}
-
 function renderApps() {
   const apps = document.getElementById('apps');
   const sites = state.desktop.map((s, i) => `
@@ -291,33 +299,50 @@ function renderWidgets() {
   w.innerHTML = distractionWidget();
 }
 
+// The blocks in force as rows (MastSet.running), kept for the extend buttons.
+let runRows = [];
+
+// The dock (design C29): the blocks in force, then how long, Block and the
+// blocklist's settings button. Block blocks the distraction set (picked in the
+// blocklist; every category to begin with) and says how much: "Block all",
+// "Block 10 categories", or "Block 10 more" once some are running. With
+// nothing left open, only the rows and the settings button stay.
 function distractionWidget() {
-  const d = distraction();
-  const all = d.services > 0 && d.blocked === d.services;
-  // Blocked: the status and a countdown are all there is (no controls).
-  if (all) {
-    const forever = d.first.until === null;
-    return `<div class="widget dist" aria-label="Distractions"><div class="blocked-status" role="status">
-      <div class="line"><i class="dot"></i>Distractions blocked ${untilText(d.first.until)}</div>
-      ${forever ? '' : `<div class="left" id="left" data-until="${d.first.until}">${leftText(d.first.until)}</div>`}
-    </div></div>`;
+  const sum = MastSet.summary(state);
+  runRows = MastSet.running(state);
+  const gear = `<button class="gear" id="editList" aria-label="Edit blocklist" data-tip="Edit blocklist">${mastIcon('settings', 18)}</button>`;
+  const rows = runsView();
+  if (!sum.open && runRows.length) {
+    return `<div class="widget dist" aria-label="Distractions">${rows}<div class="acts">${gear}</div></div>`;
   }
-  const cats = !editing ? '' : `<div class="cats">${state.categories.map((c) => `
-      <label><input type="checkbox" data-cat="${esc(c.id)}" ${state.distractions.includes(c.id) ? 'checked' : ''}>
-        <span class="nm">${esc(c.name)}</span><span class="ct">${c.services.length}</span></label>`).join('')}</div>`;
-  // No title or counts: the button says what it does and, once blocked, for
-  // how long; "Change what's blocked" opens the categories.
   return `<div class="widget dist" aria-label="Distractions">
-    ${cats}
+    ${rows}${rows ? '<i class="sep"></i>' : ''}
     <div class="seg">${DUR.map(([id, label]) => `<button data-dur="${id}" class="${id === dur ? 'on' : ''}" aria-label="${id}">${label}</button>`).join('')}</div>
-    ${blockButton(d)}
-    <div class="links"><button class="link" id="edit">${editing ? 'Done' : 'Change what’s blocked'}</button><button class="link" id="editList">Edit blocklist</button></div>
+    <div class="acts"><i class="bal"></i><button class="primary" id="blockAll" ${sum.open ? '' : 'disabled'}>${esc(sum.label || 'Block')}</button>${gear}</div>
   </div>`;
 }
 
-function blockButton(d) {
-  return d.services ? '<button class="primary" id="blockAll">Block</button>'
-    : '<button class="primary" disabled>Block</button>';
+// Three rows at most; the rest fold into one line that opens the blocklist.
+function runsView() {
+  if (!runRows.length) return '';
+  const row = (r, i, one) => {
+    // Longer blocks only (a block is never shortened); none after forever.
+    const longer = r.until === null ? [] : DUR.filter(([id]) => outlasts(untilFor(id), r.until + 6e4));
+    const name = `<span class="nm">${esc(r.name)}</span>${r.count ? `<span class="ct">· ${esc(r.count)}</span>` : ''}` +
+      (r.music ? `<span class="mo">${mastIcon('music', 11)}music only</span>` : '');
+    const left = r.until === null ? '' : `<span class="left" data-until="${r.until}">${leftText(r.until)}</span>`;
+    const ext = !longer.length ? '' : `<div class="ext"><span>Extend</span>${longer.map(([id, label]) =>
+      `<button data-extend="${id}" data-row="${i}" aria-label="Extend ${esc(r.name)}: ${id}">${label}</button>`).join('')}</div>`;
+    const tab = longer.length ? 'tabindex="0"' : '';
+    if (one) {
+      return `<div class="run one ${longer.length ? 'can' : ''}" ${tab}><div class="line"><i class="dot"></i><span class="nm">${esc(r.name)}${r.count ? ` (${esc(r.count)})` : ''}${r.music ? ', music only,' : ''} blocked ${untilText(r.until)}</span></div>${left}${ext}</div>`;
+    }
+    return `<div class="run ${longer.length ? 'can' : ''}" ${tab}><div class="line"><i class="dot"></i>${name}<span class="until">${untilText(r.until)}</span>${left}</div>${ext}</div>`;
+  };
+  if (runRows.length === 1) return `<div class="runs" role="status">${row(runRows[0], 0, true)}</div>`;
+  const shown = runRows.slice(0, 3), rest = runRows.slice(3);
+  return `<div class="runs" role="status">${shown.map((r, i) => row(r, i)).join('')}${rest.length
+    ? `<button class="more" id="moreBlocks">+ ${rest.length} more<span>${esc(rest.map((r) => r.name).join(', '))}</span></button>` : ''}</div>`;
 }
 
 // "5:47:12 left" under a day, "6 days, 23 h left" beyond.
@@ -484,7 +509,9 @@ document.getElementById('czFile').addEventListener('change', (e) => {
   if (file) uploadWallpaper(file);
 });
 
-let deskAsked = false;  // a block/undo from the desktop's own buttons is waiting
+// A block/undo from the dock is waiting: what Block was pressed for ("News",
+// "10 categories", "everything"), 'extend' for a row, true for undo.
+let deskAsked = false;
 window.mastState = (s) => {
   const first = !state;
   state = s;
@@ -502,10 +529,12 @@ window.mastState = (s) => {
     return;
   }
   if (!handled && deskAsked && (r.undone || 'changed' in r)) {
+    const asked = deskAsked;
     deskAsked = false;
     if (r.undone) toast('Undone.');
     else if (!r.changed) toast('Already blocked at least that long.');
-    else toast(`Blocked distractions ${untilText(r.until)}.`, true);
+    else if (asked === 'extend') toast(`Extended ${untilText(r.until)}.`, true);
+    else toast(`Blocked ${asked === true ? 'distractions' : asked} ${untilText(r.until)}.`, true);
   }
   if (document.getElementById('addDialog').open && !r.invalidSite) document.getElementById('addDialog').close();
   render();
@@ -526,11 +555,20 @@ document.addEventListener('click', (e) => {
   }
   if (t.id === 'addCancel') return document.getElementById('addDialog').close();
   if (t.dataset.dur) { dur = t.dataset.dur; return renderWidgets(); }
-  if (t.id === 'edit') { editing = !editing; return renderWidgets(); }
   if (t.id === 'blockAll') {
-    const go = () => { deskAsked = true; chrome.send('blockDistractions', [dur]); };
+    const sum = MastSet.summary(state);
+    if (!sum.open) return;
+    const go = () => { deskAsked = sum.what; chrome.send('blockDistractions', [dur]); };
     // Forever asks first (design C27b, mastConfirmForever in blocklist.html).
-    return dur === 'forever' ? mastConfirmForever('Your distractions', go) : go();
+    return dur === 'forever' ? mastConfirmForever(sum.asked, go) : go();
+  }
+  // A row's longer block (design C29c): that row only, never shorter.
+  if (t.dataset.extend) {
+    const r = runRows[Number(t.dataset.row)];
+    if (!r) return;
+    const id = t.dataset.extend;
+    const go = () => { deskAsked = 'extend'; chrome.send('block', [r.entries, id]); };
+    return id === 'forever' ? mastConfirmForever(r.name, go) : go();
   }
   if (t.id === 'undo') {
     clearInterval(toastTimer);
@@ -538,9 +576,10 @@ document.addEventListener('click', (e) => {
     deskAsked = true;
     return chrome.send('undo');
   }
-  if (t.id === 'editList') {
+  if (t.id === 'editList' || t.id === 'moreBlocks') {
     MastBlocklist.mount(document.getElementById('blRoot'));
     MastBlocklist.update(state);
+    MastBlocklist.reset();
     return document.getElementById('blocklistDialog').showModal();
   }
   if (t.id === 'blClose') return document.getElementById('blocklistDialog').close();
@@ -552,9 +591,6 @@ document.addEventListener('click', (e) => {
   if (t.dataset.palette) return chrome.send('setPalette', [t.dataset.palette]);
   if (t.dataset.bar) { state.theme.tabBar = t.dataset.bar; renderCustomize(); return chrome.send('setTabBar', [t.dataset.bar]); }
   if (t.dataset.tone) { applyTone(t.dataset.tone); renderCustomize(); return chrome.send('setWallpaperTone', [t.dataset.tone]); }
-});
-document.addEventListener('change', (e) => {
-  if (e.target.dataset.cat) chrome.send('setDistraction', [e.target.dataset.cat, e.target.checked]);
 });
 document.getElementById('addForm').addEventListener('submit', (e) => {
   e.preventDefault();
@@ -593,15 +629,17 @@ apps.addEventListener('drop', (e) => {
   if (from >= 0 && to !== from) chrome.send('desktopMove', [dragId, to]);
 });
 
-// The countdown ticks every second; when the block ends the page asks for
-// fresh state (the dock goes back to the durations and the button). State also
-// refreshes when the tab comes back.
+// The countdowns tick every second; when a block ends the page asks for fresh
+// state (its row goes, and Block counts it again). State also refreshes when
+// the tab comes back.
 setInterval(() => {
-  const el = document.getElementById('left');
-  if (!el) return;
-  const until = Number(el.dataset.until);
-  if (Date.now() >= until) chrome.send('getState');
-  else el.textContent = leftText(until);
+  let ended = false;
+  for (const el of document.querySelectorAll('.run [data-until]')) {
+    const until = Number(el.dataset.until);
+    if (Date.now() >= until) ended = true;
+    else el.textContent = leftText(until);
+  }
+  if (ended) chrome.send('getState');
 }, 1e3);
 document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && chrome.send('getState'));
 chrome.send('getState');

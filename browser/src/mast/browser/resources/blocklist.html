@@ -1,60 +1,117 @@
-<!-- The blocklist: every category and site, how long, Block. A fragment, not a page:
-     chrome://mast shows it full page and the new tab page in a panel (embedded as
-     the BLOCKLIST placeholder by mast_pages.cc). Styles are scoped under .bl, clicks stay inside
-     its root, so it doesn't clash with the page around it.
-     API: MastBlocklist.mount(element), MastBlocklist.update(state) -> true if it handled
-     the result of its own request (so the host page shouldn't also react). -->
+<!-- The blocklist (design C28a/C28d): YouTube's three choices, the categories
+     as tiles, how long, Block. A fragment, not a page: chrome://mast shows it
+     full page and the new tab page in a panel (embedded as the BLOCKLIST
+     placeholder by mast_pages.cc). Styles are scoped under .bl, clicks stay
+     inside its root, so it doesn't clash with the page around it.
+     What's picked here is the distraction set (MastBlocks::Distractions): every
+     category to begin with, saved as it changes, and the same thing the new
+     tab's Block button blocks.
+     API: MastBlocklist.mount(element), MastBlocklist.update(state) -> true if it
+     handled the result of its own request (so the host page shouldn't also
+     react), MastBlocklist.reset() (back to the tiles). MastSet reads the set
+     and the running blocks, for the new tab's dock too. -->
 <style>
-.bl header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 20px; }
+.bl header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
 .bl h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
-.bl .meta { color: var(--text-3); }
+.bl .meta { color: var(--text-3); font-size: 12px; white-space: nowrap; }
 .bl .meta b { color: var(--text-2); font-weight: 500; }
-.bl ul { margin: 0; padding: 0; list-style: none; }
-.bl .cats { border-top: 1px solid var(--line); }
-/* Adult and gambling sites aren't in the list: they're always blocked (mast_feeds.h). */
-.bl .always { display: flex; align-items: center; gap: 8px; margin: 16px 0 0; color: var(--text-3); }
-.bl .always i { width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--signal); }
-.bl .cat { border-bottom: 1px solid var(--line); }
-.bl .row { display: flex; align-items: center; gap: 14px; height: 52px; padding: 0 4px; }
-.bl .name { display: flex; align-items: baseline; gap: 8px; flex: 1; min-width: 0; padding: 0; border: 0; background: none;
-  text-align: left; font-size: 15px; font-weight: 500; }
-.bl .name .n { color: var(--text-3); font-size: 13px; font-weight: 400; }
-.bl .exp { display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 50%; background: none; color: var(--text-3); }
-.bl .exp:hover { background: var(--field); color: var(--text); }
-.bl .exp svg { transition: transform .15s; }
-.bl .cat.open .exp svg { transform: rotate(180deg); }
-.bl .check { display: grid; place-items: center; width: 16px; height: 16px; padding: 0; border: 1.5px solid var(--text-3);
-  border-radius: 4px; background: none; color: var(--surface); flex: none; }
-.bl .check:hover:not(:disabled) { border-color: var(--text-2); }
-.bl .check.on, .bl .check.mixed { border-color: var(--text); background: var(--text); }
-.bl .check:disabled { cursor: default; border-color: var(--line); }
-.bl .services { padding: 0 4px 12px 34px; }
-.bl .services li { display: flex; align-items: center; gap: 14px; min-height: 32px; }
-.bl .svc { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 10px; }
-.bl .svc .s { color: var(--text-2); white-space: nowrap; }
-.bl .services li.is-blocked .svc .s { color: var(--text); }
-.bl .svc .d { overflow: hidden; color: var(--text-3); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
-.bl .rm { display: grid; place-items: center; width: 20px; height: 20px; border: 0; border-radius: 50%; background: none; color: var(--text-3); }
-.bl .rm:hover { background: var(--field); color: var(--text); }
-/* YouTube: the whole site, or music only (design C24). */
-.bl .services li.yt { display: block; padding: 2px 0 10px 30px; }
-.bl .yt-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; border-radius: 8px; background: var(--bg); }
-.bl .yt-seg button { display: flex; align-items: center; justify-content: center; gap: 6px; height: 26px; border: 0; border-radius: 6px;
-  background: none; color: var(--text-2); font-size: 12px; }
-.bl .yt-seg button:hover { color: var(--text); }
-.bl .yt-seg button.on { background: var(--pressed); color: var(--text); font-weight: 600; }
-.bl .yt .hint { margin: 6px 0 0; color: var(--text-3); font-size: 11px; }
-.bl .add { flex: 1; height: 28px; padding: 0 10px; border: 0; border-radius: 4px; outline: 0; background: var(--field); }
-.bl .add:focus { box-shadow: 0 0 0 1px var(--text-3); }
-.bl .action { position: sticky; bottom: 0; display: grid; grid-template-columns: 1fr auto; gap: 10px 16px; align-items: center;
-  margin-top: 8px; padding: 20px 0 24px; background: linear-gradient(transparent, var(--bl-bg, var(--surface)) 18px); }
-.bl .action .label { grid-column: 1 / -1; color: var(--text-3); }
-.bl .action .end { grid-column: 1 / -1; min-height: 19px; color: var(--text-3); }
-.bl .action .end.warn { color: var(--signal); }
-.bl .seg { display: grid; grid-template-columns: repeat(6, 1fr); padding: 2px; border-radius: var(--r); background: var(--seg); }
+.bl .search { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 14px; border-radius: 8px; background: var(--field); color: var(--text-3); cursor: text; }
+.bl .search:focus-within { box-shadow: 0 0 0 1px var(--text-3); }
+.bl .search input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: 0; background: none; }
+.bl .search input::placeholder { color: var(--text-3); }
+/* YouTube: open, music only, or blocked, always on show (design C24, C28a). */
+.bl .yt { display: flex; align-items: center; gap: 12px; margin-top: 16px; padding: 12px 12px 12px 14px; border-radius: 10px; background: var(--field); }
+.bl .yt .ic { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 8px; background: var(--pressed); color: var(--text); }
+.bl .yt .tx { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
+.bl .yt b { font-size: 14px; font-weight: 500; }
+.bl .yt .hint { color: var(--text-3); font-size: 12px; }
+.bl .yt .hint.on { color: var(--signal); font-weight: 500; }
+.bl .ytc { display: flex; flex: none; gap: 2px; padding: 3px; border-radius: 8px; background: var(--bg); }
+.bl .ytc button { display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 0; border-radius: 6px; background: none;
+  color: var(--text-2); font-size: 12px; font-weight: 500; }
+.bl .ytc button svg { color: var(--text-3); }
+.bl .ytc button:hover { color: var(--text); }
+.bl .ytc button.on { background: color-mix(in srgb, var(--signal) 10%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--signal) 40%, transparent);
+  color: var(--signal); font-weight: 600; }
+.bl .ytc button.on svg { color: var(--signal); }
+.bl .lbl { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 22px 0 10px; color: var(--text-3); font-size: 12px; }
+.bl .lbl b { color: var(--text-2); font-weight: 500; }
+/* A tile picks the whole category; its › opens the sites (design C28a). Ember
+   means picked, as everywhere else that ember means blocked. */
+.bl .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.bl .tile { position: relative; min-width: 0; border-radius: 10px; background: var(--field); }
+.bl .tile:hover:not(.on) { background: var(--pressed); }
+.bl .tile .tg { display: flex; flex-direction: column; gap: 6px; width: 100%; padding: 12px 12px 12px 14px; border: 0; border-radius: inherit;
+  background: none; text-align: left; }
+.bl .tile .top { display: flex; align-items: center; justify-content: space-between; height: 22px; color: var(--text-2); }
+.bl .tile .nm { font-size: 14px; font-weight: 500; }
+.bl .tile .sm { overflow: hidden; padding-right: 22px; color: var(--text-3); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.bl .tile .sm.blk { display: flex; align-items: center; gap: 5px; color: var(--signal); font-weight: 500; }
+.bl .tile .mk { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--signal); color: var(--signal-text); }
+.bl .tile .pt { padding: 2px 8px; border-radius: 10px; background: color-mix(in srgb, var(--signal) 12%, transparent); color: var(--signal); font-size: 11px; font-weight: 600; }
+.bl .tile.on { background: color-mix(in srgb, var(--signal) 10%, var(--field)); box-shadow: inset 0 0 0 1px var(--signal); }
+.bl .tile.on .top { color: var(--signal); }
+.bl .tile.part { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--signal) 35%, transparent); }
+.bl .tile .more { position: absolute; right: 6px; bottom: 6px; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0;
+  border-radius: 6px; background: none; color: var(--text-3); }
+.bl .tile .more:hover { background: rgb(255 255 255/.06); color: var(--text); }
+/* A category's sites. */
+.bl .sv { display: flex; align-items: center; gap: 10px; margin: 20px 0 12px; }
+.bl .sv .back { display: flex; align-items: center; gap: 2px; height: 28px; padding: 0 8px 0 2px; border: 0; border-radius: 6px; background: none; color: var(--text-2); }
+.bl .sv .back:hover { background: var(--field); color: var(--text); }
+.bl .sv h2 { margin: 0; font-size: 15px; font-weight: 600; }
+.bl .sv .n { flex: 1; color: var(--text-3); font-size: 12px; }
+.bl .sv .all { height: 28px; padding: 0 10px; border: 0; border-radius: 6px; background: none; box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--text-2); font-size: 12px; font-weight: 500; }
+.bl .sv .all:hover { color: var(--text); }
+.bl .sv + .yt { margin: 0 0 12px; }
+.bl .sites { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.bl .site { position: relative; min-width: 0; }
+.bl .site .tg { display: flex; align-items: center; gap: 9px; width: 100%; height: 38px; padding: 0 10px 0 8px; border: 0; border-radius: 8px;
+  background: var(--field); text-align: left; }
+.bl .site .tg:hover { background: var(--pressed); }
+.bl .site.rmv .tg { padding-right: 36px; }
+.bl .site img { width: 20px; height: 20px; flex: none; border-radius: 5px; }
+.bl .site .s { font-weight: 500; white-space: nowrap; }
+.bl .site .d { flex: 1; min-width: 0; overflow: hidden; color: var(--text-3); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.bl .site .lk { display: flex; align-items: center; gap: 4px; color: var(--signal); font-size: 11px; font-weight: 500; white-space: nowrap; }
+.bl .site .ck { display: grid; color: var(--signal); }
+.bl .site.on .tg { background: color-mix(in srgb, var(--signal) 10%, var(--field)); box-shadow: inset 0 0 0 1px var(--signal); }
+.bl .site .rm { position: absolute; top: 9px; right: 8px; display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0;
+  border-radius: 50%; background: none; color: var(--text-3); }
+.bl .site .rm:hover { background: var(--pressed); color: var(--text); }
+.bl .addrow { display: flex; align-items: center; gap: 9px; height: 38px; margin-top: 6px; padding: 0 12px; border-radius: 8px;
+  box-shadow: inset 0 0 0 1px var(--line); color: var(--text-3); cursor: text; }
+.bl .addrow:focus-within { box-shadow: inset 0 0 0 1px var(--text-3); }
+.bl .addrow input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: 0; background: none; }
+.bl .addhit { display: flex; align-items: center; gap: 9px; width: 100%; height: 38px; margin-top: 6px; padding: 0 12px; border: 0; border-radius: 8px;
+  background: none; box-shadow: inset 0 0 0 1px var(--line); color: var(--text-2); text-align: left; }
+.bl .addhit:hover { color: var(--text); }
+.bl .addhit b { color: var(--text); font-weight: 600; }
+.bl .action { position: sticky; bottom: 0; display: flex; flex-direction: column; gap: 10px; margin-top: 22px; padding: 16px 0 24px;
+  border-top: 1px solid var(--line); background: var(--bl-bg, var(--surface)); }
+.bl .action .label { color: var(--text-3); font-size: 12px; }
+.bl .action .row { display: flex; align-items: center; gap: 12px; }
+.bl .action .primary { flex: none; }
+.bl .seg { display: grid; flex: 1; grid-template-columns: repeat(6, 1fr); padding: 2px; border-radius: var(--r); background: var(--seg); }
 .bl .seg button { height: 30px; padding: 0 6px; border: 0; border-radius: 4px; background: none; color: var(--text-2); font-weight: 500; white-space: nowrap; }
 .bl .seg button:hover { color: var(--text); }
 .bl .seg button.on { background: var(--seg-on); color: var(--text); box-shadow: 0 1px 2px rgb(0 0 0/.25), 0 0 0 1px var(--line); }
+.bl .foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 16px; font-size: 12px; }
+.bl .foot .end { color: var(--text-2); }
+.bl .foot .end.warn { color: var(--signal); }
+/* Adult and gambling sites aren't in the list: they're always blocked (mast_feeds.h). */
+.bl .always { display: flex; align-items: center; gap: 8px; color: var(--text-3); }
+.bl .always i { width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--signal); }
+@media (max-width: 640px) {
+  .bl .tiles { grid-template-columns: repeat(2, 1fr); }
+  .bl .sites { grid-template-columns: 1fr; }
+  .bl .yt { flex-wrap: wrap; }
+  .bl .ytc { width: 100%; }
+  .bl .ytc button { flex: 1; justify-content: center; }
+  .bl .action .row { flex-direction: column; align-items: stretch; }
+  .bl .seg { grid-template-columns: repeat(3, 1fr); }
+}
 .bl-toast { position: fixed; left: 50%; bottom: 24px; z-index: 30; transform: translateX(-50%); display: flex; align-items: center;
   gap: 14px; padding: 10px 10px 10px 16px; border-radius: 10px; background: var(--field); box-shadow: var(--shadow); white-space: nowrap; }
 .bl-toast.plain { padding-right: 16px; }
@@ -79,8 +136,8 @@ dialog.forever .hold span { position: relative; }
 dialog.forever .foot { margin-top: 12px; color: var(--text-3); font-size: 11px; }
 </style>
 <script>
-// Asks before a forever block. `what` names it ("YouTube", "These 3 sites",
-// "Your distractions"); `confirm` runs once the button has been held.
+// Asks before a forever block. `what` names it ("YouTube", "These 3 categories",
+// "Everything you picked"); `confirm` runs once the button has been held.
 function mastConfirmForever(what, confirm) {
   const d = document.createElement('dialog');
   d.className = 'forever';
@@ -110,22 +167,138 @@ function mastConfirmForever(what, confirm) {
   d.querySelector('.no').focus();
 }
 
+// Line icons (Lucide, ISC licence): mastIcon('lock', 12).
+const mastIcon = (() => {
+  const P = {
+    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    play: '<polygon points="6 3 20 12 6 21 6 3"/>',
+    tv: '<rect width="20" height="15" x="2" y="7" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/>',
+    newspaper: '<path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/>',
+    messages: '<path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z"/><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/>',
+    laugh: '<circle cx="12" cy="12" r="10"/><path d="M18 13a6 6 0 0 1-6 5 6 6 0 0 1-6-5h12Z"/><path d="M9 9h.01"/><path d="M15 9h.01"/>',
+    bag: '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+    gamepad: '<path d="M6 11h4"/><path d="M8 9v4"/><path d="M15 12h.01"/><path d="M18 10h.01"/><path d="M17.32 5H6.68a4 4 0 0 0-3.98 3.59C2.6 9.42 2 14.46 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.41-1.41A2 2 0 0 1 9.83 16h4.34a2 2 0 0 1 1.41.59L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.54-.6-6.58-.69-7.26A4 4 0 0 0 17.32 5z"/>',
+    trophy: '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
+    trending: '<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',
+    heart: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
+    message: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+    user: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+    youtube: '<path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/>',
+    music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+    ban: '<circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/>',
+    circle: '<circle cx="12" cy="12" r="10"/>',
+    lock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    'chevron-right': '<path d="m9 18 6-6-6-6"/>',
+    'chevron-left': '<path d="m15 18-6-6 6-6"/>',
+    search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+    plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+    x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    settings: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+  };
+  return (name, size = 16) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || P.circle}</svg>`;
+})();
+
+// The distraction set and the blocks in force, read from the state (no DOM):
+// the blocklist panel and the new tab's dock both count from here.
+const MastSet = (() => {
+  const YT = 'youtube.com', MUSIC = 'music:youtube.com';
+  const isYouTube = (s) => !s.custom && s.domains.includes(YT);
+  const key = (c, s) => c.id + '/' + s.name;
+  // The block that ends first; forever ends last.
+  const soonest = (a, b) => (a.until === null ? b : b.until === null ? a : b.until < a.until ? b : a);
+  const later = (a, b) => (a.until === b.until ? 0 : a.until === null ? 1 : b.until === null ? -1 : a.until - b.until);
+  // The curated categories, then the user's own sites as one more.
+  function categories(state) {
+    return [...state.categories, {id: 'yours', name: 'Your sites', custom: true,
+      services: state.custom.map((d) => ({name: d, domains: [d], custom: true}))}];
+  }
+  function read(state) {
+    const d = state.distractions || {};
+    return {cats: new Set(d.categories || []), skipped: new Set(d.skipped || []), music: !!d.youtubeMusic};
+  }
+  // The user's own sites are in unless left out; a curated site is in when its
+  // category is and it isn't left out (MastBlocks::Distractions).
+  const has = (sel, c, s) => (c.custom || sel.cats.has(c.id)) && !sel.skipped.has(key(c, s));
+  const entries = (sel, s) => (isYouTube(s) && sel.music ? [MUSIC] : s.domains);
+  const isOpen = (state, e) => !state.blocks[e] && !(e === MUSIC && state.blocks[YT]);
+  // A site's block: every domain blocked (the one ending first), some of them
+  // ({partial}), or YouTube's Music only ({music}).
+  function blockOf(state, s) {
+    const bs = s.domains.map((d) => state.blocks[d]).filter(Boolean);
+    if (bs.length && bs.length === s.domains.length) return bs.reduce(soonest);
+    if (isYouTube(s) && state.blocks[MUSIC]) return {...state.blocks[MUSIC], music: true};
+    return bs.length ? {partial: true, until: bs[0].until} : null;
+  }
+  // What Block would do now (design C28d, C29): its label, and the words for
+  // the toast and the forever question. Only what's still open gets blocked.
+  function summary(state) {
+    const sel = read(state);
+    let total = 0, picked = 0, whole = true, running = false;
+    const open = [];
+    for (const c of categories(state)) {
+      if (!c.services.length) continue;
+      total++;
+      const ins = c.services.filter((s) => has(sel, c, s));
+      if (ins.length < c.services.length) whole = false;
+      if (!ins.length) continue;
+      picked++;
+      // Running as the dock's rows count it (a whole site, or Music only).
+      if (ins.some((s) => { const b = blockOf(state, s); return b && !b.partial; })) running = true;
+      if (ins.flatMap((s) => entries(sel, s)).some((e) => isOpen(state, e))) open.push(c.name);
+    }
+    const n = open.length;
+    const all = whole && picked === total && !running;
+    return {
+      total, picked, open: n,
+      label: !n ? '' : n === 1 ? `Block ${open[0]}` : all ? 'Block all' : running ? `Block ${n} more` : `Block ${n} categories`,
+      what: n === 1 ? open[0] : all ? 'everything' : `${n} categories`,
+      asked: n === 1 ? open[0] : all ? 'Everything you picked' : `These ${n} categories`,
+    };
+  }
+  // The blocks in force, a row each, soonest to end first (design C29): a whole
+  // category by its name, a single site by its, a few sites as "Social media ·
+  // 3 sites", YouTube's Music only on its own. `entries` are what extending the
+  // row blocks again.
+  function running(state) {
+    const rows = [];
+    for (const c of categories(state)) {
+      const whole = [];
+      for (const s of c.services) {
+        const b = blockOf(state, s);
+        if (b && b.music) rows.push({name: 'YouTube', music: true, until: b.until, entries: [MUSIC]});
+        else if (b && !b.partial) whole.push([s, b]);
+      }
+      if (!whole.length) continue;
+      const every = whole.length === c.services.length, one = whole.length === 1;
+      rows.push({
+        name: one && !every ? whole[0][0].name : c.name,
+        count: every || one ? '' : `${whole.length} sites`,
+        until: whole.map(([, b]) => b).reduce(soonest).until,
+        entries: whole.flatMap(([s]) => s.domains),
+      });
+    }
+    return rows.sort(later);
+  }
+  return {categories, read, has, key, isYouTube, blockOf, soonest, summary, running};
+})();
+
 const MastBlocklist = (() => {
   const D = 864e5;
   const DUR = [['1h', '1 hour'], ['4h', '4 hours'], ['today', 'Today'], ['week', '1 week'], ['month', '1 month'], ['forever', 'Forever']];
-  let root = null, app = null, toastHost = null;
+  const S = MastSet;
+  // Each category's icon, by its id in blocklist.json.
+  const ICONS = {social: 'users', video: 'play', streaming: 'tv', news: 'newspaper', forums: 'messages', entertainment: 'laugh',
+    shopping: 'bag', games: 'gamepad', sports: 'trophy', trading: 'trending', dating: 'heart', messaging: 'message', yours: 'user'};
+  let root = null, metaEl = null, bodyEl = null, actionEl = null, searchEl = null, toastHost = null;
   let state = null;
-  const selected = new Set();  // service keys "<category>/<service>"
-  const open = new Set();
+  let view = '';    // a category whose sites are open, by id; '' for the tiles
+  let query = '';   // the search box
   let dur = null;
   let toastTimer = 0;
-  let pending = '';   // what the last Block press was for, e.g. "YouTube" or "8 sites"
+  let pending = '';   // what the last Block press was for, e.g. "News" or "10 categories"
   let asked = false;  // a block/undo from this list is waiting for its result
-  let ytMusic = false;  // YouTube selected: block all but music (C24)
-  const MUSIC = 'music:youtube.com';
-  const isYouTube = (s) => !s.custom && s.domains.includes('youtube.com');
-  const ban = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="6" cy="6" r="4.5"/><path d="M2.8 9.2l6.4-6.4"/></svg>';
-  const note = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M4.5 9V2.5l5-1V8"/><circle cx="3.2" cy="9" r="1.3"/><circle cx="8.2" cy="8" r="1.3"/></svg>';
 
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
   const hm = (t) => new Date(t).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
@@ -142,96 +315,6 @@ const MastBlocklist = (() => {
     const now = Date.now();
     return {'1h': now + 36e5, '4h': now + 4 * 36e5, today: midnight(), week: now + 7 * D, month: now + 30 * D, forever: null}[id];
   }
-  const ind = (b) => `<i class="ind ${b ? (b.until === null ? 'forever' : 'timed') : ''}"></i>`;
-  const tick = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 5.2l2 2 4-4.4"/></svg>';
-  const dash = '<svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" stroke-width="2"><path d="M2.5 5h5"/></svg>';
-  const chevron = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4.5l3 3 3-3"/></svg>';
-  const cross = '<svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.4"><path d="M2 2l6 6M8 2l-6 6"/></svg>';
-
-  function categories() {
-    return [...state.categories, {id: 'yours', name: 'Your sites', custom: true,
-      services: state.custom.map((d) => ({name: d, domains: [d], custom: true}))}];
-  }
-  // A service is blocked when all its domains are; it shows the block that ends first.
-  function serviceBlock(s) {
-    const bs = s.domains.map((d) => state.blocks[d]).filter(Boolean);
-    if (!bs.length) return null;
-    if (bs.length < s.domains.length) return {partial: true, until: bs[0].until};
-    return bs.reduce((a, b) => (a.until === null ? b : b.until === null ? a : b.until < a.until ? b : a));
-  }
-  const isForever = (b) => b && !b.partial && b.until === null;
-  const key = (c, s) => c.id + '/' + s.name;
-
-  function render() {
-    if (!app || !state) return;
-    const cats = categories();
-    let blockedServices = 0;
-    const rows = cats.map((c) => {
-      const blocks = c.services.map(serviceBlock);
-      const n = blocks.filter((b) => b && !b.partial).length;
-      blockedServices += n;
-      const free = c.services.filter((s, i) => !isForever(blocks[i]));
-      const picked = free.filter((s) => selected.has(key(c, s))).length;
-      const allForever = c.services.length > 0 && !free.length;
-      const mark = allForever ? '' : picked && picked === free.length ? 'on' : picked ? 'mixed' : '';
-      let status;
-      if (c.services.length && n === c.services.length) {
-        const first = blocks.reduce((a, b) => (a.until === null ? b : b.until === null ? a : b.until < a.until ? b : a));
-        status = `<span class="status blocked">${ind(first)}${untilText(first.until)}</span>`;
-      } else if (n) {
-        status = `<span class="status blocked">${ind({until: 1})}${n} of ${c.services.length} blocked</span>`;
-      } else {
-        status = `<span class="status">${ind(null)}Open</span>`;
-      }
-      const list = !open.has(c.id) ? '' : `<ul class="services">${c.services.map((s, i) => {
-        const b = blocks[i];
-        const fv = isForever(b);
-        const k = key(c, s);
-        return `<li class="${b ? 'is-blocked' : ''}">
-          <button class="check ${selected.has(k) ? 'on' : ''}" ${fv ? 'disabled title="Blocked forever"' : ''} data-svc="${esc(k)}" aria-label="Select ${esc(s.name)}">${selected.has(k) ? tick : ''}</button>
-          <span class="svc"><span class="s">${esc(s.name)}</span>${s.custom ? '' : `<span class="d">${s.feed ? 'Tens of thousands more, from a maintained list' : esc(s.domains.join(', '))}</span>`}</span>
-          ${b ? `<span class="status blocked">${ind(b)}${b.partial ? 'Partly blocked' : b.until === null ? 'Forever' : untilText(b.until)}</span>`
-              : isYouTube(s) && state.blocks[MUSIC] ? `<span class="status blocked">${ind(state.blocks[MUSIC])}Music only · ${state.blocks[MUSIC].until === null ? 'forever' : untilText(state.blocks[MUSIC].until).toLowerCase()}</span>`
-              : `<span class="status">Open</span>`}
-          ${s.custom && !b ? `<button class="rm" data-rm="${esc(s.name)}" aria-label="Remove ${esc(s.name)}">${cross}</button>` : ''}
-        </li>${isYouTube(s) && selected.has(k) ? `<li class="yt">
-          <div class="yt-seg"><button data-yt="site" class="${ytMusic ? '' : 'on'}">${ban}Whole site</button><button data-yt="music" class="${ytMusic ? 'on' : ''}">${note}Music only</button></div>
-          <p class="hint">${ytMusic ? 'Mixes and songs stay open. Every other video and Shorts are blocked.' : 'All of YouTube is blocked, music too.'}</p></li>` : ''}`;
-      }).join('')}${c.custom ? `<li><span class="check" style="visibility:hidden"></span><input class="add" data-add placeholder="Add a site, e.g. espn.com" spellcheck="false"></li>` : ''}</ul>`;
-      return `<li class="cat ${open.has(c.id) ? 'open' : ''}">
-        <div class="row">
-          <button class="check ${mark}" ${allForever ? 'disabled title="Blocked forever"' : ''} data-cat="${esc(c.id)}" aria-label="Select ${esc(c.name)}"
-            ${c.services.length ? '' : 'disabled'}>${mark === 'on' ? tick : mark === 'mixed' ? dash : ''}</button>
-          <button class="name" data-toggle="${esc(c.id)}">${esc(c.name)}<span class="n">${c.services.length}</span></button>
-          ${status}
-          <button class="exp" data-toggle="${esc(c.id)}" aria-label="Show sites">${chevron}</button>
-        </div>${list}
-      </li>`;
-    }).join('');
-
-    const domains = selectedDomains();
-    const count = selected.size;
-    const u = untilFor(dur);
-    const end = !count ? 'Select categories or sites, then choose how long.'
-      : u === null ? 'Forever has no end. After 10 seconds it can’t be undone.'
-      : `Ends ${endsText(u)}. Blocks can be extended, never shortened.`;
-    // Keep a half-typed site across re-renders.
-    const input = app.querySelector('[data-add]');
-    const focused = input && document.activeElement === input;
-    const typed = input ? input.value : '';
-    app.innerHTML = `
-      <header><h1>Blocklist</h1><span class="meta"><b>${blockedServices}</b> blocked · <b>${state.stopped}</b> stopped today</span></header>
-      <ul class="cats">${rows}</ul>
-      <p class="always"><i></i>Adult and gambling sites are always blocked.</p>
-      <div class="action">
-        <span class="label">How long</span>
-        <div class="seg">${DUR.map(([id, label]) => `<button data-dur="${id}" class="${id === dur ? 'on' : ''}">${label}</button>`).join('')}</div>
-        <button class="primary" data-act="block" ${domains.length ? '' : 'disabled'}>${count ? `Block ${count === 1 ? [...selected][0].split('/').slice(1).join('/') : count + ' sites'}` : 'Block'}</button>
-        <span class="end ${count && u === null ? 'warn' : ''}">${end}</span>
-      </div>`;
-    const next = app.querySelector('[data-add]');
-    if (next) { next.value = typed; if (focused) next.focus(); }
-  }
   function endsText(u) {
     if (u === midnight()) return 'at midnight';
     const t = untilText(u);
@@ -239,14 +322,196 @@ const MastBlocklist = (() => {
     if (u - Date.now() < D) return 'at ' + hm(u);
     return 'on ' + day(u);
   }
-  function selectedDomains() {
-    const out = [];
-    for (const c of categories()) for (const s of c.services) {
-      if (!selected.has(key(c, s))) continue;
-      if (isYouTube(s) && ytMusic) out.push(MUSIC);  // YouTube stays open, for music
-      else out.push(...s.domains);
+  // "Blocked until 6 pm", "Music only until midnight".
+  const blockText = (b) => b.music ? 'Music only ' + (b.until === null ? 'forever' : untilText(b.until).toLowerCase())
+    : b.until === null ? 'Blocked forever' : 'Blocked ' + untilText(b.until).toLowerCase();
+  const favicon = (d) => 'chrome://favicon2/?size=32&scaleFactor=2x&showFallbackMonogram=&pageUrl=' + encodeURIComponent('https://' + d);
+  // "https://www.espn.com/nba" -> "espn.com"; '' unless it looks like a domain.
+  function cleanDomain(v) {
+    const d = v.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+    return /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(d) ? d : '';
+  }
+  function youtube() {
+    for (const c of state.categories) {
+      const s = c.services.find(S.isYouTube);
+      if (s) return [c, s];
     }
-    return out;
+    return [null, null];
+  }
+
+  // The set is saved as it changes; the page shows the change at once.
+  function save(sel) {
+    const d = {categories: [...sel.cats], skipped: [...sel.skipped], youtubeMusic: sel.music};
+    state.distractions = d;
+    chrome.send('setDistractions', [d.categories, d.skipped, d.youtubeMusic]);
+  }
+  function setCategory(c, on) {
+    const sel = S.read(state);
+    c.services.forEach((s) => sel.skipped.delete(S.key(c, s)));
+    if (c.custom) { if (!on) c.services.forEach((s) => sel.skipped.add(S.key(c, s))); }
+    else if (on) sel.cats.add(c.id);
+    else sel.cats.delete(c.id);
+    save(sel);
+  }
+  // `music` (YouTube only): true for Music only, false for the whole site.
+  function setSite(c, s, on, music) {
+    const sel = S.read(state);
+    if (music !== undefined) sel.music = music;
+    if (on && !c.custom && !sel.cats.has(c.id)) {
+      // The category joins with only this site in it.
+      sel.cats.add(c.id);
+      c.services.forEach((o) => sel.skipped.add(S.key(c, o)));
+    }
+    if (on) sel.skipped.delete(S.key(c, s));
+    else sel.skipped.add(S.key(c, s));
+    // A category with nothing left in it leaves the set.
+    if (!c.custom && c.services.every((o) => sel.skipped.has(S.key(c, o)))) {
+      sel.cats.delete(c.id);
+      c.services.forEach((o) => sel.skipped.delete(S.key(c, o)));
+    }
+    save(sel);
+  }
+  function addSite(domain) {
+    if (!domain) return;
+    chrome.send('addSite', [domain]);  // a new site of your own starts out picked
+    query = '';
+    searchEl.value = '';
+    view = 'yours';
+  }
+
+  function ytRow() {
+    const [c, s] = youtube();
+    if (!c) return '';
+    const sel = S.read(state);
+    const mode = !S.has(sel, c, s) ? 'open' : sel.music ? 'music' : 'site';
+    const b = S.blockOf(state, s);
+    const live = b && !b.partial;
+    const hint = live ? blockText(b) : {
+      open: `Stays open when you block ${c.name}.`,
+      music: 'Mixes and songs stay. Other videos and Shorts are blocked.',
+      site: `Blocked with ${c.name}. Pick Music only to keep songs and mixes.`}[mode];
+    const choices = [['open', 'circle', 'Open'], ['music', 'music', 'Music only'], ['site', 'ban', 'Block']];
+    return `<div class="yt">
+      <span class="ic">${mastIcon('youtube', 18)}</span>
+      <span class="tx"><b>YouTube</b><span class="hint ${live ? 'on' : ''}">${esc(hint)}</span></span>
+      <span class="ytc" role="radiogroup" aria-label="YouTube">${choices.map(([id, icon, label]) =>
+        `<button role="radio" aria-checked="${mode === id}" data-yt="${id}" class="${mode === id ? 'on' : ''}">${mastIcon(icon, 13)}${label}</button>`).join('')}</span>
+    </div>`;
+  }
+
+  function tile(c, sel) {
+    const n = c.services.length;
+    const ins = c.services.filter((s) => S.has(sel, c, s)).length;
+    const on = n > 0 && ins === n, part = ins > 0 && ins < n;
+    const blocks = c.services.map((s) => S.blockOf(state, s)).filter((b) => b && !b.partial && !b.music);
+    const status = !blocks.length ? '' : blocks.length === n ? untilText(blocks.reduce(S.soonest).until) : `${blocks.length} of ${n} blocked`;
+    const sample = !n ? 'Add your own sites' : c.services.slice(0, 2).map((s) => s.name).join(', ') + (n > 2 ? ` +${n - 2}` : '');
+    const mark = on ? `<span class="mk">${mastIcon('check', 12)}</span>` : part ? `<span class="pt">${ins}/${n}</span>` : '';
+    // With no sites yet, "Your sites" opens to add one.
+    const act = n ? `data-cat="${esc(c.id)}" aria-pressed="${on ? 'true' : part ? 'mixed' : 'false'}"` : `data-view="${esc(c.id)}"`;
+    return `<div class="tile ${on ? 'on' : part ? 'part' : ''}">
+      <button class="tg" ${act}>
+        <span class="top">${mastIcon(ICONS[c.id] || 'circle', 17)}${mark}</span>
+        <span class="nm">${esc(c.name)}</span>
+        ${status ? `<span class="sm blk">${mastIcon('lock', 11)}${esc(status)}</span>` : `<span class="sm">${esc(sample)}</span>`}
+      </button>
+      <button class="more" data-view="${esc(c.id)}" aria-label="Choose sites in ${esc(c.name)}">${mastIcon('chevron-right', 14)}</button>
+    </div>`;
+  }
+
+  // One site, to pick or leave out. `sub` replaces its domains (search shows
+  // the category instead).
+  function site(c, s, sel, sub) {
+    const on = S.has(sel, c, s);
+    const b = S.blockOf(state, s);
+    const live = b && !b.partial;
+    const removable = s.custom && !b;
+    const d = sub || (s.feed ? 'Tens of thousands more, from a maintained list' : s.custom ? '' : s.domains.join(', '));
+    const st = !live ? '' : b.music ? 'Music only' : b.until === null ? 'Forever' : untilText(b.until);
+    return `<div class="site ${on ? 'on' : ''} ${removable ? 'rmv' : ''}">
+      <button class="tg" data-svc="${esc(S.key(c, s))}" aria-pressed="${on}">
+        ${s.feed ? '' : `<img src="${esc(favicon(s.domains[0]))}" alt="">`}<span class="s">${esc(s.name)}</span><span class="d">${esc(d)}</span>
+        ${st ? `<span class="lk">${mastIcon('lock', 11)}${esc(st)}</span>` : ''}${on ? `<span class="ck">${mastIcon('check', 14)}</span>` : ''}
+      </button>${removable ? `<button class="rm" data-rm="${esc(s.name)}" aria-label="Remove ${esc(s.name)}">${mastIcon('x', 12)}</button>` : ''}
+    </div>`;
+  }
+
+  function tilesView(sel) {
+    return `${ytRow()}
+      <div class="lbl"><b>Categories</b><span>Tap a tile to block all of it, or › to choose sites</span></div>
+      <div class="tiles">${S.categories(state).map((c) => tile(c, sel)).join('')}</div>`;
+  }
+
+  function sitesView(sel) {
+    const c = S.categories(state).find((x) => x.id === view);
+    if (!c) { view = ''; return tilesView(sel); }
+    const n = c.services.length;
+    const ins = c.services.filter((s) => S.has(sel, c, s)).length;
+    // YouTube's three choices stand in for its cell.
+    const yt = c.services.some(S.isYouTube) ? ytRow() : '';
+    const list = c.services.filter((s) => !(yt && S.isYouTube(s)));
+    return `<div class="sv">
+        <button class="back" data-view="">${mastIcon('chevron-left', 16)}Categories</button>
+        <h2>${esc(c.name)}</h2><span class="n">${n} ${n === 1 ? 'site' : 'sites'}</span>
+        ${n ? `<button class="all" data-cat="${esc(c.id)}">${ins === n ? 'Clear' : 'Select all'}</button>` : ''}
+      </div>${yt}
+      ${list.length ? `<div class="sites">${list.map((s) => site(c, s, sel)).join('')}</div>` : ''}
+      ${c.custom ? `<label class="addrow">${mastIcon('plus', 14)}<input data-add placeholder="Add a site, e.g. espn.com" spellcheck="false" autocomplete="off"></label>` : ''}`;
+  }
+
+  function resultsView(sel) {
+    const q = query.trim().toLowerCase();
+    const dom = cleanDomain(q);
+    const hits = [];
+    let known = false;
+    for (const c of S.categories(state)) for (const s of c.services) {
+      if (dom && s.domains.includes(dom)) known = true;
+      if (s.name.toLowerCase().includes(q) || s.domains.some((d) => d.includes(dom || q))) hits.push([c, s]);
+    }
+    const title = !hits.length ? 'No sites match' : hits.length === 1 ? '1 site' : `${hits.length} sites`;
+    return `<div class="lbl"><b>${title}</b>${hits.length ? '<span>Tap a site to pick it</span>' : ''}</div>
+      ${hits.length ? `<div class="sites">${hits.slice(0, 40).map(([c, s]) => site(c, s, sel, c.name)).join('')}</div>` : ''}
+      ${dom && !known ? `<button class="addhit" data-addsite="${esc(dom)}">${mastIcon('plus', 14)}<span>Add <b>${esc(dom)}</b> to your sites</span></button>` : ''}`;
+  }
+
+  function actionView() {
+    const sum = S.summary(state);
+    const u = untilFor(dur);
+    const end = !sum.picked ? 'Pick categories or sites, then choose how long.'
+      : !sum.open ? 'Everything you picked is already blocked.'
+      : u === null ? 'Forever has no end. After 10 seconds it can’t be undone.'
+      : `Ends ${endsText(u)}. Your new tab’s Block button blocks the same.`;
+    return `<span class="label">How long</span>
+      <div class="row">
+        <div class="seg">${DUR.map(([id, label]) => `<button data-dur="${id}" class="${id === dur ? 'on' : ''}">${label}</button>`).join('')}</div>
+        <button class="primary" data-act="block" ${sum.open ? '' : 'disabled'}>${esc(sum.label || 'Block')}</button>
+      </div>
+      <div class="foot"><span class="end ${sum.open && u === null ? 'warn' : ''}">${end}</span>
+        <span class="always"><i></i>Adult and gambling sites are always blocked.</span></div>`;
+  }
+
+  function render() {
+    if (!root || !state) return;
+    const sel = S.read(state);
+    let blocked = 0;
+    for (const c of S.categories(state)) for (const s of c.services) {
+      const b = S.blockOf(state, s);
+      if (b && !b.partial && !b.music) blocked++;
+    }
+    metaEl.innerHTML = `<b>${blocked}</b> blocked · <b>${state.stopped}</b> stopped today`;
+    // Keep a half-typed site across re-renders.
+    const input = bodyEl.querySelector('[data-add]');
+    const focused = input && document.activeElement === input;
+    const typed = input ? input.value : '';
+    bodyEl.innerHTML = query.trim() ? resultsView(sel) : view ? sitesView(sel) : tilesView(sel);
+    const next = bodyEl.querySelector('[data-add]');
+    if (next) { next.value = typed; if (focused) next.focus(); }
+    actionEl.innerHTML = actionView();
+  }
+  function toTop() {
+    const box = root.closest('dialog');
+    if (box) box.scrollTop = 0;
+    else root.scrollIntoView({block: 'start'});
   }
 
   function toast(text, undo) {
@@ -267,38 +532,38 @@ const MastBlocklist = (() => {
     e.stopPropagation();
     const t = e.target.closest('button');
     if (!t || !state) return;
+    const cats = S.categories(state);
     if (t.dataset.cat) {
-      const c = categories().find((c) => c.id === t.dataset.cat);
-      const free = c.services.filter((s) => !isForever(serviceBlock(s))).map((s) => key(c, s));
-      const all = free.every((k) => selected.has(k));
-      free.forEach((k) => (all ? selected.delete(k) : selected.add(k)));
+      const c = cats.find((x) => x.id === t.dataset.cat);
+      if (!c) return;
+      const sel = S.read(state);
+      setCategory(c, !c.services.every((s) => S.has(sel, c, s)));
     } else if (t.dataset.svc) {
-      selected.has(t.dataset.svc) ? selected.delete(t.dataset.svc) : selected.add(t.dataset.svc);
+      const i = t.dataset.svc.indexOf('/');
+      const c = cats.find((x) => x.id === t.dataset.svc.slice(0, i));
+      const s = c && c.services.find((x) => x.name === t.dataset.svc.slice(i + 1));
+      if (!s) return;
+      setSite(c, s, !S.has(S.read(state), c, s));
     } else if (t.dataset.yt) {
-      ytMusic = t.dataset.yt === 'music';
-    } else if (t.dataset.toggle) {
-      open.has(t.dataset.toggle) ? open.delete(t.dataset.toggle) : open.add(t.dataset.toggle);
+      const [c, s] = youtube();
+      if (!c) return;
+      const mode = t.dataset.yt;
+      setSite(c, s, mode !== 'open', mode === 'open' ? undefined : mode === 'music');
+    } else if ('view' in t.dataset) {
+      view = t.dataset.view;
+      toTop();
     } else if (t.dataset.dur) {
       dur = t.dataset.dur;
     } else if (t.dataset.rm) {
-      selected.delete('yours/' + t.dataset.rm);
       return chrome.send('removeSite', [t.dataset.rm]);
+    } else if (t.dataset.addsite) {
+      addSite(t.dataset.addsite);
     } else if (t.dataset.act === 'block') {
-      const domains = selectedDomains();
-      const label = selected.size === 1 ? [...selected][0].split('/').slice(1).join('/') : selected.size + ' sites';
-      const go = () => {
-        pending = label;
-        if (selected.size === 1 && ytMusic && pending === 'YouTube') pending = 'YouTube (all but music)';
-        selected.clear();
-        asked = true;
-        chrome.send('block', [domains, dur]);
-        render();
-      };
+      const sum = S.summary(state);
+      if (!sum.open) return;
+      const go = () => { pending = sum.what; asked = true; chrome.send('blockDistractions', [dur]); };
       // Forever asks first (design C27b); timed blocks have their undo.
-      if (dur === 'forever') {
-        return mastConfirmForever(selected.size === 1 ? label : `These ${selected.size} sites`, go);
-      }
-      return go();
+      return dur === 'forever' ? mastConfirmForever(sum.asked, go) : go();
     } else if (t.dataset.act === 'undo') {
       clearInterval(toastTimer);
       toastHost.innerHTML = '';
@@ -307,11 +572,26 @@ const MastBlocklist = (() => {
     } else return;
     render();
   }
+  function onInput(e) {
+    if (!e.target.matches('[data-q]')) return;
+    query = e.target.value;
+    render();
+  }
   function onKey(e) {
     e.stopPropagation();
-    if (e.key === 'Enter' && e.target.matches('[data-add]')) {
-      const v = e.target.value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
-      if (v) { selected.add('yours/' + v); e.target.value = ''; chrome.send('addSite', [v]); }
+    if (e.target.matches('[data-q]')) {
+      if (e.key === 'Escape' && e.target.value) {
+        e.preventDefault();  // clears the search; a second Escape closes the panel
+        e.target.value = query = '';
+        render();
+      } else if (e.key === 'Enter') {
+        const dom = cleanDomain(e.target.value);
+        const known = dom && S.categories(state).some((c) => c.services.some((s) => s.domains.includes(dom)));
+        if (dom && !known) { addSite(dom); render(); }
+      }
+    } else if (e.key === 'Enter' && e.target.matches('[data-add]')) {
+      const dom = cleanDomain(e.target.value);
+      if (dom) { e.target.value = ''; addSite(dom); }
     }
   }
 
@@ -320,11 +600,28 @@ const MastBlocklist = (() => {
       if (root) return;
       root = el;
       root.classList.add('bl');
-      root.innerHTML = '<div class="bl-app"></div><div class="bl-toast-host"></div>';
-      app = root.querySelector('.bl-app');
+      root.innerHTML = `<div class="bl-app">
+          <header><h1>Blocklist</h1><span class="meta"></span></header>
+          <label class="search">${mastIcon('search', 16)}<input data-q placeholder="Search sites, or add one like example.com"
+            spellcheck="false" autocomplete="off" aria-label="Search sites"></label>
+          <div class="bl-body"></div>
+          <div class="action"></div>
+        </div><div class="bl-toast-host"></div>`;
+      metaEl = root.querySelector('.meta');
+      bodyEl = root.querySelector('.bl-body');
+      actionEl = root.querySelector('.action');
+      searchEl = root.querySelector('[data-q]');
       toastHost = root.querySelector('.bl-toast-host');
       root.addEventListener('click', onClick);
+      root.addEventListener('input', onInput);
       root.addEventListener('keydown', onKey);
+      render();
+    },
+    // Back to the tiles, search cleared (the new tab opens the panel this way).
+    reset() {
+      view = '';
+      query = '';
+      if (searchEl) searchEl.value = '';
       render();
     },
     update(s) {
@@ -342,8 +639,6 @@ const MastBlocklist = (() => {
           else toast(`Blocked ${pending} ${r.until === null ? 'forever' : untilText(r.until).toLowerCase()}.`, true);
         }
       }
-      // Drop selections that became forever.
-      for (const c of categories()) for (const sv of c.services) if (isForever(serviceBlock(sv))) selected.delete(key(c, sv));
       render();
       return handled;
     },

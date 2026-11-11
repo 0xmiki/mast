@@ -7,6 +7,7 @@
 #include <set>
 #include <utility>
 
+#include "base/strings/strcat.h"
 #include "base/strings/stringprintf.h"
 #include "base/values.h"
 #include "chrome/browser/browser_process.h"
@@ -33,15 +34,28 @@ constexpr char kCustomSitesPref[] = "mast.custom_sites";
 constexpr char kLastDurationPref[] = "mast.last_duration";
 constexpr char kBlockedDayPref[] = "mast.stats.blocked_day";
 constexpr char kBlockedCountPref[] = "mast.stats.blocked_count";
-constexpr char kDistractionsPref[] = "mast.distractions";
-
-// Blocked by "Block distractions" until someone changes the set. Shopping,
-// games, trading, dating and messaging stay open: people often need them.
+// The distraction set (MastBlocks::Distractions). Every category by default
+// (design C28d: Block starts as "Block all"); the user unticks what they need.
 // (Adult and gambling sites aren't categories: they're always blocked; see
 // mast_feeds.h.)
-constexpr const char* kDefaultDistractions[] = {
-    "social", "video",  "streaming", "news",
-    "forums", "entertainment", "sports"};
+constexpr char kDistractionsPref[] = "mast.distractions";
+constexpr char kDistractionsSkippedPref[] = "mast.distractions_skipped";
+constexpr char kDistractionsYouTubeMusicPref[] =
+    "mast.distractions_youtube_music";
+
+bool IsYouTubeService(const Service& s) {
+  return std::ranges::find(s.domains, "youtube.com") != s.domains.end();
+}
+
+std::vector<std::string> StringList(const base::ListValue& list) {
+  std::vector<std::string> out;
+  for (const base::Value& v : list) {
+    if (v.is_string()) {
+      out.push_back(v.GetString());
+    }
+  }
+  return out;
+}
 
 // Entries that aren't domains: feeds ("feed:…") and YouTube's Music only.
 bool IsSpecialEntry(std::string_view entry) {
@@ -162,10 +176,12 @@ void MastBlocks::RegisterLocalStatePrefs(PrefRegistrySimple* registry) {
   registry->RegisterStringPref(kBlockedDayPref, std::string());
   registry->RegisterIntegerPref(kBlockedCountPref, 0);
   base::ListValue distractions;
-  for (const char* id : kDefaultDistractions) {
-    distractions.Append(id);
+  for (const Category& c : Categories()) {
+    distractions.Append(c.id);
   }
   registry->RegisterListPref(kDistractionsPref, std::move(distractions));
+  registry->RegisterListPref(kDistractionsSkippedPref);
+  registry->RegisterBooleanPref(kDistractionsYouTubeMusicPref, false);
 }
 
 PrefService* MastBlocks::prefs() const {
@@ -358,6 +374,9 @@ bool MastBlocks::RemoveSite(const std::string& domain) {
   ScopedListPrefUpdate(p, kCustomSitesPref)->EraseIf([&](const base::Value& v) {
     return v.is_string() && v.GetString() == domain;
   });
+  // Added again later, it starts out in the distraction set.
+  ScopedListPrefUpdate(p, kDistractionsSkippedPref)
+      ->EraseValue(base::Value(DistractionKey(kYourSitesId, domain)));
   return true;
 }
 
@@ -405,47 +424,94 @@ void MastBlocks::ReloadBlockedTabs(bool youtube) {
   }
 }
 
-std::vector<std::string> MastBlocks::DistractionCategories() const {
-  std::vector<std::string> ids;
+MastBlocks::Distractions MastBlocks::GetDistractions() const {
+  Distractions d;
   if (PrefService* p = prefs()) {
-    for (const base::Value& v : p->GetList(kDistractionsPref)) {
-      if (v.is_string()) {
-        ids.push_back(v.GetString());
-      }
-    }
+    d.categories = StringList(p->GetList(kDistractionsPref));
+    d.skipped = StringList(p->GetList(kDistractionsSkippedPref));
+    d.youtube_music = p->GetBoolean(kDistractionsYouTubeMusicPref);
   }
-  return ids;
+  return d;
 }
 
-void MastBlocks::SetDistraction(std::string_view category_id, bool on) {
+void MastBlocks::SetDistractions(const Distractions& d) {
   PrefService* p = prefs();
-  const bool known = std::ranges::any_of(
-      Categories(), [&](const Category& c) { return c.id == category_id; });
-  if (!p || !known) {
+  if (!p) {
     return;
   }
-  ScopedListPrefUpdate update(p, kDistractionsPref);
-  update.Get().EraseValue(base::Value(category_id));
-  if (on) {
-    update.Get().Append(category_id);
+  std::set<std::string> known_categories;
+  std::set<std::string> known_sites;
+  for (const Category& c : Categories()) {
+    known_categories.insert(c.id);
+    for (const Service& s : c.services) {
+      known_sites.insert(DistractionKey(c.id, s.name));
+    }
   }
+  for (const std::string& site : CustomSites()) {
+    known_sites.insert(DistractionKey(kYourSitesId, site));
+  }
+  // Sets, so a repeated id is stored once.
+  std::set<std::string> categories;
+  for (const std::string& id : d.categories) {
+    if (known_categories.contains(id)) {
+      categories.insert(id);
+    }
+  }
+  std::set<std::string> skipped;
+  for (const std::string& key : d.skipped) {
+    if (known_sites.contains(key)) {
+      skipped.insert(key);
+    }
+  }
+  base::ListValue category_list;
+  for (const std::string& id : categories) {
+    category_list.Append(id);
+  }
+  base::ListValue skipped_list;
+  for (const std::string& key : skipped) {
+    skipped_list.Append(key);
+  }
+  p->SetList(kDistractionsPref, std::move(category_list));
+  p->SetList(kDistractionsSkippedPref, std::move(skipped_list));
+  p->SetBoolean(kDistractionsYouTubeMusicPref, d.youtube_music);
 }
 
-std::vector<std::string> MastBlocks::DistractionDomains() const {
-  const std::vector<std::string> ids = DistractionCategories();
-  const std::set<std::string> wanted(ids.begin(), ids.end());
-  std::vector<std::string> domains;
+std::vector<std::string> MastBlocks::OpenDistractionDomains() const {
+  const Distractions d = GetDistractions();
+  const std::set<std::string> wanted(d.categories.begin(), d.categories.end());
+  const std::set<std::string> skipped(d.skipped.begin(), d.skipped.end());
+  std::vector<std::string> entries;
   for (const Category& c : Categories()) {
     if (!wanted.contains(c.id)) {
       continue;
     }
     for (const Service& s : c.services) {
-      domains.insert(domains.end(), s.domains.begin(), s.domains.end());
+      if (skipped.contains(DistractionKey(c.id, s.name))) {
+        continue;
+      }
+      if (d.youtube_music && IsYouTubeService(s)) {
+        entries.push_back(kYouTubeMusicKey);
+      } else {
+        entries.insert(entries.end(), s.domains.begin(), s.domains.end());
+      }
     }
   }
-  const std::vector<std::string> custom = CustomSites();
-  domains.insert(domains.end(), custom.begin(), custom.end());
-  return domains;
+  for (const std::string& site : CustomSites()) {
+    if (!skipped.contains(DistractionKey(kYourSitesId, site))) {
+      entries.push_back(site);
+    }
+  }
+  // Only what's still open. Music only adds nothing while all of YouTube is
+  // blocked.
+  std::erase_if(entries, [&](const std::string& e) {
+    return Of(e) || (e == kYouTubeMusicKey && Of("youtube.com"));
+  });
+  return entries;
+}
+
+std::string DistractionKey(std::string_view category_id,
+                           std::string_view service_name) {
+  return base::StrCat({category_id, "/", service_name});
 }
 
 bool IsYouTubeHost(std::string_view host) {

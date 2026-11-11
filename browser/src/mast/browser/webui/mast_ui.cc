@@ -221,7 +221,7 @@ class MastHandler : public content::WebUIMessageHandler,
     On("addSite", &MastHandler::HandleAddSite);
     On("removeSite", &MastHandler::HandleRemoveSite);
     On("blockDistractions", &MastHandler::HandleBlockDistractions);
-    On("setDistraction", &MastHandler::HandleSetDistraction);
+    On("setDistractions", &MastHandler::HandleSetDistractions);
     On("desktopAdd", &MastHandler::HandleDesktopAdd);
     On("desktopRemove", &MastHandler::HandleDesktopRemove);
     On("desktopMove", &MastHandler::HandleDesktopMove);
@@ -350,9 +350,10 @@ class MastHandler : public content::WebUIMessageHandler,
     Block(domains, StringArg(args, 1));
   }
 
-  // ["blockDistractions", durationId]: everything in the distraction set.
+  // ["blockDistractions", durationId]: what the distraction set still has
+  // open (blocks already running are left as they are).
   void HandleBlockDistractions(const base::ListValue& args) {
-    Block(MastBlocks::Get().DistractionDomains(), StringArg(args, 0));
+    Block(MastBlocks::Get().OpenDistractionDomains(), StringArg(args, 0));
   }
 
   void Block(const std::vector<std::string>& domains,
@@ -370,10 +371,25 @@ class MastHandler : public content::WebUIMessageHandler,
     SendState(std::move(result));
   }
 
-  // ["setDistraction", categoryId, on]
-  void HandleSetDistraction(const base::ListValue& args) {
-    const bool on = args.size() > 1 && args[1].is_bool() && args[1].GetBool();
-    MastBlocks::Get().SetDistraction(StringArg(args, 0), on);
+  // ["setDistractions", [categoryIds], [skipped site keys], youtubeMusic]:
+  // the whole set at once (the blocklist panel's tiles, design C28d).
+  void HandleSetDistractions(const base::ListValue& args) {
+    auto strings = [&](size_t i) {
+      std::vector<std::string> out;
+      if (args.size() > i && args[i].is_list()) {
+        for (const base::Value& v : args[i].GetList()) {
+          if (v.is_string()) {
+            out.push_back(v.GetString());
+          }
+        }
+      }
+      return out;
+    };
+    MastBlocks::Distractions d;
+    d.categories = strings(0);
+    d.skipped = strings(1);
+    d.youtube_music = args.size() > 2 && args[2].is_bool() && args[2].GetBool();
+    MastBlocks::Get().SetDistractions(d);
     SendState();
   }
 
@@ -587,11 +603,19 @@ class MastHandler : public content::WebUIMessageHandler,
     state.Set("canUndo", blocks.CanUndo());
     state.Set("stopped", blocks.StoppedToday());
     state.Set("now", Ms(base::Time::Now()));
-    base::ListValue distractions;
-    for (const std::string& id : blocks.DistractionCategories()) {
-      distractions.Append(id);
+    const MastBlocks::Distractions set = blocks.GetDistractions();
+    base::ListValue set_categories;
+    for (const std::string& id : set.categories) {
+      set_categories.Append(id);
     }
-    state.Set("distractions", std::move(distractions));
+    base::ListValue set_skipped;
+    for (const std::string& key : set.skipped) {
+      set_skipped.Append(key);
+    }
+    state.Set("distractions", base::DictValue()
+                                  .Set("categories", std::move(set_categories))
+                                  .Set("skipped", std::move(set_skipped))
+                                  .Set("youtubeMusic", set.youtube_music));
     state.Set("desktop", DesktopValue());
     // A model still loading reports no sites yet; the observer repaints.
     state.Set("desktopReady", bookmarks_ && bookmarks_->loaded());

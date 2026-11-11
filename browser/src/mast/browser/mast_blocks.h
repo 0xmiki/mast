@@ -27,6 +27,12 @@ inline constexpr char kYouTubeMusicKey[] = "music:youtube.com";
 // True for youtube.com and www./m. (not music.youtube.com, which stays open).
 bool IsYouTubeHost(std::string_view host);
 
+// "video/YouTube": how the distraction set names a site, by its category id
+// ("yours" for the user's own) and its name (the domain, for the user's own).
+std::string DistractionKey(std::string_view category_id,
+                           std::string_view service_name);
+inline constexpr char kYourSitesId[] = "yours";
+
 // How long a block lasts. `until` is empty for forever.
 struct Block {
   base::Time since;
@@ -99,12 +105,26 @@ class MastBlocks {
   void RecordBlocked();
   int StoppedToday() const;
 
-  // "Distractions": the categories one button blocks (the new tab page's
-  // Distractions widget). Ids from blocklist.json, e.g. "social".
-  std::vector<std::string> DistractionCategories() const;
-  void SetDistraction(std::string_view category_id, bool on);
-  // Every domain in those categories, plus the user's own sites.
-  std::vector<std::string> DistractionDomains() const;
+  // "Distractions": what Block blocks, from the new tab's dock and from the
+  // blocklist panel alike (design C28d). Every category is in it until the
+  // user takes it out.
+  struct Distractions {
+    // Category ids from blocklist.json, e.g. "social".
+    std::vector<std::string> categories;
+    // Sites left out inside those categories, by DistractionKey() (e.g.
+    // "video/Twitch"). The user's own sites are always in, unless left out
+    // as "yours/<domain>", so a site added later starts out in the set.
+    std::vector<std::string> skipped;
+    // YouTube, while it's in the set, is blocked as Music only (C24).
+    bool youtube_music = false;
+  };
+  Distractions GetDistractions() const;
+  // Unknown categories and sites are dropped.
+  void SetDistractions(const Distractions& distractions);
+  // The entries Block would block that aren't blocked yet: blocking the set
+  // adds what's still open and never touches a block already running (those
+  // are extended one by one, from the new tab's rows).
+  std::vector<std::string> OpenDistractionDomains() const;
 
  private:
   struct Recent {
