@@ -21,7 +21,6 @@
 .bl .search input::placeholder { color: var(--text-3); }
 /* YouTube: open, music only, or blocked, always on show (design C24, C28a). */
 .bl .yt { display: flex; align-items: center; gap: 12px; margin-top: 16px; padding: 12px 12px 12px 14px; border-radius: 10px; background: var(--field); }
-.bl .yt .ic { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 8px; background: var(--pressed); color: var(--text); }
 .bl .yt .tx { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
 .bl .yt b { font-size: 14px; font-weight: 500; }
 .bl .yt .hint { color: var(--text-3); font-size: 12px; }
@@ -43,14 +42,14 @@
 .bl .tile:hover:not(.on) { background: var(--pressed); }
 .bl .tile .tg { display: flex; flex-direction: column; gap: 6px; width: 100%; padding: 12px 12px 12px 14px; border: 0; border-radius: inherit;
   background: none; text-align: left; }
-.bl .tile .top { display: flex; align-items: center; justify-content: space-between; height: 22px; color: var(--text-2); }
-.bl .tile .nm { font-size: 14px; font-weight: 500; }
+.bl .tile .top { position: absolute; top: 10px; right: 10px; display: flex; pointer-events: none; }
+.bl .tile .nm { padding-right: 28px; font-size: 14px; font-weight: 500; }
+.bl .tile.part .nm { padding-right: 52px; }
 .bl .tile .sm { overflow: hidden; padding-right: 22px; color: var(--text-3); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
 .bl .tile .sm.blk { display: flex; align-items: center; gap: 5px; color: var(--signal); font-weight: 500; }
 .bl .tile .mk { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--signal); color: var(--signal-text); }
 .bl .tile .pt { padding: 2px 8px; border-radius: 10px; background: color-mix(in srgb, var(--signal) 12%, transparent); color: var(--signal); font-size: 11px; font-weight: 600; }
 .bl .tile.on { background: color-mix(in srgb, var(--signal) 10%, var(--field)); box-shadow: inset 0 0 0 1px var(--signal); }
-.bl .tile.on .top { color: var(--signal); }
 .bl .tile.part { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--signal) 35%, transparent); }
 .bl .tile .more { position: absolute; right: 6px; bottom: 6px; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0;
   border-radius: 6px; background: none; color: var(--text-3); }
@@ -252,7 +251,8 @@ const MastSet = (() => {
     const all = whole && picked === total && !running;
     return {
       total, picked, open: n,
-      label: !n ? '' : n === 1 ? `Block ${open[0]}` : all ? 'Block all' : running ? `Block ${n} more` : `Block ${n} categories`,
+      // Always just "Block": nothing to count or work out.
+      label: n ? 'Block' : '',
       what: n === 1 ? open[0] : all ? 'everything' : `${n} categories`,
       asked: n === 1 ? open[0] : all ? 'Everything you picked' : `These ${n} categories`,
     };
@@ -288,9 +288,6 @@ const MastBlocklist = (() => {
   const D = 864e5;
   const DUR = [['1h', '1 hour'], ['4h', '4 hours'], ['today', 'Today'], ['week', '1 week'], ['month', '1 month'], ['forever', 'Forever']];
   const S = MastSet;
-  // Each category's icon, by its id in blocklist.json.
-  const ICONS = {social: 'users', video: 'play', streaming: 'tv', news: 'newspaper', forums: 'messages', entertainment: 'laugh',
-    shopping: 'bag', games: 'gamepad', sports: 'trophy', trading: 'trending', dating: 'heart', messaging: 'message', yours: 'user'};
   let root = null, metaEl = null, bodyEl = null, actionEl = null, searchEl = null, toastHost = null;
   let state = null;
   let view = '';    // a category whose sites are open, by id; '' for the tiles
@@ -392,7 +389,6 @@ const MastBlocklist = (() => {
       site: `Blocked with ${c.name}. Pick Music only to keep songs and mixes.`}[mode];
     const choices = [['open', 'circle', 'Open'], ['music', 'music', 'Music only'], ['site', 'ban', 'Block']];
     return `<div class="yt">
-      <span class="ic">${mastIcon('youtube', 18)}</span>
       <span class="tx"><b>YouTube</b><span class="hint ${live ? 'on' : ''}">${esc(hint)}</span></span>
       <span class="ytc" role="radiogroup" aria-label="YouTube">${choices.map(([id, icon, label]) =>
         `<button role="radio" aria-checked="${mode === id}" data-yt="${id}" class="${mode === id ? 'on' : ''}">${mastIcon(icon, 13)}${label}</button>`).join('')}</span>
@@ -410,8 +406,8 @@ const MastBlocklist = (() => {
     // With no sites yet, "Your sites" opens to add one.
     const act = n ? `data-cat="${esc(c.id)}" aria-pressed="${on ? 'true' : part ? 'mixed' : 'false'}"` : `data-view="${esc(c.id)}"`;
     return `<div class="tile ${on ? 'on' : part ? 'part' : ''}">
+      ${mark ? `<span class="top">${mark}</span>` : ''}
       <button class="tg" ${act}>
-        <span class="top">${mastIcon(ICONS[c.id] || 'circle', 17)}${mark}</span>
         <span class="nm">${esc(c.name)}</span>
         ${status ? `<span class="sm blk">${mastIcon('lock', 11)}${esc(status)}</span>` : `<span class="sm">${esc(sample)}</span>`}
       </button>

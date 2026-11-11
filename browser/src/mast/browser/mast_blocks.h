@@ -141,9 +141,6 @@ class MastBlocks {
   std::optional<Recent> recent_;
 };
 
-// Shorthand for hooks in upstream code: true while any site is blocked.
-bool AnyBlockActive();
-
 }  // namespace mast
 
 #endif  // MAST_BROWSER_MAST_BLOCKS_H_

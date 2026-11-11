@@ -156,29 +156,6 @@ diff -ruN a/chrome/browser/prefs/BUILD.gn b/chrome/browser/prefs/BUILD.gn
      ":prefs",
      ":util",
      "//chrome/browser:browser_process",
-diff -ruN a/chrome/browser/prefs/incognito_mode_prefs.cc b/chrome/browser/prefs/incognito_mode_prefs.cc
---- a/chrome/browser/prefs/incognito_mode_prefs.cc
-+++ b/chrome/browser/prefs/incognito_mode_prefs.cc
-@@ -4,6 +4,8 @@
- 
- #include "chrome/browser/prefs/incognito_mode_prefs.h"
- 
-+#include "mast/browser/mast_blocks.h"
-+
- #include <stdint.h>
- 
- #include "base/command_line.h"
-@@ -164,6 +166,10 @@
-     const Profile* profile,
-     GetAvailabilityMode mode) {
-   DCHECK(profile);
-+  // Mast: no private windows while any site is blocked.
-+  if (mast::AnyBlockActive()) {
-+    return policy::IncognitoModeAvailability::kDisabled;
-+  }
- 
-   IncognitoModeAvailability result = kDefaultAvailability;
-   // Enterprise Isolated Mode has higher priority than the Incognito mode
 diff -ruN a/chrome/browser/resources/settings/appearance_page/appearance_page.html.ts b/chrome/browser/resources/settings/appearance_page/appearance_page.html.ts
 --- a/chrome/browser/resources/settings/appearance_page/appearance_page.html.ts
 +++ b/chrome/browser/resources/settings/appearance_page/appearance_page.html.ts

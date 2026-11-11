@@ -60,33 +60,21 @@ body { background: var(--surface); }
   border-radius: 6px; background: rgb(20 20 20/.95); box-shadow: inset 0 0 0 1px rgb(255 255 255/.1); color: #f2f2f2; font-size: 12px; font-weight: 500;
   white-space: nowrap; text-shadow: none; pointer-events: none; opacity: 0; transition: opacity .12s; }
 .gear:hover::after, .gear:focus-visible::after { opacity: 1; transition-delay: .3s; }
-/* The blocks in force, a row each, soonest to end first (design C29b/C29c).
-   One block is a centred line with its countdown under it, as before. */
-.runs { display: flex; flex-direction: column; gap: 2px; width: 100%; }
-.run { display: flex; flex-direction: column; padding: 6px 12px; border-radius: 8px; outline: none; }
-.run .line { display: flex; align-items: center; gap: 10px; min-height: 20px; }
+/* While something is blocked for a while: one quiet line, "Blocked until
+   6:40 PM", and its countdown. No list of what; forever blocks aren't
+   mentioned here at all (the blocklist shows them). */
+.run { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 6px 16px; border-radius: 8px; outline: none; text-align: center; }
+.run .line { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 20px; }
 .run .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--signal); flex: none; }
-.run .nm { color: var(--text); font-size: 14px; font-weight: 600; white-space: nowrap; }
-.run .ct, .run .until { color: var(--text-2); font-size: 13px; white-space: nowrap; }
-.run .mo { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 9px; background: color-mix(in srgb, var(--signal) 15%, transparent);
-  color: var(--signal); font-size: 11px; font-weight: 600; white-space: nowrap; }
-.run .left { margin-left: auto; color: var(--text); font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.run .ext { display: none; align-items: center; gap: 18px; padding: 6px 0 2px 17px; }
+.run .nm { color: var(--text); font-size: 16px; font-weight: 600; white-space: nowrap; }
+.run .left { color: var(--text-2); font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.run .ext { display: none; align-items: center; gap: 18px; padding: 2px 0; }
 .run .ext span { color: var(--text-2); font-size: 12px; font-weight: 500; }
 .run .ext button { height: 24px; padding: 0; border: 0; background: none; color: var(--text); font-size: 14px; font-weight: 500; }
 .run .ext button:hover { text-decoration: underline; text-underline-offset: 4px; }
-/* Hover or Tab onto a row: it offers longer blocks only. */
+/* Hover or Tab onto it: it offers longer blocks only. */
 .run.can:hover, .run.can:focus-within { background: rgb(255 255 255/.08); }
 .run.can:hover .ext, .run.can:focus-within .ext { display: flex; }
-.run.one { align-items: center; gap: 8px; text-align: center; }
-.run.one .line { justify-content: center; }
-.run.one .nm { font-size: 16px; }
-.run.one .left { margin: 0; color: var(--text-2); font-weight: 400; }
-.run.one .ext { padding-left: 0; }
-.runs .more { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border: 0; border-radius: 8px; background: none;
-  color: var(--text-2); font-size: 13px; font-weight: 500; text-align: left; }
-.runs .more span { overflow: hidden; color: var(--text-3); font-weight: 400; white-space: nowrap; text-overflow: ellipsis; }
-.runs .more:hover { color: var(--text); }
 .dist .sep { width: 120px; height: 1px; background: var(--line); }
 dialog { width: 340px; padding: 18px; border: 0; border-radius: 10px; background: var(--field); color: var(--text); box-shadow: var(--shadow); }
 dialog::backdrop { background: rgb(0 0 0/.35); }
@@ -300,50 +288,42 @@ function renderWidgets() {
   w.innerHTML = distractionWidget();
 }
 
-// The blocks in force as rows (MastSet.running), kept for the extend buttons.
-let runRows = [];
+// The timed blocks taken as one, kept for the extend buttons: when the first
+// of them ends, and every entry they cover (extending blocks them all again,
+// never shorter than they already are).
+let timed = null;
 
-// The dock (design C29): the blocks in force, then how long, Block and the
-// blocklist's settings button. Block blocks the distraction set (picked in the
-// blocklist; every category to begin with) and says how much: "Block all",
-// "Block 10 categories", or "Block 10 more" once some are running. With
-// nothing left open, only the rows and the settings button stay.
+// The dock: how long, Block and the blocklist's settings button, with one
+// status line above while something timed is running. Block blocks the
+// distraction set (picked in the blocklist; every category to begin with) and
+// only ever says "Block". With nothing left open, the status line and the
+// settings button stay.
 function distractionWidget() {
   const sum = MastSet.summary(state);
-  runRows = MastSet.running(state);
+  const running = MastSet.running(state);
+  const rows = running.filter((r) => r.until !== null);
+  timed = rows.length ? {until: Math.min(...rows.map((r) => r.until)), entries: rows.flatMap((r) => r.entries)} : null;
   const gear = `<button class="gear" id="editList" aria-label="Edit blocklist" data-tip="Edit blocklist">${mastIcon('settings', 18)}</button>`;
-  const rows = runsView();
-  if (!sum.open && runRows.length) {
-    return `<div class="widget dist" aria-label="Distractions">${rows}<div class="acts">${gear}</div></div>`;
+  const status = statusView();
+  if (!sum.open && running.length) {
+    return `<div class="widget dist" aria-label="Distractions">${status}<div class="acts">${gear}</div></div>`;
   }
   return `<div class="widget dist" aria-label="Distractions">
-    ${rows}${rows ? '<i class="sep"></i>' : ''}
+    ${status}${status ? '<i class="sep"></i>' : ''}
     <div class="seg">${DUR.map(([id, label]) => `<button data-dur="${id}" class="${id === dur ? 'on' : ''}" aria-label="${id}">${label}</button>`).join('')}</div>
-    <div class="acts"><i class="bal"></i><button class="primary" id="blockAll" ${sum.open ? '' : 'disabled'}>${esc(sum.label || 'Block')}</button>${gear}</div>
+    <div class="acts"><i class="bal"></i><button class="primary" id="blockAll" ${sum.open ? '' : 'disabled'}>Block</button>${gear}</div>
   </div>`;
 }
 
-// Three rows at most; the rest fold into one line that opens the blocklist.
-function runsView() {
-  if (!runRows.length) return '';
-  const row = (r, i, one) => {
-    // Longer blocks only (a block is never shortened); none after forever.
-    const longer = r.until === null ? [] : DUR.filter(([id]) => outlasts(untilFor(id), r.until + 6e4));
-    const name = `<span class="nm">${esc(r.name)}</span>${r.count ? `<span class="ct">· ${esc(r.count)}</span>` : ''}` +
-      (r.music ? `<span class="mo">${mastIcon('music', 11)}music only</span>` : '');
-    const left = r.until === null ? '' : `<span class="left" data-until="${r.until}">${leftText(r.until)}</span>`;
-    const ext = !longer.length ? '' : `<div class="ext"><span>Extend</span>${longer.map(([id, label]) =>
-      `<button data-extend="${id}" data-row="${i}" aria-label="Extend ${esc(r.name)}: ${id}">${label}</button>`).join('')}</div>`;
-    const tab = longer.length ? 'tabindex="0"' : '';
-    if (one) {
-      return `<div class="run one ${longer.length ? 'can' : ''}" ${tab}><div class="line"><i class="dot"></i><span class="nm">${esc(r.name)}${r.count ? ` (${esc(r.count)})` : ''}${r.music ? ', music only,' : ''} blocked ${untilText(r.until)}</span></div>${left}${ext}</div>`;
-    }
-    return `<div class="run ${longer.length ? 'can' : ''}" ${tab}><div class="line"><i class="dot"></i>${name}<span class="until">${untilText(r.until)}</span>${left}</div>${ext}</div>`;
-  };
-  if (runRows.length === 1) return `<div class="runs" role="status">${row(runRows[0], 0, true)}</div>`;
-  const shown = runRows.slice(0, 3), rest = runRows.slice(3);
-  return `<div class="runs" role="status">${shown.map((r, i) => row(r, i)).join('')}${rest.length
-    ? `<button class="more" id="moreBlocks">+ ${rest.length} more<span>${esc(rest.map((r) => r.name).join(', '))}</span></button>` : ''}</div>`;
+// "Blocked until 6:40 PM" and the countdown to it; hovering offers longer.
+function statusView() {
+  if (!timed) return '';
+  const longer = DUR.filter(([id]) => outlasts(untilFor(id), timed.until + 6e4));
+  const ext = !longer.length ? '' : `<div class="ext"><span>Extend</span>${longer.map(([id, label]) =>
+    `<button data-extend="${id}" aria-label="Extend: ${id}">${label}</button>`).join('')}</div>`;
+  return `<div class="run ${longer.length ? 'can' : ''}" role="status" ${longer.length ? 'tabindex="0"' : ''}>
+    <div class="line"><i class="dot"></i><span class="nm">Blocked ${untilText(timed.until)}</span></div>
+    <span class="left" data-until="${timed.until}">${leftText(timed.until)}</span>${ext}</div>`;
 }
 
 // "5:47:12 left" under a day, "6 days, 23 h left" beyond.
@@ -563,13 +543,12 @@ document.addEventListener('click', (e) => {
     // Forever asks first (design C27b, mastConfirmForever in blocklist.html).
     return dur === 'forever' ? mastConfirmForever(sum.asked, go) : go();
   }
-  // A row's longer block (design C29c): that row only, never shorter.
+  // A longer block for everything timed (design C29c), never shorter.
   if (t.dataset.extend) {
-    const r = runRows[Number(t.dataset.row)];
-    if (!r) return;
-    const id = t.dataset.extend;
-    const go = () => { deskAsked = 'extend'; chrome.send('block', [r.entries, id]); };
-    return id === 'forever' ? mastConfirmForever(r.name, go) : go();
+    if (!timed) return;
+    const id = t.dataset.extend, entries = timed.entries;
+    const go = () => { deskAsked = 'extend'; chrome.send('block', [entries, id]); };
+    return id === 'forever' ? mastConfirmForever('What’s blocked now', go) : go();
   }
   if (t.id === 'undo') {
     clearInterval(toastTimer);
@@ -577,7 +556,7 @@ document.addEventListener('click', (e) => {
     deskAsked = true;
     return chrome.send('undo');
   }
-  if (t.id === 'editList' || t.id === 'moreBlocks') {
+  if (t.id === 'editList') {
     MastBlocklist.mount(document.getElementById('blRoot'));
     MastBlocklist.update(state);
     MastBlocklist.reset();

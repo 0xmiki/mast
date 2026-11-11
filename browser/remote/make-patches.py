@@ -110,12 +110,9 @@ edit(H, "chrome/browser/prefs/browser_prefs.cc", lambda t: once(once(once(t,
     # Last in RegisterProfilePrefs(), so Mast can change upstream defaults.
     '  registry->RegisterBooleanPref(prefs::kStaticStorageQuotaEnabled, false);\n}\n',
     '  registry->RegisterBooleanPref(prefs::kStaticStorageQuotaEnabled, false);\n  mast::RegisterProfilePrefs(registry);\n}\n'))
-edit(H, "chrome/browser/prefs/incognito_mode_prefs.cc", lambda t: once(once(t,
-    '#include "chrome/browser/prefs/incognito_mode_prefs.h"\n',
-    '#include "chrome/browser/prefs/incognito_mode_prefs.h"\n\n#include "mast/browser/mast_blocks.h"\n'),
-    '    GetAvailabilityMode mode) {\n  DCHECK(profile);\n',
-    '    GetAvailabilityMode mode) {\n  DCHECK(profile);\n  // Mast: no private windows while any site is blocked.\n  if (mast::AnyBlockActive()) {\n    return policy::IncognitoModeAvailability::kDisabled;\n  }\n'))
 edit(H, "chrome/browser/prefs/BUILD.gn", lambda t: add_dep(t, 'source_set("impl") {', "//mast/browser"))
+# Incognito stays available: blocks live in Local State and the navigation throttle runs
+# for every profile, so a private window is blocked exactly like a normal one.
 
 # chrome://mast, and Mast's page as the new tab page (both NTP hosts, so the
 # omnibox still treats it as the NTP).

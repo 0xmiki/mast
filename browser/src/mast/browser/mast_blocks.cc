@@ -35,7 +35,7 @@ constexpr char kLastDurationPref[] = "mast.last_duration";
 constexpr char kBlockedDayPref[] = "mast.stats.blocked_day";
 constexpr char kBlockedCountPref[] = "mast.stats.blocked_count";
 // The distraction set (MastBlocks::Distractions). Every category by default
-// (design C28d: Block starts as "Block all"); the user unticks what they need.
+// (design C28d); the user unticks what they need.
 // (Adult and gambling sites aren't categories: they're always blocked; see
 // mast_feeds.h.)
 constexpr char kDistractionsPref[] = "mast.distractions";
@@ -523,10 +523,6 @@ std::optional<Block> MastBlocks::YouTubeMusicOnly() const {
     return std::nullopt;  // the whole site is blocked
   }
   return Of(kYouTubeMusicKey);
-}
-
-bool AnyBlockActive() {
-  return MastBlocks::Get().AnyActive();
 }
 
 }  // namespace mast
