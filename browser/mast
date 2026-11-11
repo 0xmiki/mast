@@ -5,6 +5,8 @@
 #
 #   ./mast up [type]        create the builder (from the last snapshot if there is one)
 #   ./mast build            push code → build → download (creates the builder if needed)
+#   ./mast unattended       build + shots on the builder, which then snapshots and deletes itself (laptop can be off)
+#   ./mast collect          after an unattended build: download the browser, patches and shots, then down --keep
 #   ./mast down [--keep]    delete the builder; --keep snapshots its disk first
 #   ./mast resize <type>    change server type, keeping the disk
 #   ./mast cost             money spent so far vs MAST_BUDGET
@@ -107,6 +109,7 @@ check_budget() {
 
 cmd_up() {
 	need hcloud
+	settle
 	# The firewall follows your current IP even for a running builder (home IPs change).
 	exists && { ensure_key_and_firewall; HOST=$(server_ip); log "builder already running ($(server_type), $HOST)"; return; }
 	check_budget
@@ -125,6 +128,28 @@ cmd_up() {
 		log "fresh server: installing packages and syncing Chromium (about 30–45 min)"
 		job bootstrap || die "bootstrap failed. Inspect with: ./mast ssh"
 	fi
+}
+
+# An unattended builder deletes itself while the laptop may be off: close its ledger entry at
+# the time of the snapshot it left (within minutes of the delete), so cost stays honest.
+settle() {
+	awk '$2 == "up" || $2 == "resize" { on = 1 } $2 == "down" { on = 0 } END { exit !on }' "$LEDGER" 2>/dev/null || return 0
+	exists && return 0
+	local id t gb
+	id=$(latest_snapshot)
+	if [[ -n $id ]]; then
+		t=$(date -d "$(hcloud image describe "$id" -o json | jq -r .created)" +%s)
+		gb=$(hcloud image describe "$id" -o json | jq -r '.image_size // .disk_size')
+		if ! grep -q " snap $id " "$LEDGER"; then
+			echo "$t snap $id $gb" >> "$LEDGER"
+			# The snapshot takes a few minutes; count ten more of server time to be safe.
+			echo "$((t + 600)) down" >> "$LEDGER"
+			log "settled the unattended run: builder gone, snapshot $id (${gb} GB)"
+			return 0
+		fi
+	fi
+	ledger down
+	log "builder is gone; closed its ledger entry now"
 }
 
 cmd_down() {
@@ -306,6 +331,52 @@ pull_patches() {
 	rsync -az --timeout=120 -e "ssh ${SSH_OPTS[*]}" "root@$HOST:mast/patches/*.patch" "$ROOT/patches/" || true
 }
 
+# Start a build nobody watches: remote/unattended.sh builds, takes the screenshots, then
+# snapshots the builder and deletes it, so it needs the Hetzner token (in memory there, never
+# on its disk past the first second). MAST_DEADLINE_HOURS (default 8) caps the whole run.
+cmd_unattended() {
+	check_budget
+	cmd_up
+	HOST=$(server_ip)
+	push
+	local token
+	token=${HCLOUD_TOKEN:-$(awk -v c="$(hcloud context active)" '
+		/^\[\[contexts\]\]/ { n = "" } /^ *name *=/ { gsub(/["[:space:]]/, ""); sub(/^name=/, ""); n = $0 }
+		/^ *token *=/ && n == c { gsub(/["[:space:]]/, ""); sub(/^token=/, ""); print; exit }' ~/.config/hcloud/cli.toml)}
+	[[ -n $token ]] || die "no Hetzner token found (hcloud context, or HCLOUD_TOKEN)"
+	printf '%s' "$token" | rssh "umask 077; cat > /root/.mast-hcloud-token"
+	rssh "cd ~/mast && rm -f build.status shots.status deadline.status && (setsid nohup bash remote/unattended.sh '$MAST_NAME' '${MAST_DEADLINE_HOURS:-8}' > ~/mast/unattended.log 2>&1 < /dev/null &)"
+	sleep 5
+	rssh "test ! -e /root/.mast-hcloud-token && pgrep -f 'remote/[u]nattended\.sh' >/dev/null" ||
+		die "the unattended job didn't start. Inspect with: ./mast ssh  (or ./mast down)"
+	# The builder deletes itself; the laptop's idle guard must not race it.
+	stop_guard
+	log "unattended build running; the builder snapshots and deletes itself (cap ${MAST_DEADLINE_HOURS:-8} h)"
+	log "you can shut the laptop down. Later: ./mast collect"
+}
+
+# After ./mast unattended: bring the builder back from its snapshot, report how the run went,
+# download the browser, the regenerated patches and the screenshots, then snapshot and delete.
+cmd_collect() {
+	cmd_up
+	HOST=$(server_ip)
+	rssh "cd ~/mast; tail -5 unattended.log; for s in build shots deadline; do [ -f \$s.status ] && echo \"\$s: \$(cat \$s.status)\"; done; true"
+	if [[ $(rssh "cat ~/mast/build.status 2>/dev/null") == 0 ]]; then
+		pull_patches
+		cmd_fetch
+		local dir
+		dir="$ROOT/shots/$(date +%m%d-%H%M%S)"
+		mkdir -p "$dir"
+		rsync -az --timeout=120 -e "ssh ${SSH_OPTS[*]}" --include="*.jpg" --include="*.json" --include="*.txt" --exclude="*" "root@$HOST:mast/shots/" "$dir/" &&
+			ln -sfn "$dir" "$ROOT/shots/latest" && log "screenshots in ${dir#"$ROOT/"}"
+	else
+		rsync -az --timeout=120 -e "ssh ${SSH_OPTS[*]}" "root@$HOST:mast/build.log" "$STATE/unattended-build.log" || true
+		log "the build failed; its log is in .state/unattended-build.log (builder still up: fix, then ./mast build, or ./mast down --keep)"
+		return 1
+	fi
+	cmd_down --keep
+}
+
 cmd_build() {
 	cmd_up
 	HOST=$(server_ip)
@@ -386,7 +457,7 @@ cmd_check-rebase() {
 cmd=${1:-help}
 shift || true
 case $cmd in
-	up | down | build | resize | status | cost | hold | destroy | fetch | shots | _guard) need hcloud; need jq; "cmd_$cmd" "$@" ;;
+	up | down | build | unattended | collect | resize | status | cost | hold | destroy | fetch | shots | _guard) need hcloud; need jq; "cmd_$cmd" "$@" ;;
 	run) cmd_run "$@" ;;
 	package) bash "$ROOT/packaging/package.sh" "$@" ;;
 	check-patches) cmd_check-patches "$@" ;;
@@ -394,5 +465,5 @@ case $cmd in
 	ssh) HOST=$(server_ip); ssh "${SSH_OPTS[@]}" -t "root@$HOST" "$@" ;;
 	logs) HOST=$(server_ip); follow "${1:-build}" ;;
 	job) HOST=$(server_ip); job "${1:?usage: ./mast job bootstrap|build}" ;;
-	*) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//' ;;
+	*) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//' ;;
 esac
