@@ -35,4 +35,9 @@ No headers, names, overridden methods or GN deps gone. Report:
 **ungoogled series:** `disable-tos-dialog.patch` and `wasm-interpreter-fixes.patch` left the
 series. On first run after the move, check that no terms-of-service dialog appears.
 
-**Build:** started unattended 2026-11-11; results via `./mast collect`.
+**Build:** unattended, 2026-11-11, first try: sync + ungoogled base + patches ~13 min,
+compile ~1 h 40 min (54.8k steps), screenshots 6 min; about 2 h of builder time, ~$0.45.
+The builder's regenerated patches matched the repo byte for byte, and all 62 screenshots
+rendered, the tab-group menu scene included. The check predicted this: nothing it missed.
+Still to look at on a real machine: the two review items above (suggestion popup corners,
+focus ring with the popup open) and the first-run terms-of-service dialog.
