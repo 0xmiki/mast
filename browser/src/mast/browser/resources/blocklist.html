@@ -30,27 +30,26 @@
   color: var(--text-2); font-size: 12px; font-weight: 500; }
 .bl .ytc button svg { color: var(--text-3); }
 .bl .ytc button:hover { color: var(--text); }
-.bl .ytc button.on { background: color-mix(in srgb, var(--signal) 10%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--signal) 40%, transparent);
-  color: var(--signal); font-weight: 600; }
-.bl .ytc button.on svg { color: var(--signal); }
+.bl .ytc button.on { background: color-mix(in srgb, var(--text) 12%, transparent); color: var(--text); font-weight: 600; }
+.bl .ytc button.on svg { color: var(--text); }
 .bl .lbl { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 22px 0 10px; color: var(--text-3); font-size: 12px; }
 .bl .lbl b { color: var(--text-2); font-weight: 500; }
 /* A tile picks the whole category; its › opens the sites (design C28a). Ember
    means picked, as everywhere else that ember means blocked. */
 .bl .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .bl .tile { position: relative; min-width: 0; border-radius: 10px; background: var(--field); }
-.bl .tile:hover:not(.on) { background: var(--pressed); }
+.bl .tile:hover { background: var(--pressed); }
 .bl .tile .tg { display: flex; flex-direction: column; gap: 6px; width: 100%; padding: 12px 12px 12px 14px; border: 0; border-radius: inherit;
   background: none; text-align: left; }
-.bl .tile .top { position: absolute; top: 10px; right: 10px; display: flex; pointer-events: none; }
+.bl .tile .top { position: absolute; top: 12px; right: 12px; display: flex; pointer-events: none; }
 .bl .tile .nm { padding-right: 28px; font-size: 14px; font-weight: 500; }
-.bl .tile.part .nm { padding-right: 52px; }
 .bl .tile .sm { overflow: hidden; padding-right: 22px; color: var(--text-3); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
 .bl .tile .sm.blk { display: flex; align-items: center; gap: 5px; color: var(--signal); font-weight: 500; }
-.bl .tile .mk { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--signal); color: var(--signal-text); }
-.bl .tile .pt { padding: 2px 8px; border-radius: 10px; background: color-mix(in srgb, var(--signal) 12%, transparent); color: var(--signal); font-size: 11px; font-weight: 600; }
-.bl .tile.on { background: color-mix(in srgb, var(--signal) 10%, var(--field)); box-shadow: inset 0 0 0 1px var(--signal); }
-.bl .tile.part { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--signal) 35%, transparent); }
+/* Picked is a checkbox and nothing else (design C31): white with a tick, a dash when only
+   some sites are, an empty outline when none. Ember stays for what's blocked. */
+.bl .cb { display: grid; place-items: center; width: 18px; height: 18px; flex: none; border-radius: 5px;
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--text) 30%, transparent); color: var(--bg); }
+.bl .cb.on, .bl .cb.part { background: var(--text); box-shadow: none; }
 .bl .tile .more { position: absolute; right: 6px; bottom: 6px; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0;
   border-radius: 6px; background: none; color: var(--text-3); }
 .bl .tile .more:hover { background: rgb(255 255 255/.06); color: var(--text); }
@@ -74,8 +73,6 @@
 .bl .site .s { font-weight: 500; white-space: nowrap; }
 .bl .site .d { flex: 1; min-width: 0; overflow: hidden; color: var(--text-3); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
 .bl .site .lk { display: flex; align-items: center; gap: 4px; color: var(--signal); font-size: 11px; font-weight: 500; white-space: nowrap; }
-.bl .site .ck { display: grid; color: var(--signal); }
-.bl .site.on .tg { background: color-mix(in srgb, var(--signal) 10%, var(--field)); box-shadow: inset 0 0 0 1px var(--signal); }
 .bl .site .rm { position: absolute; top: 9px; right: 8px; display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0;
   border-radius: 50%; background: none; color: var(--text-3); }
 .bl .site .rm:hover { background: var(--pressed); color: var(--text); }
@@ -89,16 +86,12 @@
 .bl .addhit b { color: var(--text); font-weight: 600; }
 .bl .action { position: sticky; bottom: 0; display: flex; flex-direction: column; gap: 10px; margin-top: 22px; padding: 16px 0 24px;
   border-top: 1px solid var(--line); background: var(--bl-bg, var(--surface)); }
-.bl .action .label { color: var(--text-3); font-size: 12px; }
 .bl .action .row { display: flex; align-items: center; gap: 12px; }
 .bl .action .primary { flex: none; }
 .bl .seg { display: grid; flex: 1; grid-template-columns: repeat(6, 1fr); padding: 2px; border-radius: var(--r); background: var(--seg); }
 .bl .seg button { height: 30px; padding: 0 6px; border: 0; border-radius: 4px; background: none; color: var(--text-2); font-weight: 500; white-space: nowrap; }
 .bl .seg button:hover { color: var(--text); }
 .bl .seg button.on { background: var(--seg-on); color: var(--text); box-shadow: 0 1px 2px rgb(0 0 0/.25), 0 0 0 1px var(--line); }
-.bl .foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 16px; font-size: 12px; }
-.bl .foot .end { color: var(--text-2); }
-.bl .foot .end.warn { color: var(--signal); }
 /* Adult and gambling sites aren't in the list, and it doesn't mention them: they're always
    blocked (mast_feeds.h); opening one shows a plain "Blocked" page. */
 @media (max-width: 640px) {
@@ -168,24 +161,11 @@ function mastConfirmForever(what, confirm) {
 // Line icons (Lucide, ISC licence): mastIcon('lock', 12).
 const mastIcon = (() => {
   const P = {
-    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
-    play: '<polygon points="6 3 20 12 6 21 6 3"/>',
-    tv: '<rect width="20" height="15" x="2" y="7" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/>',
-    newspaper: '<path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/>',
-    messages: '<path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z"/><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/>',
-    laugh: '<circle cx="12" cy="12" r="10"/><path d="M18 13a6 6 0 0 1-6 5 6 6 0 0 1-6-5h12Z"/><path d="M9 9h.01"/><path d="M15 9h.01"/>',
-    bag: '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
-    gamepad: '<path d="M6 11h4"/><path d="M8 9v4"/><path d="M15 12h.01"/><path d="M18 10h.01"/><path d="M17.32 5H6.68a4 4 0 0 0-3.98 3.59C2.6 9.42 2 14.46 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.41-1.41A2 2 0 0 1 9.83 16h4.34a2 2 0 0 1 1.41.59L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.54-.6-6.58-.69-7.26A4 4 0 0 0 17.32 5z"/>',
-    trophy: '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
-    trending: '<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',
-    heart: '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
-    message: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
-    user: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
-    youtube: '<path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/>',
     music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
     ban: '<circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/>',
     circle: '<circle cx="12" cy="12" r="10"/>',
     lock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+    minus: '<path d="M5 12h14"/>',
     check: '<path d="M20 6 9 17l-5-5"/>',
     'chevron-right': '<path d="m9 18 6-6-6-6"/>',
     'chevron-left': '<path d="m15 18-6-6 6-6"/>',
@@ -307,17 +287,6 @@ const MastBlocklist = (() => {
     if (u - Date.now() < 2 * D) return 'Until tomorrow ' + hm(u);
     return 'Until ' + day(u);
   }
-  function untilFor(id) {
-    const now = Date.now();
-    return {'1h': now + 36e5, '4h': now + 4 * 36e5, today: midnight(), week: now + 7 * D, month: now + 30 * D, forever: null}[id];
-  }
-  function endsText(u) {
-    if (u === midnight()) return 'at midnight';
-    const t = untilText(u);
-    if (t.startsWith('Until tomorrow ')) return 'tomorrow at ' + t.slice(15);
-    if (u - Date.now() < D) return 'at ' + hm(u);
-    return 'on ' + day(u);
-  }
   // "Blocked until 6 pm", "Music only until midnight".
   const blockText = (b) => b.music ? 'Music only ' + (b.until === null ? 'forever' : untilText(b.until).toLowerCase())
     : b.until === null ? 'Blocked forever' : 'Blocked ' + untilText(b.until).toLowerCase();
@@ -400,11 +369,12 @@ const MastBlocklist = (() => {
     const on = n > 0 && ins === n, part = ins > 0 && ins < n;
     const blocks = c.services.map((s) => S.blockOf(state, s)).filter((b) => b && !b.partial && !b.music);
     const status = !blocks.length ? '' : blocks.length === n ? untilText(blocks.reduce(S.soonest).until) : `${blocks.length} of ${n} blocked`;
-    const sample = !n ? 'Add your own sites' : c.services.slice(0, 2).map((s) => s.name).join(', ') + (n > 2 ? ` +${n - 2}` : '');
-    const mark = on ? `<span class="mk">${mastIcon('check', 12)}</span>` : part ? `<span class="pt">${ins}/${n}</span>` : '';
+    let sample = !n ? 'Add your own sites' : c.services.slice(0, 2).map((s) => s.name).join(', ') + (n > 2 ? ` +${n - 2}` : '');
+    const mark = n ? checkbox(on, part) : '';
     // With no sites yet, "Your sites" opens to add one.
     const act = n ? `data-cat="${esc(c.id)}" aria-pressed="${on ? 'true' : part ? 'mixed' : 'false'}"` : `data-view="${esc(c.id)}"`;
-    return `<div class="tile ${on ? 'on' : part ? 'part' : ''}">
+    if (part && !status) sample = `${ins} of ${n} sites`;
+    return `<div class="tile">
       ${mark ? `<span class="top">${mark}</span>` : ''}
       <button class="tg" ${act}>
         <span class="nm">${esc(c.name)}</span>
@@ -413,6 +383,9 @@ const MastBlocklist = (() => {
       <button class="more" data-view="${esc(c.id)}" aria-label="Choose sites in ${esc(c.name)}">${mastIcon('chevron-right', 14)}</button>
     </div>`;
   }
+
+  const checkbox = (on, part) =>
+    `<span class="cb ${on ? 'on' : part ? 'part' : ''}">${on ? mastIcon('check', 12) : part ? mastIcon('minus', 12) : ''}</span>`;
 
   // One site, to pick or leave out. `sub` replaces its domains (search shows
   // the category instead).
@@ -423,10 +396,10 @@ const MastBlocklist = (() => {
     const removable = s.custom && !b;
     const d = sub || (s.feed ? 'Tens of thousands more, from a maintained list' : s.custom ? '' : s.domains.join(', '));
     const st = !live ? '' : b.music ? 'Music only' : b.until === null ? 'Forever' : untilText(b.until);
-    return `<div class="site ${on ? 'on' : ''} ${removable ? 'rmv' : ''}">
+    return `<div class="site ${removable ? 'rmv' : ''}">
       <button class="tg" data-svc="${esc(S.key(c, s))}" aria-pressed="${on}">
         ${s.feed ? '' : `<img src="${esc(favicon(s.domains[0]))}" alt="">`}<span class="s">${esc(s.name)}</span><span class="d">${esc(d)}</span>
-        ${st ? `<span class="lk">${mastIcon('lock', 11)}${esc(st)}</span>` : ''}${on ? `<span class="ck">${mastIcon('check', 14)}</span>` : ''}
+        ${st ? `<span class="lk">${mastIcon('lock', 11)}${esc(st)}</span>` : ''}${checkbox(on)}
       </button>${removable ? `<button class="rm" data-rm="${esc(s.name)}" aria-label="Remove ${esc(s.name)}">${mastIcon('x', 12)}</button>` : ''}
     </div>`;
   }
@@ -471,17 +444,10 @@ const MastBlocklist = (() => {
 
   function actionView() {
     const sum = S.summary(state);
-    const u = untilFor(dur);
-    const end = !sum.picked ? 'Pick categories or sites, then choose how long.'
-      : !sum.open ? 'Everything you picked is already blocked.'
-      : u === null ? 'Forever has no end. After 10 seconds it can’t be undone.'
-      : `Ends ${endsText(u)}. Your new tab’s Block button blocks the same.`;
-    return `<span class="label">How long</span>
-      <div class="row">
+    return `<div class="row">
         <div class="seg">${DUR.map(([id, label]) => `<button data-dur="${id}" class="${id === dur ? 'on' : ''}">${label}</button>`).join('')}</div>
         <button class="primary" data-act="block" ${sum.open ? '' : 'disabled'}>${esc(sum.label || 'Block')}</button>
-      </div>
-      <div class="foot"><span class="end ${sum.open && u === null ? 'warn' : ''}">${end}</span></div>`;
+      </div>`;
   }
 
   function render() {
