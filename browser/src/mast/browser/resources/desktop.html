@@ -16,8 +16,9 @@ body { background: var(--surface); }
   border-radius: 8px; color: var(--text); text-decoration: none; }
 .app:hover { background: rgb(255 255 255/.06); box-shadow: inset 0 0 0 1px rgb(255 255 255/.08); }
 .app:focus-visible { outline: 2px solid var(--text-3); outline-offset: 0; }
-.tile { display: grid; place-items: center; flex: none; width: 44px; height: 44px; }
-.tile img { width: 40px; height: 40px; border-radius: 9px; filter: drop-shadow(0 2px 5px rgb(0 0 0/.35)); }
+/* .app .tile: the saved sites' icons. Scoped: the blocklist panel has .tile cards too. */
+.app .tile { display: grid; place-items: center; flex: none; width: 44px; height: 44px; }
+.app .tile img { width: 40px; height: 40px; border-radius: 9px; filter: drop-shadow(0 2px 5px rgb(0 0 0/.35)); }
 .app .label { width: 100%; overflow: hidden; font-size: 12px; line-height: 1.25; text-align: center;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
 .app .rm { position: absolute; top: 2px; right: 6px; display: none; place-items: center; width: 20px; height: 20px; padding: 0;
@@ -30,7 +31,7 @@ body { background: var(--surface); }
 .add .tile { color: var(--text-2); }
 .add .label { color: var(--text-2); }
 .add:hover .tile, .add:hover .label { color: var(--text); }
-.hint { grid-row: 1; align-self: center; width: 260px; margin: 0 0 0 12px; color: var(--text-3); font-size: 12px; }
+.apps .hint { grid-row: 1; align-self: center; width: 260px; margin: 0 0 0 12px; color: var(--text-3); font-size: 12px; }
 /* Customize, in the bottom-right corner. */
 .customize { position: fixed; right: 48px; bottom: 24px; display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px;
   border: 0; border-radius: var(--r); background: var(--field); color: var(--text-2); font-size: 12px; font-weight: 500; }
@@ -43,10 +44,10 @@ body { background: var(--surface); }
 .widgets { display: flex; flex-direction: column; align-items: center; width: 100%; text-align: center; }
 .widget { display: flex; flex-direction: column; align-items: center; }
 .dist { gap: 16px; width: 100%; }
-.seg { display: flex; justify-content: center; gap: 24px; }
-.seg button { height: 36px; padding: 0; border: 0; background: none; color: var(--text-2); font-size: 15px; white-space: nowrap; }
-.seg button:hover { color: var(--text); }
-.seg button.on { color: var(--text); font-weight: 700; }
+.dist .seg { display: flex; justify-content: center; gap: 24px; }
+.dist .seg button { height: 36px; padding: 0; border: 0; background: none; color: var(--text-2); font-size: 15px; white-space: nowrap; }
+.dist .seg button:hover { color: var(--text); }
+.dist .seg button.on { color: var(--text); font-weight: 700; }
 .dist .primary { height: 40px; padding: 0 26px; font-size: 14px; }
 /* Block, centred, and the blocklist's settings button beside it (design C29a);
    a 40 px spacer on the other side keeps Block in the middle. */
@@ -94,7 +95,7 @@ dialog input { width: 100%; height: 34px; margin-bottom: 8px; padding: 0 10px; b
   background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
 dialog input:focus { box-shadow: inset 0 0 0 1px var(--text-3); }
 dialog .err { min-height: 18px; color: var(--signal); font-size: 12px; }
-dialog .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+#addDialog .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
 .toast { display: flex; align-items: center;
   gap: 14px; padding: 10px 10px 10px 16px; border-radius: 10px; background: var(--field); box-shadow: var(--shadow); white-space: nowrap; }
 .toast.plain { padding-right: 16px; }
@@ -136,14 +137,14 @@ body.wall .widget, body.wall .customize { background: none; box-shadow: none;
 body.wall .widget .primary { text-shadow: none; }
 body.wall .primary { background: #f2f2f2; color: #111; }
 body.wall.light .primary { background: #141414; color: #f2f2f2; }
-body.wall .app .label, body.wall .add .label, body.wall .hint { color: #ededed; text-shadow: 0 1px 3px rgb(0 0 0/.7); }
+body.wall .app .label, body.wall .add .label, body.wall .apps .hint { color: #ededed; text-shadow: 0 1px 3px rgb(0 0 0/.7); }
 body.wall .add .tile { color: #ededed; filter: drop-shadow(0 1px 3px rgb(0 0 0/.7)); }
 body.wall .app:hover { background: rgb(255 255 255/.1); box-shadow: inset 0 0 0 1px rgb(255 255 255/.15); }
 body.wall .customize:hover { background: rgb(255 255 255/.2); }
 body.wall.light .widget, body.wall.light .customize { background: none; box-shadow: none;
   --text: #141414; --text-2: #3d3d3d; --text-3: #5e5e5e; --seg: rgb(0 0 0/.07); --pressed: rgb(255 255 255/.85); --field: rgb(0 0 0/.06);
   --line: rgb(0 0 0/.08); text-shadow: 0 1px 4px rgb(255 255 255/.55); }
-body.wall.light .app .label, body.wall.light .add .label, body.wall.light .hint { color: #141414; text-shadow: 0 1px 2px rgb(255 255 255/.6); }
+body.wall.light .app .label, body.wall.light .add .label, body.wall.light .apps .hint { color: #141414; text-shadow: 0 1px 2px rgb(255 255 255/.6); }
 body.wall.light .add .tile { color: #141414; filter: none; }
 body.wall.light .app:hover { background: rgb(255 255 255/.3); box-shadow: inset 0 0 0 1px rgb(0 0 0/.08); }
 body.wall.light .customize:hover { background: rgb(255 255 255/.7); }
