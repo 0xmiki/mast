@@ -28,7 +28,24 @@ base::RepeatingCallbackList<void(const void*)>& Revealed() {
   return *revealed;
 }
 
+using TypedList =
+    base::RepeatingCallbackList<void(const void*, const std::u16string&)>;
+TypedList& Typed() {
+  static base::NoDestructor<TypedList> typed;
+  return *typed;
+}
+
 }  // namespace
+
+void NewTabTyped(const void* web_contents, const std::u16string& text) {
+  Typed().Notify(web_contents, text);
+}
+
+base::CallbackListSubscription OnNewTabTyped(
+    base::RepeatingCallback<void(const void*, const std::u16string&)>
+        callback) {
+  return Typed().Add(std::move(callback));
+}
 
 float WallpaperOpacity(const void* browser_view) {
   const auto it = Opacities().find(browser_view);

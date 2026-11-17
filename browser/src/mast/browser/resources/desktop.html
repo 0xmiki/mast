@@ -528,6 +528,31 @@ window.mastState = (s) => {
   renderCustomize();
 };
 
+// Typing anywhere on the page, with nothing on it focused, goes to the address
+// bar, which takes the focus (MastTabBar): no need to click it first. Not
+// while a dialog or a field here has the keys, and shortcuts stay shortcuts.
+let lastTyped = 0;
+function typesHere(e) {
+  const t = e.target;
+  return !document.querySelector('dialog[open]') && !(t instanceof HTMLInputElement) &&
+    !(t instanceof HTMLTextAreaElement) && !(t instanceof HTMLSelectElement) && !t.isContentEditable;
+}
+document.addEventListener('keydown', (e) => {
+  if (e.defaultPrevented || e.isComposing || e.ctrlKey || e.metaKey || e.altKey) return;
+  if ([...e.key].length !== 1 || !typesHere(e)) return;  // one printable character
+  // A space only continues what's being typed (on its own it presses buttons).
+  if (e.key === ' ' && Date.now() - lastTyped > 800) return;
+  e.preventDefault();
+  lastTyped = Date.now();
+  chrome.send('typeInAddressBar', [e.key]);
+});
+document.addEventListener('paste', (e) => {
+  const text = e.clipboardData && e.clipboardData.getData('text/plain').trim();
+  if (!text || !typesHere(e)) return;
+  e.preventDefault();
+  chrome.send('typeInAddressBar', [text.slice(0, 2048)]);
+});
+
 document.addEventListener('click', (e) => {
   const t = e.target.closest('button, a');
   if (!t || !state) return;

@@ -15,8 +15,10 @@
 #include "chrome/browser/ui/browser_window.h"
 #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
 #include "chrome/browser/ui/browser_window_theme_observer.h"
+#include "chrome/browser/ui/omnibox/omnibox_view.h"
 #include "chrome/browser/ui/tabs/tab_strip_model.h"
 #include "chrome/browser/ui/views/frame/browser_view.h"
+#include "chrome/browser/ui/views/location_bar/location_bar_view.h"
 #include "components/prefs/pref_service.h"
 #include "components/viz/common/frame_sinks/copy_output_result.h"
 #include "content/public/browser/navigation_controller.h"
@@ -31,6 +33,7 @@
 #include "ui/gfx/geometry/cubic_bezier.h"
 #include "ui/gfx/geometry/rect.h"
 #include "ui/gfx/geometry/size.h"
+#include "ui/views/focus/focus_manager.h"
 #include "ui/views/widget/widget.h"
 #include "url/gurl.h"
 
@@ -50,6 +53,8 @@ constexpr float kSameColor = 0.012f;
 constexpr base::TimeDelta kResampleEvery = base::Seconds(2);
 // Longest the row waits for a new tab page to show its picture.
 constexpr base::TimeDelta kHoldAtMost = base::Seconds(1);
+// Most text one message from the new tab page may put in the address bar.
+constexpr size_t kMaxTyped = 2048;
 
 // A new tab page, committed or still on its way.
 bool IsNewTabPage(content::WebContents* contents) {
@@ -148,6 +153,8 @@ MastTabBar::MastTabBar(BrowserWindowInterface* browser)
       }));
   revealed_ = mast::OnWallpaperRevealed(base::BindRepeating(
       &MastTabBar::OnWallpaperRevealed, base::Unretained(this)));
+  typed_ = mast::OnNewTabTyped(base::BindRepeating(
+      &MastTabBar::OnNewTabTyped, base::Unretained(this)));
   Update();
 }
 
@@ -317,6 +324,33 @@ void MastTabBar::OnWallpaperRevealed(const void* contents) {
   if (hold_.IsRunning()) {
     FadeWallpaperIn();
   }
+}
+
+void MastTabBar::OnNewTabTyped(const void* contents,
+                               const std::u16string& text) {
+  // Only the front tab of this window, and only while it's a new tab page.
+  if (!web_contents() || contents != web_contents() ||
+      !IsNewTabPage(web_contents()) || text.empty() ||
+      text.size() > kMaxTyped) {
+    return;
+  }
+  LocationBarView* location_bar = browser_view_->GetLocationBarView();
+  OmniboxView* omnibox = location_bar ? location_bar->GetOmniboxView() : nullptr;
+  if (!omnibox) {
+    return;
+  }
+  // Keys typed before the address bar took the focus arrive one after
+  // another; once it has the focus they go to it directly. Either way they
+  // add up in order.
+  views::FocusManager* focus = browser_view_->GetFocusManager();
+  const bool focused =
+      focus && location_bar->Contains(focus->GetFocusedView());
+  if (!focused) {
+    location_bar->FocusLocation(/*is_user_initiated=*/true,
+                                /*clear_focus_if_failed=*/false);
+  }
+  omnibox->SetUserText(focused ? omnibox->GetText() + text : text,
+                       /*update_popup=*/true);
 }
 
 void MastTabBar::AnimationProgressed(const gfx::Animation* animation) {

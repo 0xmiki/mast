@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <string>
 
 #include "base/callback_list.h"
 #include "base/functional/callback_forward.h"
@@ -39,6 +40,13 @@ void SetWallpaperOpacity(const void* browser_view, std::optional<float> opacity)
 void WallpaperRevealed(const void* web_contents);
 base::CallbackListSubscription OnWallpaperRevealed(
     base::RepeatingCallback<void(const void*)> callback);
+
+// Text typed (or pasted) on a new tab page while nothing on it was focused
+// (desktop.html, mast_ui.cc). MastTabBar moves it into that window's address
+// bar, which takes the focus, so typing anywhere on a new tab searches.
+void NewTabTyped(const void* web_contents, const std::u16string& text);
+base::CallbackListSubscription OnNewTabTyped(
+    base::RepeatingCallback<void(const void*, const std::u16string&)> callback);
 
 }  // namespace mast
 

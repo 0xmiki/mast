@@ -13,7 +13,7 @@ and re-run. `./mast check-rebase <version>` checks all of this against another r
 | `mast-branding.patch` | 5 edits |
 | `mast-ungoogled.patch` | 2 edits |
 | `mast-webstore.patch` | 11 edits |
-| Chromium headers included by `src/mast` | 166 |
+| Chromium headers included by `src/mast` | 168 |
 | Upstream methods overridden | 39 |
 | Upstream GN deps | 27 |
 | ungoogled patches dropped / added | 1 / 1 |
@@ -208,12 +208,13 @@ between releases and flags changes to the names below.
 | `chrome/browser/ui/browser_window/public/browser_window_interface.h` | mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_one_row_toolbar.cc, mast/browser/ui/mast_tab_bar.cc |
 | `chrome/browser/ui/browser_window_theme_observer.h` | mast/browser/ui/mast_tab_bar.cc |
 | `chrome/browser/ui/color/chrome_color_id.h` | mast/browser/ui/color/mast_chrome_color_mixer.cc, mast/browser/ui/mast_block_bubble.cc |
+| `chrome/browser/ui/omnibox/omnibox_view.h` | mast/browser/ui/mast_tab_bar.cc |
 | `chrome/browser/ui/tabs/tab_strip_model.h` | mast/browser/ui/mast_one_row_toolbar.cc, mast/browser/ui/mast_tab_bar.cc |
 | `chrome/browser/ui/tabs/tab_strip_model_observer.h` | mast/browser/ui/mast_tab_bar.h |
 | `chrome/browser/ui/views/controls/rich_hover_button.h` | mast/browser/ui/mast_block_bubble.cc |
 | `chrome/browser/ui/views/frame/browser_view.h` | mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_one_row_toolbar.cc, mast/browser/ui/mast_tab_bar.cc, mast/browser/ui/mast_wallpaper.cc |
 | `chrome/browser/ui/views/frame/toolbar_button_provider.h` | mast/browser/ui/mast_one_row_toolbar.cc |
-| `chrome/browser/ui/views/location_bar/location_bar_view.h` | mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_one_row_toolbar.cc |
+| `chrome/browser/ui/views/location_bar/location_bar_view.h` | mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_one_row_toolbar.cc, mast/browser/ui/mast_tab_bar.cc |
 | `chrome/browser/ui/views/location_bar/location_icon_view.h` | mast/browser/ui/mast_block_bubble.cc |
 | `chrome/browser/ui/views/page_info/page_info_view_factory.h` | mast/browser/ui/mast_block_bubble.cc |
 | `chrome/browser/ui/views/toolbar/reload_button.h` | mast/browser/ui/mast_one_row_toolbar.cc |
@@ -309,6 +310,7 @@ between releases and flags changes to the names below.
 | `ui/views/controls/combobox/combobox.h` | mast/browser/ui/mast_block_bubble.cc |
 | `ui/views/controls/focus_ring.h` | mast/browser/ui/mast_block_bubble.cc |
 | `ui/views/controls/label.h` | mast/browser/ui/mast_block_bubble.cc |
+| `ui/views/focus/focus_manager.h` | mast/browser/ui/mast_tab_bar.cc |
 | `ui/views/layout/box_layout.h` | mast/browser/ui/mast_block_bubble.cc |
 | `ui/views/layout/flex_layout_types.h` | mast/browser/ui/mast_one_row_toolbar.cc |
 | `ui/views/style/typography.h` | mast/browser/ui/mast_block_bubble.cc |

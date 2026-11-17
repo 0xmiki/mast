@@ -233,6 +233,7 @@ class MastHandler : public content::WebUIMessageHandler,
     On("setWallpaperPreset", &MastHandler::HandleSetWallpaperPreset);
     On("setTabBar", &MastHandler::HandleSetTabBar);
     On("wallRevealed", &MastHandler::HandleWallRevealed);
+    On("typeInAddressBar", &MastHandler::HandleTypeInAddressBar);
   }
 
   void OnJavascriptAllowed() override {
@@ -545,6 +546,13 @@ class MastHandler : public content::WebUIMessageHandler,
   // tab row fades its own in with it (MastTabBar).
   void HandleWallRevealed(const base::ListValue& args) {
     WallpaperRevealed(web_ui()->GetWebContents());
+  }
+
+  // ["typeInAddressBar", text]: typed or pasted on the new tab page with
+  // nothing on it focused; the address bar takes it, and the focus.
+  void HandleTypeInAddressBar(const base::ListValue& args) {
+    NewTabTyped(web_ui()->GetWebContents(),
+                base::UTF8ToUTF16(StringArg(args)));
   }
 
   // ["setWallpaperPreset", id]: one of Customize's built-in pictures.

@@ -6,6 +6,7 @@
 #include <map>
 #include <optional>
 #include <set>
+#include <string>
 
 #include "base/callback_list.h"
 #include "base/memory/raw_ptr.h"
@@ -108,6 +109,8 @@ class MastTabBar : public TabStripModelObserver,
   void FadeWallpaperIn();
   void ShowWallpaper();
   void OnWallpaperRevealed(const void* web_contents);
+  // Typing on the new tab page with nothing focused: into the address bar.
+  void OnNewTabTyped(const void* web_contents, const std::u16string& text);
   void RepaintRow();
 
   const raw_ptr<BrowserWindowInterface> browser_;
@@ -119,6 +122,7 @@ class MastTabBar : public TabStripModelObserver,
   base::RepeatingTimer resample_;
   base::CallbackListSubscription did_close_;
   base::CallbackListSubscription revealed_;
+  base::CallbackListSubscription typed_;
   // New tab pages that have shown their picture: going back to one is instant.
   std::set<const content::WebContents*> shown_;
   gfx::LinearAnimation fade_{base::Milliseconds(560),
