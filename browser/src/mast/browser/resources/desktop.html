@@ -127,6 +127,9 @@ body.wall .widget, body.wall .customize { background: none; box-shadow: none;
 body.wall .widget .primary { text-shadow: none; }
 body.wall .primary { background: #f2f2f2; color: #111; }
 body.wall.light .primary { background: #141414; color: #f2f2f2; }
+/* ...and stays visibly off when disabled (the rules above outrank .primary:disabled). */
+body.wall .primary:disabled { background: rgb(255 255 255/.1); color: rgb(242 242 242/.4); }
+body.wall.light .primary:disabled { background: rgb(0 0 0/.08); color: rgb(20 20 20/.4); }
 body.wall .app .label, body.wall .add .label, body.wall .apps .hint { color: #ededed; text-shadow: 0 1px 3px rgb(0 0 0/.7); }
 body.wall .add .tile { color: #ededed; filter: drop-shadow(0 1px 3px rgb(0 0 0/.7)); }
 body.wall .app:hover { background: rgb(255 255 255/.1); box-shadow: inset 0 0 0 1px rgb(255 255 255/.15); }
