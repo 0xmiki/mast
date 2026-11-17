@@ -104,15 +104,17 @@ dialog.bl-panel .bl header { padding-right: 44px; }
 /* Customize's picture: its own layer, so it fades in once decoded instead of
    popping in a frame after the page (Chromium's NTP fades its background the
    same way). Laid out like the tab row's copy (mast_wallpaper.cc). */
-/* The reveal is Chromium's own: the whole picture fades in over 700ms with the
-   default ease (new_tab_page/untrusted/background_image.html). */
+/* The reveal is Chromium's own, a fifth quicker: the whole picture fades in
+   over 560ms (Chromium: 700ms) with the default ease
+   (new_tab_page/untrusted/background_image.html). The tab row matches it
+   (MastTabBar). */
 #wall { position: fixed; inset: 0; z-index: -1; pointer-events: none; background-repeat: no-repeat;
   opacity: 0;
   background-image: linear-gradient(rgb(0 0 0/.22), rgb(0 0 0/.22)), var(--wall);
   background-size: 100% 100%, var(--wall-size, cover); background-position: 0 0, var(--wall-pos, center); }
 /* The body must not paint over the layer (html keeps the page colour). */
 body.wall { background: transparent; }
-#wall.shown { opacity: 1; transition: opacity 700ms ease; }
+#wall.shown { opacity: 1; transition: opacity 560ms ease; }
 @media (prefers-reduced-motion: reduce) { #wall.shown { transition: none; } }
 body.light #wall { background-image: var(--wall); background-size: var(--wall-size, cover); background-position: var(--wall-pos, center); }
 /* On a picture, icons stand on it (labels carry a soft shadow), and widgets

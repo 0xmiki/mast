@@ -49,7 +49,7 @@ namespace mast {
 // changed one is seen twice in a row, so scrolling and animations don't flicker.
 //
 // A new tab that replaces a website's colour brings Customize's picture back to
-// the row. The page fades its picture in (Chromium's 700ms ease, desktop.html),
+// the row. The page fades its picture in (560ms ease, desktop.html),
 // so the row holds its own back and fades it in on the page's signal, as one.
 class MastTabBar : public TabStripModelObserver,
                    public content::WebContentsObserver,
@@ -121,7 +121,7 @@ class MastTabBar : public TabStripModelObserver,
   base::CallbackListSubscription revealed_;
   // New tab pages that have shown their picture: going back to one is instant.
   std::set<const content::WebContents*> shown_;
-  gfx::LinearAnimation fade_{base::Milliseconds(700),
+  gfx::LinearAnimation fade_{base::Milliseconds(560),
                              gfx::LinearAnimation::kDefaultFrameRate, this};
   base::OneShotTimer hold_;  // fades in anyway if the page never says so
   base::WeakPtrFactory<MastTabBar> weak_factory_{this};
