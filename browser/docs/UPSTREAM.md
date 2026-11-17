@@ -6,13 +6,13 @@ and re-run. `./mast check-rebase <version>` checks all of this against another r
 
 | | |
 |---|---|
-| Edits to upstream files | 87 (in 78 files) |
+| Edits to upstream files | 88 (in 79 files) |
 | `mast-hooks.patch` | 30 edits |
 | `mast-theme.patch` | 18 edits |
 | `mast-onerow.patch` | 22 edits |
 | `mast-branding.patch` | 5 edits |
 | `mast-ungoogled.patch` | 2 edits |
-| `mast-webstore.patch` | 10 edits |
+| `mast-webstore.patch` | 11 edits |
 | Chromium headers included by `src/mast` | 166 |
 | Upstream methods overridden | 39 |
 | Upstream GN deps | 27 |
@@ -135,10 +135,11 @@ patch run fails. "Why" is the comment above the edit.
 | `chrome/browser/extensions/extension_migrator.h` | [871](../remote/make-patches.py#L871) | web store | Undo disable-webstore-urls.patch in these files. |
 | `extensions/browser/updater/extension_downloader.cc` | [871](../remote/make-patches.py#L871) | web store | Undo disable-webstore-urls.patch in these files. |
 | `extensions/common/extension_urls.cc` | [874](../remote/make-patches.py#L874) | web store | The store's real URLs, and no utm_source tag on store links. |
-| `extensions/common/api/_api_features.json` | [888](../remote/make-patches.py#L888) | web store | The store's pages may use the install API (webstorePrivate) and management again. |
-| `chrome/browser/resources/webstore_app/manifest.json` | [891](../remote/make-patches.py#L891) | web store | The store's pages may use the install API (webstorePrivate) and management again. |
-| `chrome/app/extensions_strings.grdp` | [894](../remote/make-patches.py#L894) | web store | Links: the extensions page's "Web Store" (empty state) and Settings' current-theme link. |
-| `chrome/browser/resources/settings/appearance_page/appearance_page.ts` | [897](../remote/make-patches.py#L897) | web store | Links: the extensions page's "Web Store" (empty state) and Settings' current-theme link. |
+| `extensions/browser/webstore_installer.cc` | [891](../remote/make-patches.py#L891) | web store | The store's Install button: inox's 0005-disable-default-extensions.patch (in ungoogled's series) empties WebstoreInstaller's download and install steps, so a store install was accepted and then never started (the button just spun). Undo that file's part only; the rest of the patch (no default extensions) stays. |
+| `extensions/common/api/_api_features.json` | [895](../remote/make-patches.py#L895) | web store | The store's pages may use the install API (webstorePrivate) and management again. |
+| `chrome/browser/resources/webstore_app/manifest.json` | [898](../remote/make-patches.py#L898) | web store | The store's pages may use the install API (webstorePrivate) and management again. |
+| `chrome/app/extensions_strings.grdp` | [901](../remote/make-patches.py#L901) | web store | Links: the extensions page's "Web Store" (empty state) and Settings' current-theme link. |
+| `chrome/browser/resources/settings/appearance_page/appearance_page.ts` | [904](../remote/make-patches.py#L904) | web store | Links: the extensions page's "Web Store" (empty state) and Settings' current-theme link. |
 
 ## 2. Chromium code that `src/mast` builds against
 
@@ -360,4 +361,4 @@ Mast builds on ungoogled-chromium's patches, with these changes (`patches/*.list
 
 - not applied: `replace-google-search-engine-with-nosearch.patch`
 - also applied (from extra/): `fix-building-without-mdns-and-service-discovery.patch`
-- partly undone by `unpatch()` in make-patches.py (2 places)
+- partly undone by `unpatch()` in make-patches.py (3 places)

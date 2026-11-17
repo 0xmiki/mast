@@ -884,6 +884,13 @@ edit(W, "extensions/common/extension_urls.cc", lambda t: once(once(once(once(onc
     # Store links carry no utm_source tag (which menu or page you came from).
     '  return net::AppendQueryParameter(url, "utm_source", utm_source_value);\n',
     '  return url;  // Mast: no tracking tag on store links\n'))
+# The store's Install button: inox's 0005-disable-default-extensions.patch (in ungoogled's
+# series) empties WebstoreInstaller's download and install steps, so a store install was
+# accepted and then never started (the button just spun). Undo that file's part only; the
+# rest of the patch (no default extensions) stays.
+edit(W, "extensions/browser/webstore_installer.cc", lambda t: unpatch(
+    t, "extensions/browser/webstore_installer.cc",
+    "core/inox-patchset/0005-disable-default-extensions.patch"))
 # The store's pages may use the install API (webstorePrivate) and management again.
 edit(W, "extensions/common/api/_api_features.json", lambda t: exactly(t,
     '    "matches": ["https://chromewebstore.9oo91e.qjz9zk/*"]\n',
