@@ -47,6 +47,8 @@
 .bl .sc-row .t { min-width: 0; }
 .bl .sc-row .t b { display: block; font-size: 14px; font-weight: 500; }
 .bl .sc-row .t span { display: block; overflow: hidden; color: var(--text-3); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.bl .sc-row .acts { display: flex; gap: 2px; }
+.bl .sc-row.editing { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 35%, transparent); }
 .bl .sc-row .rm { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--text-3); }
 .bl .sc-row .rm:hover { background: var(--pressed); color: var(--text); }
 .bl .sc-add { margin-top: 14px; padding: 16px; border-radius: 10px; background: var(--field); }
@@ -58,6 +60,8 @@
 .bl .sc-f input:focus { box-shadow: inset 0 0 0 1px var(--text-3); }
 .bl .sc-f input::placeholder { color: var(--text-3); }
 .bl .sc-rec { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.bl .sc-cancel { height: 36px; padding: 0 14px; border: 0; border-radius: 18px; background: none; box-shadow: inset 0 0 0 1px var(--line); color: var(--text-2); font-weight: 500; }
+.bl .sc-cancel:hover { color: var(--text); }
 .bl .sc-key { display: flex; flex: 1; align-items: center; gap: 10px; height: 44px; padding: 0 12px; border: 0; border-radius: 7px; background: var(--surface);
   box-shadow: inset 0 0 0 1px var(--line); color: var(--text-3); text-align: left; }
 .bl .sc-key.listening { box-shadow: inset 0 0 0 1px var(--text-2); color: var(--text-2); }
@@ -197,6 +201,7 @@ const mastIcon = (() => {
   const P = {
     lock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
     minus: '<path d="M5 12h14"/>',
+    pencil: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
     check: '<path d="M20 6 9 17l-5-5"/>',
     'chevron-right': '<path d="m9 18 6-6-6-6"/>',
     'chevron-left': '<path d="m15 18-6-6 6-6"/>',
@@ -308,7 +313,8 @@ const MastBlocklist = (() => {
   let asked = false;  // a block/undo from this list is waiting for its result
   let tab = 'bl';     // 'bl' (Blocklist) or 'sc' (Shortcuts)
   // The Shortcuts tab's form, kept across re-renders.
-  const sc = {name: '', url: '', key: '', listening: false, msg: '', bad: false, err: false};
+  const sc = {name: '', url: '', key: '', listening: false, msg: '', bad: false, err: false, editing: ''};
+  const SC_EMPTY = {name: '', url: '', key: '', listening: false, msg: '', bad: false, err: false, editing: ''};
   const SC_TAKEN = {D: 'focuses the address bar', E: 'opens the menu', F: 'opens the menu'};
 
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
@@ -482,24 +488,27 @@ const MastBlocklist = (() => {
       </div>`;
   }
 
+  const shortUrl = (u) => u.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
   const keysHtml = (k) => `<span class="keys"><kbd>Alt</kbd><kbd>${esc(k)}</kbd></span>`;
   function shortcutsView() {
     const list = state.shortcuts || [];
-    const rows = list.map((s) => `<div class="sc-row">${keysHtml(s.key)}<div class="t"><b>${esc(s.name)}</b>
-      <span>${esc(s.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, ''))}</span></div>
-      <button class="rm" data-scrm="${esc(s.key)}" aria-label="Remove ${esc(s.name)}">${mastIcon('x', 12)}</button></div>`).join('');
+    const rows = list.map((s) => `<div class="sc-row ${sc.editing === s.key ? 'editing' : ''}">${keysHtml(s.key)}<div class="t"><b>${esc(s.name)}</b>
+      <span>${esc(shortUrl(s.url))}</span></div>
+      <div class="acts"><button class="rm" data-scedit="${esc(s.key)}" aria-label="Edit ${esc(s.name)}">${mastIcon('pencil', 13)}</button>
+      <button class="rm" data-scrm="${esc(s.key)}" aria-label="Remove ${esc(s.name)}">${mastIcon('x', 12)}</button></div></div>`).join('');
     const keyBox = sc.key ? keysHtml(sc.key) : `<span>${sc.listening ? 'Press Alt + a letter…' : 'Click, then press Alt + a letter'}</span>`;
     return `<p class="sc-intro">Press Alt and a letter anywhere in Mast to open a page in a new tab.</p>
       ${rows ? `<div class="sc-list">${rows}</div>` : ''}
       <div class="sc-add">
-        <h3>Add a shortcut</h3>
+        <h3>${sc.editing ? 'Edit shortcut' : 'Add a shortcut'}</h3>
         <div class="sc-fields">
           <label class="sc-f">Name<input data-scname placeholder="NVIDIA stock" spellcheck="false" autocomplete="off"></label>
           <label class="sc-f">Opens<input data-scurl placeholder="A link, or a search like google.com/search?q=nvidia+stock" spellcheck="false" autocomplete="off"></label>
         </div>
         <div class="sc-rec">
           <button class="sc-key ${sc.listening ? 'listening' : ''} ${sc.bad ? 'bad' : ''}" data-act="sckey">${keyBox}</button>
-          <button class="primary" data-act="scadd" ${sc.key && !sc.bad && sc.url.trim() ? '' : 'disabled'}>Add</button>
+          ${sc.editing ? '<button class="sc-cancel" data-act="sccancel">Cancel</button>' : ''}
+          <button class="primary" data-act="scadd" ${sc.key && !sc.bad && sc.url.trim() ? '' : 'disabled'}>${sc.editing ? 'Save' : 'Add'}</button>
         </div>
         <div class="sc-msg ${sc.bad || sc.err ? 'bad' : ''}">${esc(sc.msg)}</div>
       </div>
@@ -508,7 +517,7 @@ const MastBlocklist = (() => {
   }
   // A recorded key: free, or why not.
   function pickKey(k) {
-    const taken = (state.shortcuts || []).find((s) => s.key === k);
+    const taken = (state.shortcuts || []).find((s) => s.key === k && s.key !== sc.editing);
     sc.key = k;
     sc.bad = true;
     if (/\d/.test(k)) sc.msg = `Alt + ${k} switches to tab ${k}. Pick a letter.`;
@@ -584,12 +593,20 @@ const MastBlocklist = (() => {
     } else if (t.dataset.act === 'sckey') {
       sc.listening = true;
       sc.key = '';
+      sc.err = false;
       sc.bad = false;
       sc.msg = '';
     } else if (t.dataset.act === 'scadd') {
       if (!sc.key || sc.bad || !sc.url.trim()) return;
-      return chrome.send('addShortcut', [sc.key, sc.name, sc.url]);
+      return chrome.send('addShortcut', [sc.key, sc.name, sc.url, sc.editing]);
+    } else if (t.dataset.act === 'sccancel') {
+      Object.assign(sc, SC_EMPTY);
+    } else if (t.dataset.scedit) {
+      const s = (state.shortcuts || []).find((x) => x.key === t.dataset.scedit);
+      if (!s) return;
+      Object.assign(sc, SC_EMPTY, {editing: s.key, key: s.key, name: s.name, url: shortUrl(s.url)});
     } else if (t.dataset.scrm) {
+      if (sc.editing === t.dataset.scrm) Object.assign(sc, SC_EMPTY);
       return chrome.send('removeShortcut', [t.dataset.scrm]);
     } else if (t.dataset.cat) {
       const c = cats.find((x) => x.id === t.dataset.cat);
@@ -716,7 +733,7 @@ const MastBlocklist = (() => {
       if (r.shortcut) {
         handled = true;
         if (r.shortcut === 'added') {
-          Object.assign(sc, {name: '', url: '', key: '', listening: false, bad: false, err: false, msg: `Added. Press Alt + ${r.key} anywhere in Mast.`});
+          Object.assign(sc, SC_EMPTY, {msg: `${sc.editing ? 'Saved' : 'Added'}. Press Alt + ${r.key} anywhere in Mast.`});
         } else if (r.shortcut === 'badUrl') {
           Object.assign(sc, {err: true, msg: 'That doesn’t look like a web address.'});
         } else {

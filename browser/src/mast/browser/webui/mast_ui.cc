@@ -600,24 +600,30 @@ class MastHandler : public content::WebUIMessageHandler,
     SendState();
   }
 
-  // ["addShortcut", key, name, url]: Alt + key opens url in a new tab
-  // (Shortcuts tab, MastShortcuts). The key is a free letter (IsShortcutKey,
-  // not one another shortcut has); the url, a web address as typed.
+  // ["addShortcut", key, name, url, replaces]: Alt + key opens url in a new
+  // tab (Shortcuts tab, MastShortcuts). The key is a free letter (IsShortcutKey,
+  // not one another shortcut has); the url, a web address as typed. With
+  // `replaces` (a key), it edits that shortcut in place.
   void HandleAddShortcut(const base::ListValue& args) {
     const std::string key = base::ToUpperASCII(StringArg(args, 0));
     std::string name(
         base::TrimWhitespaceASCII(StringArg(args, 1), base::TRIM_ALL));
-    const GURL url = url_formatter::FixupURL(
-        std::string(
-            base::TrimWhitespaceASCII(StringArg(args, 2), base::TRIM_ALL)),
-        std::string());
+    // Typed without a scheme ("google.com/search?q=..."): https, not the
+    // fixer's http.
+    std::string typed(
+        base::TrimWhitespaceASCII(StringArg(args, 2), base::TRIM_ALL));
+    if (!typed.empty() && typed.find("://") == std::string::npos) {
+      typed = "https://" + typed;
+    }
+    const GURL url = url_formatter::FixupURL(typed, std::string());
+    const std::string replaces = StringArg(args, 3);
     PrefService* prefs = profile_->GetPrefs();
     const base::ListValue& list = prefs->GetList(kShortcutsPref);
     bool taken = false;
     for (const base::Value& item : list) {
       const std::string* k = item.is_dict() ? item.GetDict().FindString("key")
                                             : nullptr;
-      taken = taken || (k && *k == key);
+      taken = taken || (k && *k == key && *k != replaces);
     }
     if (!IsShortcutKey(key) || taken) {
       return SendState(base::DictValue().Set("shortcut", "badKey"));
@@ -631,11 +637,26 @@ class MastHandler : public content::WebUIMessageHandler,
         name = name.substr(4);
       }
     }
-    base::ListValue next = list.Clone();
-    next.Append(base::DictValue()
-                    .Set("key", key)
-                    .Set("name", name.substr(0, 80))
-                    .Set("url", url.spec()));
+    base::DictValue shortcut = base::DictValue()
+                                   .Set("key", key)
+                                   .Set("name", name.substr(0, 80))
+                                   .Set("url", url.spec());
+    // An edit keeps its place in the list.
+    base::ListValue next;
+    bool placed = false;
+    for (const base::Value& item : list) {
+      const std::string* k = item.is_dict() ? item.GetDict().FindString("key")
+                                            : nullptr;
+      if (!replaces.empty() && k && *k == replaces && !placed) {
+        next.Append(shortcut.Clone());
+        placed = true;
+      } else {
+        next.Append(item.Clone());
+      }
+    }
+    if (!placed) {
+      next.Append(std::move(shortcut));
+    }
     prefs->SetList(kShortcutsPref, std::move(next));
     SendState(base::DictValue().Set("shortcut", "added").Set("key", key));
   }
