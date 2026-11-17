@@ -368,7 +368,11 @@ const wallEl = document.getElementById("wall");
 function revealWall() {
   layoutWallpaper();
   wallImg.decode().catch(() => {}).then(() =>
-    requestAnimationFrame(() => requestAnimationFrame(() => wallEl.classList.add("shown"))));
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      wallEl.classList.add("shown");
+      // The tab row fades its copy of the picture in with this one (MastTabBar).
+      chrome.send("wallRevealed");
+    })));
 }
 wallImg.onload = revealWall;
 function layoutWallpaper() {

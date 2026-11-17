@@ -30,6 +30,9 @@
 #include "ui/gfx/geometry/rect.h"
 #include "ui/gfx/geometry/size.h"
 #include "ui/gfx/image/canvas_image_source.h"
+#include "ui/gfx/image/image_skia_operations.h"
+#include "ui/color/color_id.h"
+#include "ui/color/color_provider.h"
 #include "ui/native_theme/native_theme.h"
 #include "ui/views/view.h"
 #include "ui/views/widget/widget.h"
@@ -176,6 +179,15 @@ gfx::ImageSkia WallpaperFrameImage(const BrowserView* browser_view) {
     w.light = light;
     w.slice = MakeSlice(w.bitmap, screen, light);
   }
+  // Fading in with a new tab page's picture (mast_tab_bar_state.h): what the
+  // frame paints under it is the palette, as under the page's.
+  const float opacity = WallpaperOpacity(browser_view);
+  if (opacity <= 0.0f) {
+    return gfx::ImageSkia();
+  }
+  if (opacity < 1.0f) {
+    return gfx::ImageSkiaOperations::CreateTransparentImage(w.slice, opacity);
+  }
   return w.slice;
 }
 
@@ -194,6 +206,16 @@ bool PaintWallpaperBackground(gfx::Canvas* canvas,
   origin.Offset(0, ThemeProperties::kFrameHeightAboveTabs);
   if (browser_view->theme_background_y_offset()) {
     origin.set_y(origin.y() + *browser_view->theme_background_y_offset());
+  }
+  // Mid-fade the image is translucent: lay it on the frame's colour, as the
+  // frame does behind the tabs, or the frame's own fading copy would show
+  // through and this part of the row would arrive sooner.
+  if (WallpaperOpacity(browser_view) < 1.0f) {
+    if (const ui::ColorProvider* colors = view->GetColorProvider()) {
+      const bool active = browser_view->GetWidget()->ShouldPaintAsActive();
+      canvas->DrawColor(colors->GetColor(active ? ui::kColorFrameActive
+                                                : ui::kColorFrameInactive));
+    }
   }
   canvas->TileImageInt(image, origin.x(), origin.y(), 0, 0, view->width(),
                        view->height(), 1.0f, SkTileMode::kRepeat,

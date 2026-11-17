@@ -575,7 +575,7 @@ edit(R, "chrome/browser/ui/browser_window/internal/embedder_browser_window_featu
     '#include "chrome/browser/ui/views/frame/browser_view.h"\n#include "mast/browser/ui/mast_one_row_toolbar.h"\n'),
     'void EmbedderBrowserWindowFeatures::InitPostWindowConstruction(\n    BrowserWindowInterface* browser) {\n  // Embedder implementation goes here.\n}',
     'void EmbedderBrowserWindowFeatures::InitPostWindowConstruction(\n    BrowserWindowInterface* browser) {\n  mast::OnBrowserWindowReady(browser);\n}'))
-edit(R, "chrome/browser/ui/browser_window/internal/BUILD.gn", lambda t: add_dep(add_dep(add_dep(add_dep(add_dep(once(t,
+edit(R, "chrome/browser/ui/browser_window/internal/BUILD.gn", lambda t: add_dep(add_dep(add_dep(add_dep(add_dep(add_dep(add_dep(once(t,
     '      "embedder_browser_window_features.cc",\n',
     '      "embedder_browser_window_features.cc",\n      "//mast/browser/ui/mast_one_row_toolbar.cc",\n      "//mast/browser/ui/mast_one_row_toolbar.h",\n'
     '      "//mast/browser/ui/mast_tab_bar.cc",\n      "//mast/browser/ui/mast_tab_bar.h",\n'),
@@ -583,7 +583,9 @@ edit(R, "chrome/browser/ui/browser_window/internal/BUILD.gn", lambda t: add_dep(
     'source_set("internal") {', "//components/prefs"),
     'source_set("internal") {', "//content/public/browser"),
     'source_set("internal") {', "//skia"),
-    'source_set("internal") {', "//components/viz/common"))
+    'source_set("internal") {', "//components/viz/common"),
+    'source_set("internal") {', "//ui/gfx/animation"),
+    'source_set("internal") {', "//ui/gfx/geometry"))
 
 # No dividers between tabs in the one-row window: tabs are pills with space between them.
 # (Chromium paints dividers with SkColorSetA(colour, opacity), which overrides the colour's

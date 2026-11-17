@@ -53,6 +53,7 @@
 #include "mast/browser/mast_theme.h"
 #include "mast/browser/mast_wallpapers.h"
 #include "mast/common/mast_features.h"
+#include "mast/common/mast_tab_bar_state.h"
 #include "mast/ui/color/mast_palette.h"
 #include "components/prefs/pref_service.h"
 #include "services/network/public/mojom/content_security_policy.mojom.h"
@@ -231,6 +232,7 @@ class MastHandler : public content::WebUIMessageHandler,
     On("setWallpaperTone", &MastHandler::HandleSetWallpaperTone);
     On("setWallpaperPreset", &MastHandler::HandleSetWallpaperPreset);
     On("setTabBar", &MastHandler::HandleSetTabBar);
+    On("wallRevealed", &MastHandler::HandleWallRevealed);
   }
 
   void OnJavascriptAllowed() override {
@@ -537,6 +539,12 @@ class MastHandler : public content::WebUIMessageHandler,
       RepaintBrowser();  // same colours, new picture
     }
     SendState();
+  }
+
+  // ["wallRevealed"]: the new tab page started fading its picture in; the
+  // tab row fades its own in with it (MastTabBar).
+  void HandleWallRevealed(const base::ListValue& args) {
+    WallpaperRevealed(web_ui()->GetWebContents());
   }
 
   // ["setWallpaperPreset", id]: one of Customize's built-in pictures.
