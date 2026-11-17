@@ -747,6 +747,48 @@ edit(R, "chrome/browser/ui/views/frame/browser_frame_view.cc", lambda t: once(on
     '  // Mast: Customize\'s image continues behind the tab row.\n'
     '  if (gfx::ImageSkia wallpaper = mast::WallpaperFrameImage(GetBrowserView());\n'
     '      !wallpaper.isNull()) {\n    return wallpaper;\n  }\n'))
+# Behind a new tab page (mast_wallpaper.h, WallpaperBehindPage): the page area is
+# transparent there, and its container paints the whole picture under it, so a new tab
+# shows the picture at once instead of black until the page has painted.
+edit(R, "chrome/browser/ui/views/frame/contents_web_view.cc", lambda t: once(once(once(t,
+    '#include "chrome/browser/ui/views/frame/contents_web_view.h"\n',
+    '#include "chrome/browser/ui/views/frame/contents_web_view.h"\n\n#include "mast/browser/ui/mast_wallpaper.h"\n'),
+    '  auto* background_layer = layer()->AsSolidColor();\n'
+    '  background_layer->SetColor(\n'
+    '      SkColor4f::FromColor(background_visible_ ? color : SK_ColorTRANSPARENT));\n'
+    '\n'
+    '  SafeInvoke(web_contents())\n'
+    '      .Then(&content::WebContents::GetRenderWidgetHostView)\n'
+    '      .Then(&content::RenderWidgetHostView::SetBackgroundColor,\n'
+    '            background_visible_ ? color : SK_ColorTRANSPARENT);\n',
+    '  // Mast: transparent over Customize\'s picture on a new tab page; the\n'
+    '  // container paints the picture under it.\n'
+    '  const bool mast_picture = mast::WallpaperBehindPage(this);\n'
+    '  const bool visible = background_visible_ && !mast_picture;\n'
+    '  auto* background_layer = layer()->AsSolidColor();\n'
+    '  background_layer->SetColor(\n'
+    '      SkColor4f::FromColor(visible ? color : SK_ColorTRANSPARENT));\n'
+    '\n'
+    '  SafeInvoke(web_contents())\n'
+    '      .Then(&content::WebContents::GetRenderWidgetHostView)\n'
+    '      .Then(&content::RenderWidgetHostView::SetBackgroundColor,\n'
+    '            visible ? color : SK_ColorTRANSPARENT);\n'
+    '  if (parent()) {\n    parent()->SchedulePaint();\n  }\n'),
+    # Another tab in this view (a tab switch): the page area follows it.
+    '  SafeInvoke(\n'
+    '      web_modal::WebContentsModalDialogManager::FromWebContents(web_contents))\n'
+    '      .Then(&web_modal::WebContentsModalDialogManager::UpdateDialogHost);\n}\n',
+    '  SafeInvoke(\n'
+    '      web_modal::WebContentsModalDialogManager::FromWebContents(web_contents))\n'
+    '      .Then(&web_modal::WebContentsModalDialogManager::UpdateDialogHost);\n'
+    '  if (GetWidget()) {\n    UpdateBackgroundColor();  // Mast: a new tab page shows the picture\n  }\n}\n'))
+edit(R, "chrome/browser/ui/views/frame/contents_container_view.cc", lambda t: once(once(t,
+    '#include "chrome/browser/ui/views/frame/contents_web_view.h"\n',
+    '#include "chrome/browser/ui/views/frame/contents_web_view.h"\n#include "mast/browser/ui/mast_wallpaper.h"\n'),
+    '  contents_view_->SetID(VIEW_ID_TAB_CONTAINER);\n',
+    '  contents_view_->SetID(VIEW_ID_TAB_CONTAINER);\n'
+    '  // Mast: Customize\'s picture under a new tab page (mast_wallpaper.h).\n'
+    '  SetBackground(mast::CreateNewTabPageBackground(contents_view_));\n'))
 edit(R, "chrome/browser/ui/views/frame/themed_background.cc", lambda t: once(once(t,
     '#include "chrome/browser/ui/color/chrome_color_id.h"\n',
     '#include "chrome/browser/ui/color/chrome_color_id.h"\n#include "mast/browser/ui/mast_wallpaper.h"\n'),
@@ -755,12 +797,14 @@ edit(R, "chrome/browser/ui/views/frame/themed_background.cc", lambda t: once(onc
     '  // Mast: the toolbar\'s part of the tab row shows Customize\'s image too.\n'
     '  if (mast::PaintWallpaperBackground(canvas, view, browser_view)) {\n    return;\n  }\n'
     '  bool painted =\n'))
-edit(R, "chrome/browser/ui/views/frame/BUILD.gn", lambda t: add_dep(add_dep(add_dep(once(t,
+edit(R, "chrome/browser/ui/views/frame/BUILD.gn", lambda t: add_dep(add_dep(add_dep(add_dep(add_dep(once(t,
     'source_set("themed_background_impl") {\n  sources = [ "themed_background.cc" ]\n',
     'source_set("themed_background_impl") {\n  sources = [\n    "themed_background.cc",\n'
     '    "//mast/browser/ui/mast_wallpaper.cc",\n    "//mast/browser/ui/mast_wallpaper.h",\n  ]\n'),
     'source_set("themed_background_impl") {', "//mast/common"),
     'source_set("themed_background_impl") {', "//ui/display"),
+    'source_set("themed_background_impl") {', "//ui/views/controls/webview"),
+    'source_set("themed_background_impl") {', "//content/public/browser"),
     'source_set("themed_background_impl") {', "//ui/gfx/codec"))
 
 # Customize's "Tab bar on websites" (mast/browser/ui/mast_tab_bar.h): each one-row window's

@@ -235,7 +235,6 @@ class MastHandler : public content::WebUIMessageHandler,
     On("setWallpaperTone", &MastHandler::HandleSetWallpaperTone);
     On("setWallpaperPreset", &MastHandler::HandleSetWallpaperPreset);
     On("setTabBar", &MastHandler::HandleSetTabBar);
-    On("wallRevealed", &MastHandler::HandleWallRevealed);
     On("typeInAddressBar", &MastHandler::HandleTypeInAddressBar);
   }
 
@@ -543,12 +542,6 @@ class MastHandler : public content::WebUIMessageHandler,
       RepaintBrowser();  // same colours, new picture
     }
     SendState();
-  }
-
-  // ["wallRevealed"]: the new tab page started fading its picture in; the
-  // tab row fades its own in with it (MastTabBar).
-  void HandleWallRevealed(const base::ListValue& args) {
-    WallpaperRevealed(web_ui()->GetWebContents());
   }
 
   // ["typeInAddressBar", text]: typed or pasted on the new tab page with

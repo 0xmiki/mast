@@ -30,7 +30,6 @@
 #include "mast/common/mast_tab_bar_state.h"
 #include "mast/ui/color/mast_site_color.h"
 #include "third_party/skia/include/core/SkBitmap.h"
-#include "ui/gfx/geometry/cubic_bezier.h"
 #include "ui/gfx/geometry/rect.h"
 #include "ui/gfx/geometry/size.h"
 #include "ui/views/focus/focus_manager.h"
@@ -51,8 +50,6 @@ constexpr float kMaxSpread = 0.035f;
 // A sample this close to the current colour isn't a change.
 constexpr float kSameColor = 0.012f;
 constexpr base::TimeDelta kResampleEvery = base::Seconds(2);
-// Longest the row waits for a new tab page to show its picture.
-constexpr base::TimeDelta kHoldAtMost = base::Seconds(1);
 // Most text one message from the new tab page may put in the address bar.
 constexpr size_t kMaxTyped = 2048;
 
@@ -151,8 +148,6 @@ MastTabBar::MastTabBar(BrowserWindowInterface* browser)
       base::BindRepeating([](BrowserWindowInterface* browser) {
         TabBars().erase(browser);
       }));
-  revealed_ = mast::OnWallpaperRevealed(base::BindRepeating(
-      &MastTabBar::OnWallpaperRevealed, base::Unretained(this)));
   typed_ = mast::OnNewTabTyped(base::BindRepeating(
       &MastTabBar::OnNewTabTyped, base::Unretained(this)));
   Update();
@@ -160,7 +155,6 @@ MastTabBar::MastTabBar(BrowserWindowInterface* browser)
 
 MastTabBar::~MastTabBar() {
   SetTabBarColor(browser_view_.get(), std::nullopt);
-  SetWallpaperOpacity(browser_view_.get(), std::nullopt);
   if (TabStripModel* model = browser_->GetTabStripModel()) {
     model->RemoveObserver(this);
   }
@@ -212,16 +206,6 @@ void MastTabBar::Update() {
   } else {
     resample_.Stop();
   }
-  // The picture comes back to the row for a new tab page that hasn't shown
-  // its own yet: hold it back, before the window repaints below.
-  content::WebContents* contents = web_contents();
-  if (next) {
-    ShowWallpaper();
-  } else if (published_ && contents && IsNewTabPage(contents) &&
-             !shown_.contains(contents) &&
-             browser_->GetProfile()->GetPrefs()->GetInteger(kWallpaperPref) > 0) {
-    HoldWallpaper();
-  }
   if (next == published_) {
     return;
   }
@@ -240,15 +224,11 @@ void MastTabBar::OnTabStripModelChanged(TabStripModel* tab_strip_model,
   if (change.type() == TabStripModelChange::kRemoved) {
     for (const auto& removed : change.GetRemove()->contents) {
       sites_.erase(removed.contents);
-      shown_.erase(removed.contents.get());
     }
   } else if (change.type() == TabStripModelChange::kReplaced) {
     sites_.erase(change.GetReplace()->old_contents);
-    shown_.erase(change.GetReplace()->old_contents.get());
   }
   if (selection.active_tab_changed()) {
-    // Another tab: whatever the row was fading in, it shows at once.
-    ShowWallpaper();
     Observe(selection.new_contents);
     if (web_contents() && !sites_[web_contents()].color) {
       TakeThemeColor();
@@ -287,45 +267,6 @@ void MastTabBar::OnBackgroundColorChanged() {
   ScheduleSample(base::Milliseconds(100));
 }
 
-void MastTabBar::HoldWallpaper() {
-  if (fade_.is_animating() || hold_.IsRunning()) {
-    return;
-  }
-  SetWallpaperOpacity(browser_view_.get(), 0.0f);
-  hold_.Start(FROM_HERE, kHoldAtMost,
-              base::BindOnce(&MastTabBar::FadeWallpaperIn,
-                             base::Unretained(this)));
-}
-
-void MastTabBar::FadeWallpaperIn() {
-  hold_.Stop();
-  if (!fade_.is_animating()) {
-    fade_.Start();
-  }
-}
-
-void MastTabBar::ShowWallpaper() {
-  if (!hold_.IsRunning() && !fade_.is_animating()) {
-    return;
-  }
-  hold_.Stop();
-  if (fade_.is_animating()) {
-    fade_.Stop();  // mid-way this cancels: AnimationEnded isn't called
-  }
-  SetWallpaperOpacity(browser_view_.get(), std::nullopt);
-  RepaintRow();
-}
-
-void MastTabBar::OnWallpaperRevealed(const void* contents) {
-  if (!web_contents() || contents != web_contents()) {
-    return;
-  }
-  shown_.insert(web_contents());
-  if (hold_.IsRunning()) {
-    FadeWallpaperIn();
-  }
-}
-
 void MastTabBar::OnNewTabTyped(const void* contents,
                                const std::u16string& text) {
   // Only the front tab of this window, and only while it's a new tab page.
@@ -353,24 +294,6 @@ void MastTabBar::OnNewTabTyped(const void* contents,
                        /*update_popup=*/true);
 }
 
-void MastTabBar::AnimationProgressed(const gfx::Animation* animation) {
-  // CSS "ease", like the page's transition.
-  static const gfx::CubicBezier ease(0.25, 0.1, 0.25, 1.0);
-  SetWallpaperOpacity(browser_view_.get(),
-                      static_cast<float>(ease.Solve(animation->GetCurrentValue())));
-  RepaintRow();
-}
-
-void MastTabBar::AnimationEnded(const gfx::Animation* animation) {
-  SetWallpaperOpacity(browser_view_.get(), std::nullopt);
-  RepaintRow();
-}
-
-void MastTabBar::RepaintRow() {
-  if (views::Widget* widget = browser_view_->GetWidget()) {
-    widget->GetRootView()->SchedulePaint();
-  }
-}
 
 void MastTabBar::TakeThemeColor() {
   if (!MatchingSites() || !web_contents()) {

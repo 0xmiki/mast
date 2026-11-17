@@ -130,7 +130,7 @@ diff -ruN a/chrome/browser/ui/views/frame/browser_widget.cc b/chrome/browser/ui/
 diff -ruN a/chrome/browser/ui/views/frame/BUILD.gn b/chrome/browser/ui/views/frame/BUILD.gn
 --- a/chrome/browser/ui/views/frame/BUILD.gn
 +++ b/chrome/browser/ui/views/frame/BUILD.gn
-@@ -1256,12 +1256,19 @@
+@@ -1256,12 +1256,21 @@
  }
  
  source_set("themed_background_impl") {
@@ -146,12 +146,14 @@ diff -ruN a/chrome/browser/ui/views/frame/BUILD.gn b/chrome/browser/ui/views/fra
    ]
    deps = [
 +    "//ui/gfx/codec",
++    "//content/public/browser",
++    "//ui/views/controls/webview",
 +    "//ui/display",
 +    "//mast/common",
      ":top_container_view",
      "//base",
      "//chrome/app/theme:theme_resources",
-@@ -3107,6 +3114,7 @@
+@@ -3107,6 +3116,7 @@
      "//ui/views",
    ]
    deps = [
@@ -159,7 +161,7 @@ diff -ruN a/chrome/browser/ui/views/frame/BUILD.gn b/chrome/browser/ui/views/fra
      ":custom_corners",
      ":custom_corners_background",
      ":custom_floating_corner",
-@@ -3396,6 +3404,7 @@
+@@ -3396,6 +3406,7 @@
      "//chrome/browser:browser_public_dependencies",
    ]
    deps = [
@@ -167,6 +169,72 @@ diff -ruN a/chrome/browser/ui/views/frame/BUILD.gn b/chrome/browser/ui/views/fra
      ":browser_frame_view",
      ":browser_native_widget",
      ":browser_native_widget_factory",
+diff -ruN a/chrome/browser/ui/views/frame/contents_container_view.cc b/chrome/browser/ui/views/frame/contents_container_view.cc
+--- a/chrome/browser/ui/views/frame/contents_container_view.cc
++++ b/chrome/browser/ui/views/frame/contents_container_view.cc
+@@ -25,6 +25,7 @@
+ #include "chrome/browser/ui/views/frame/contents_container_outline.h"
+ #include "chrome/browser/ui/views/frame/contents_separator.h"
+ #include "chrome/browser/ui/views/frame/contents_web_view.h"
++#include "mast/browser/ui/mast_wallpaper.h"
+ #include "chrome/browser/ui/views/frame/multi_contents_view_mini_toolbar.h"
+ #include "chrome/browser/ui/views/frame/scrim_view.h"
+ #include "chrome/browser/ui/views/frame/tab_modal_dialog_host.h"
+@@ -85,6 +86,8 @@
+   contents_view_ = AddChildView(
+       std::make_unique<ContentsWebView>(browser_view->GetProfile()));
+   contents_view_->SetID(VIEW_ID_TAB_CONTAINER);
++  // Mast: Customize's picture under a new tab page (mast_wallpaper.h).
++  SetBackground(mast::CreateNewTabPageBackground(contents_view_));
+   contents_view_->set_use_default_deadline_when_animating_bounds(
+       base::FeatureList::IsEnabled(
+           features::kUseDefaultDeadlineWhenAnimatingBounds));
+diff -ruN a/chrome/browser/ui/views/frame/contents_web_view.cc b/chrome/browser/ui/views/frame/contents_web_view.cc
+--- a/chrome/browser/ui/views/frame/contents_web_view.cc
++++ b/chrome/browser/ui/views/frame/contents_web_view.cc
+@@ -4,6 +4,8 @@
+ 
+ #include "chrome/browser/ui/views/frame/contents_web_view.h"
+ 
++#include "mast/browser/ui/mast_wallpaper.h"
++
+ #include "base/debug/dump_without_crashing.h"
+ #include "build/build_config.h"
+ #include "chrome/browser/ui/color/chrome_color_id.h"
+@@ -172,6 +174,9 @@
+   SafeInvoke(
+       web_modal::WebContentsModalDialogManager::FromWebContents(web_contents))
+       .Then(&web_modal::WebContentsModalDialogManager::UpdateDialogHost);
++  if (GetWidget()) {
++    UpdateBackgroundColor();  // Mast: a new tab page shows the picture
++  }
+ }
+ 
+ #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
+@@ -214,14 +219,21 @@
+     }
+   }
+ 
++  // Mast: transparent over Customize's picture on a new tab page; the
++  // container paints the picture under it.
++  const bool mast_picture = mast::WallpaperBehindPage(this);
++  const bool visible = background_visible_ && !mast_picture;
+   auto* background_layer = layer()->AsSolidColor();
+   background_layer->SetColor(
+-      SkColor4f::FromColor(background_visible_ ? color : SK_ColorTRANSPARENT));
++      SkColor4f::FromColor(visible ? color : SK_ColorTRANSPARENT));
+ 
+   SafeInvoke(web_contents())
+       .Then(&content::WebContents::GetRenderWidgetHostView)
+       .Then(&content::RenderWidgetHostView::SetBackgroundColor,
+-            background_visible_ ? color : SK_ColorTRANSPARENT);
++            visible ? color : SK_ColorTRANSPARENT);
++  if (parent()) {
++    parent()->SchedulePaint();
++  }
+ }
+ 
+ std::unique_ptr<ui::Layer> ContentsWebView::RecreateLayer() {
 diff -ruN a/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc b/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc
 --- a/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc
 +++ b/chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc

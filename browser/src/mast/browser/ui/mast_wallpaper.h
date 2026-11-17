@@ -3,6 +3,8 @@
 #ifndef MAST_BROWSER_UI_MAST_WALLPAPER_H_
 #define MAST_BROWSER_UI_MAST_WALLPAPER_H_
 
+#include <memory>
+
 #include "ui/gfx/image/image_skia.h"
 
 class BrowserView;
@@ -12,7 +14,9 @@ class Canvas;
 }  // namespace gfx
 
 namespace views {
+class Background;
 class View;
+class WebView;
 }  // namespace views
 
 namespace mast {
@@ -36,6 +40,15 @@ gfx::ImageSkia WallpaperFrameImage(const BrowserView* browser_view);
 bool PaintWallpaperBackground(gfx::Canvas* canvas,
                               const views::View* view,
                               const BrowserView* browser_view);
+
+// Behind a new tab page, so it never shows black before the page has painted:
+// while `contents_view`'s tab is a new tab page and the row shows the picture,
+// the page area is transparent (ContentsWebView::UpdateBackgroundColor) and its
+// container paints the whole picture, aligned with the row's, under it. The
+// page then draws the same picture on top (desktop.html).
+bool WallpaperBehindPage(const views::WebView* contents_view);
+std::unique_ptr<views::Background> CreateNewTabPageBackground(
+    const views::WebView* contents_view);
 
 }  // namespace mast
 

@@ -17,8 +17,6 @@
 #include "content/public/browser/render_widget_host_view.h"
 #include "content/public/browser/web_contents_observer.h"
 #include "third_party/skia/include/core/SkColor.h"
-#include "ui/gfx/animation/animation_delegate.h"
-#include "ui/gfx/animation/linear_animation.h"
 
 class BrowserView;
 class BrowserWindowInterface;
@@ -48,13 +46,8 @@ namespace mast {
 // theme-color stands in until the first strip arrives. Each tab keeps its
 // colour, so switching tabs never flashes; a page keeps its colour until a
 // changed one is seen twice in a row, so scrolling and animations don't flicker.
-//
-// A new tab that replaces a website's colour brings Customize's picture back to
-// the row. The page fades its picture in (560ms ease, desktop.html),
-// so the row holds its own back and fades it in on the page's signal, as one.
 class MastTabBar : public TabStripModelObserver,
-                   public content::WebContentsObserver,
-                   public gfx::AnimationDelegate {
+                   public content::WebContentsObserver {
  public:
   // Starts one for a normal, one-row, on-the-record window (from
   // OnBrowserWindowReady). It lives until the window closes.
@@ -78,10 +71,6 @@ class MastTabBar : public TabStripModelObserver,
   void DidChangeThemeColor() override;
   void OnBackgroundColorChanged() override;
 
-  // gfx::AnimationDelegate (the row's picture fading in):
-  void AnimationProgressed(const gfx::Animation* animation) override;
-  void AnimationEnded(const gfx::Animation* animation) override;
-
  private:
   struct Site {
     std::optional<SkColor> color;    // the row's colour; none: the palette
@@ -103,15 +92,8 @@ class MastTabBar : public TabStripModelObserver,
                  const content::CopyFromSurfaceResult& result);
   // The site's declared theme-color, until its pixels are known.
   void TakeThemeColor();
-  // The row's picture: held back until a new tab page shows its own, then
-  // faded in with it; or shown at once (a tab switch cancels a fade).
-  void HoldWallpaper();
-  void FadeWallpaperIn();
-  void ShowWallpaper();
-  void OnWallpaperRevealed(const void* web_contents);
   // Typing on the new tab page with nothing focused: into the address bar.
   void OnNewTabTyped(const void* web_contents, const std::u16string& text);
-  void RepaintRow();
 
   const raw_ptr<BrowserWindowInterface> browser_;
   const raw_ptr<BrowserView> browser_view_;
@@ -121,13 +103,7 @@ class MastTabBar : public TabStripModelObserver,
   base::OneShotTimer sample_soon_;
   base::RepeatingTimer resample_;
   base::CallbackListSubscription did_close_;
-  base::CallbackListSubscription revealed_;
   base::CallbackListSubscription typed_;
-  // New tab pages that have shown their picture: going back to one is instant.
-  std::set<const content::WebContents*> shown_;
-  gfx::LinearAnimation fade_{base::Milliseconds(560),
-                             gfx::LinearAnimation::kDefaultFrameRate, this};
-  base::OneShotTimer hold_;  // fades in anyway if the page never says so
   base::WeakPtrFactory<MastTabBar> weak_factory_{this};
 };
 

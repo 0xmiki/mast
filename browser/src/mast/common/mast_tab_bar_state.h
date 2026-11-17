@@ -28,19 +28,6 @@ void SetTabBarColor(const void* browser_view, std::optional<uint32_t> color);
 // (ui/color/color_provider_manager.cc, mast-theme.patch).
 bool TabBarColorInUse(uint32_t color);
 
-// How much of Customize's picture the row shows, 0 to 1 (1 if never set). A
-// new tab page fades its picture in (desktop.html); when a new tab replaces a
-// website's colour, the row holds its picture back and fades it in with the
-// page's, so the two arrive as one (MastTabBar). Read by mast_wallpaper.cc.
-float WallpaperOpacity(const void* browser_view);
-void SetWallpaperOpacity(const void* browser_view, std::optional<float> opacity);
-
-// The new tab page in `web_contents` started fading its picture in (sent by
-// the page, mast_ui.cc). MastTabBar starts the row's fade on it.
-void WallpaperRevealed(const void* web_contents);
-base::CallbackListSubscription OnWallpaperRevealed(
-    base::RepeatingCallback<void(const void*)> callback);
-
 // Text typed (or pasted) on a new tab page while nothing on it was focused
 // (desktop.html, mast_ui.cc). MastTabBar moves it into that window's address
 // bar, which takes the focus, so typing anywhere on a new tab searches.

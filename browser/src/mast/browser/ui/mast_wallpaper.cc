@@ -3,12 +3,14 @@
 #include "mast/browser/ui/mast_wallpaper.h"
 
 #include <algorithm>
+#include <memory>
 #include <string>
 #include <utility>
 
 #include "base/containers/span.h"
 #include "base/files/file_path.h"
 #include "base/files/file_util.h"
+#include "base/memory/raw_ptr.h"
 #include "base/functional/bind.h"
 #include "base/no_destructor.h"
 #include "base/task/thread_pool.h"
@@ -30,12 +32,13 @@
 #include "ui/gfx/geometry/rect.h"
 #include "ui/gfx/geometry/size.h"
 #include "ui/gfx/image/canvas_image_source.h"
-#include "ui/gfx/image/image_skia_operations.h"
-#include "ui/color/color_id.h"
-#include "ui/color/color_provider.h"
 #include "ui/native_theme/native_theme.h"
+#include "content/public/browser/web_contents.h"
+#include "ui/views/background.h"
+#include "ui/views/controls/webview/webview.h"
 #include "ui/views/view.h"
 #include "ui/views/widget/widget.h"
+#include "url/gurl.h"
 
 namespace mast {
 
@@ -53,9 +56,10 @@ struct Wallpaper {
   base::FilePath path;
   int version = 0;
   SkBitmap bitmap;     // decoded, full size; empty while loading
-  gfx::Size screen;    // what `slice` was made for
+  gfx::Size screen;    // what `slice` and `page` were made for
   bool light = false;  // ... and for which tone
-  gfx::ImageSkia slice;
+  gfx::ImageSkia slice;  // the row's part
+  gfx::ImageSkia page;   // all of it, for behind a new tab page; made on use
 };
 
 Wallpaper& Current() {
@@ -91,14 +95,15 @@ class SliceSource : public gfx::CanvasImageSource {
   const SkAlpha wash_;
 };
 
-gfx::ImageSkia MakeSlice(const SkBitmap& bitmap,
+// The picture cover-scaled to `screen`, its top `height` DIPs.
+gfx::ImageSkia MakeImage(const SkBitmap& bitmap,
                          const gfx::Size& screen,
-                         bool light) {
+                         bool light,
+                         int height) {
   const double iw = bitmap.width(), ih = bitmap.height();
   const double sw = screen.width(), sh = screen.height();
   // CSS background-size: cover, centred (desktop.html does the same sums).
   const double k = std::max(sw / iw, sh / ih);
-  const int height = std::min(kSliceHeight, screen.height());
   const gfx::Rect source(static_cast<int>((iw - sw / k) / 2),
                          static_cast<int>((ih - sh / k) / 2),
                          static_cast<int>(sw / k), static_cast<int>(height / k));
@@ -177,18 +182,78 @@ gfx::ImageSkia WallpaperFrameImage(const BrowserView* browser_view) {
   if (w.slice.isNull() || w.screen != screen || w.light != light) {
     w.screen = screen;
     w.light = light;
-    w.slice = MakeSlice(w.bitmap, screen, light);
-  }
-  // Fading in with a new tab page's picture (mast_tab_bar_state.h): what the
-  // frame paints under it is the palette, as under the page's.
-  const float opacity = WallpaperOpacity(browser_view);
-  if (opacity <= 0.0f) {
-    return gfx::ImageSkia();
-  }
-  if (opacity < 1.0f) {
-    return gfx::ImageSkiaOperations::CreateTransparentImage(w.slice, opacity);
+    w.slice = MakeImage(w.bitmap, screen, light,
+                        std::min(kSliceHeight, screen.height()));
+    w.page = gfx::ImageSkia();
   }
   return w.slice;
+}
+
+bool WallpaperBehindPage(const views::WebView* contents_view) {
+  content::WebContents* contents =
+      contents_view ? contents_view->web_contents() : nullptr;
+  if (!contents) {
+    return false;
+  }
+  const GURL& url = contents->GetVisibleURL();
+  if (!url.SchemeIs("chrome") ||
+      (url.host() != "newtab" && url.host() != "new-tab-page")) {
+    return false;
+  }
+  const views::Widget* widget = contents_view->GetWidget();
+  const BrowserView* browser_view =
+      widget ? BrowserView::GetBrowserViewForNativeWindow(
+                   widget->GetNativeWindow())
+             : nullptr;
+  return !WallpaperFrameImage(browser_view).isNull();
+}
+
+namespace {
+
+// The whole picture behind `view`, aligned with the row's (the frame's origin).
+void PaintPage(gfx::Canvas* canvas,
+               const views::View* view,
+               const BrowserView* browser_view) {
+  if (WallpaperFrameImage(browser_view).isNull()) {
+    return;  // also makes sure `Current()` is this picture, decoded
+  }
+  Wallpaper& w = Current();
+  if (w.page.isNull()) {
+    w.page = MakeImage(w.bitmap, w.screen, w.light, w.screen.height());
+  }
+  gfx::Point origin;
+  views::View::ConvertPointToTarget(view, browser_view, &origin);
+  origin.Offset(0, ThemeProperties::kFrameHeightAboveTabs);
+  canvas->DrawImageInt(w.page, -origin.x(), -origin.y());
+}
+
+// ContentsContainerView's background: the picture, while its tab is a new tab
+// page that shows one (WallpaperBehindPage); nothing otherwise.
+class PageBackground : public views::Background {
+ public:
+  explicit PageBackground(const views::WebView* contents_view)
+      : contents_view_(contents_view) {}
+
+  void Paint(gfx::Canvas* canvas, views::View* view) const override {
+    if (!WallpaperBehindPage(contents_view_)) {
+      return;
+    }
+    const views::Widget* widget = view->GetWidget();
+    PaintPage(canvas, view,
+              widget ? BrowserView::GetBrowserViewForNativeWindow(
+                           widget->GetNativeWindow())
+                     : nullptr);
+  }
+
+ private:
+  const raw_ptr<const views::WebView> contents_view_;
+};
+
+}  // namespace
+
+std::unique_ptr<views::Background> CreateNewTabPageBackground(
+    const views::WebView* contents_view) {
+  return std::make_unique<PageBackground>(contents_view);
 }
 
 bool PaintWallpaperBackground(gfx::Canvas* canvas,
@@ -206,16 +271,6 @@ bool PaintWallpaperBackground(gfx::Canvas* canvas,
   origin.Offset(0, ThemeProperties::kFrameHeightAboveTabs);
   if (browser_view->theme_background_y_offset()) {
     origin.set_y(origin.y() + *browser_view->theme_background_y_offset());
-  }
-  // Mid-fade the image is translucent: lay it on the frame's colour, as the
-  // frame does behind the tabs, or the frame's own fading copy would show
-  // through and this part of the row would arrive sooner.
-  if (WallpaperOpacity(browser_view) < 1.0f) {
-    if (const ui::ColorProvider* colors = view->GetColorProvider()) {
-      const bool active = browser_view->GetWidget()->ShouldPaintAsActive();
-      canvas->DrawColor(colors->GetColor(active ? ui::kColorFrameActive
-                                                : ui::kColorFrameInactive));
-    }
   }
   canvas->TileImageInt(image, origin.x(), origin.y(), 0, 0, view->width(),
                        view->height(), 1.0f, SkTileMode::kRepeat,

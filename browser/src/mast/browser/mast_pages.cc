@@ -251,6 +251,9 @@ std::string DesktopPageHtml(int wallpaper, int wallpaper_top, bool light_image) 
                                      base::NumberToString(wallpaper_top));
   base::ReplaceSubstringsAfterOffset(&page, 0, "{{WALLPAPER_TONE}}",
                                      light_image ? "\"light\"" : "\"dark\"");
+  // Transparent from the first frame over the browser's copy of the picture.
+  base::ReplaceSubstringsAfterOffset(&page, 0, "{{HTML_CLASS}}",
+                                     wallpaper > 0 ? "picture" : "");
   return page;
 }
 
