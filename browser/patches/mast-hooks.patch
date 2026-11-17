@@ -300,6 +300,18 @@ diff -ruN a/chrome/browser/ui/toolbar/bookmark_sub_menu_model.cc b/chrome/browse
  
    AddItemWithStringId(IDC_SHOW_BOOKMARK_SIDE_PANEL,
                        IDS_SHOW_BOOKMARK_SIDE_PANEL);
+diff -ruN a/chrome/browser/ui/ui_features.cc b/chrome/browser/ui/ui_features.cc
+--- a/chrome/browser/ui/ui_features.cc
++++ b/chrome/browser/ui/ui_features.cc
+@@ -158,7 +158,7 @@
+ 
+ // When enabled, newly installed extensions are pinned to the toolbar by
+ // default.
+-BASE_FEATURE(kExtensionsPinnedByDefault, base::FEATURE_ENABLED_BY_DEFAULT);
++BASE_FEATURE(kExtensionsPinnedByDefault, base::FEATURE_DISABLED_BY_DEFAULT);  // Mast
+ 
+ #endif  // BUILDFLAG(ENABLE_EXTENSIONS_CORE)
+ 
 diff -ruN a/chrome/browser/ui/views/bookmarks/bookmark_bubble_view.cc b/chrome/browser/ui/views/bookmarks/bookmark_bubble_view.cc
 --- a/chrome/browser/ui/views/bookmarks/bookmark_bubble_view.cc
 +++ b/chrome/browser/ui/views/bookmarks/bookmark_bubble_view.cc
@@ -398,7 +410,15 @@ diff -ruN a/chrome/browser/ui/views/tabs/tab/tab_icon.cc b/chrome/browser/ui/vie
 diff -ruN a/chrome/browser/ui/views/toolbar/toolbar_view.cc b/chrome/browser/ui/views/toolbar/toolbar_view.cc
 --- a/chrome/browser/ui/views/toolbar/toolbar_view.cc
 +++ b/chrome/browser/ui/views/toolbar/toolbar_view.cc
-@@ -602,7 +602,7 @@
+@@ -112,6 +112,7 @@
+ #include "chrome/browser/ui/views/toolbar/toolbar_button.h"
+ #include "chrome/browser/ui/views/toolbar/toolbar_controller.h"
+ #include "chrome/browser/ui/views/toolbar/toolbar_divider.h"
++#include "mast/common/mast_features.h"
+ #include "chrome/browser/ui/views/toolbar/toolbar_glic_actor_task_icon.h"
+ #include "chrome/browser/ui/views/toolbar/toolbar_glic_button.h"
+ #include "chrome/browser/ui/views/toolbar/toolbar_icon_container_view.h"
+@@ -602,7 +603,7 @@
    if (!features::IsWebUIAvatarButtonEnabled()) {
      avatar_ = AddChildView(std::make_unique<AvatarToolbarButton>(browser_));
      bool show_avatar_toolbar_button =
@@ -407,6 +427,39 @@ diff -ruN a/chrome/browser/ui/views/toolbar/toolbar_view.cc b/chrome/browser/ui/
      avatar_->SetVisible(show_avatar_toolbar_button);
    }
  
+@@ -1603,6 +1604,10 @@
+ 
+     extensions_container_->SetProperty(views::kFlexBehaviorKey,
+                                        extensions_flex_rule);
++    if (mast::IsOneRowWindow()) {  // Mast: final size at once (see make-patches.py)
++      extensions_container_->GetAnimatingLayoutManager()->SetBoundsAnimationMode(
++          views::AnimatingLayoutManager::BoundsAnimationMode::kUseHostBounds);
++    }
+   }
+ 
+   if (pinned_toolbar_actions_container_) {
+@@ -1612,6 +1617,11 @@
+             pinned_toolbar_actions_container_->GetAnimatingLayoutManager()
+                 ->GetDefaultFlexRule())
+             .WithOrder(kToolbarActionsFlexOrder));
++    if (mast::IsOneRowWindow()) {  // Mast: final size at once
++      pinned_toolbar_actions_container_->GetAnimatingLayoutManager()
++          ->SetBoundsAnimationMode(views::AnimatingLayoutManager::
++                                       BoundsAnimationMode::kUseHostBounds);
++    }
+   }
+ 
+   if (toolbar_divider_) {
+@@ -1808,7 +1818,8 @@
+ 
+   if (toolbar_divider_ && extensions_container_) {
+     views::ManualLayoutUtil(layout_manager_)
+-        .SetViewHidden(toolbar_divider_, !extensions_container_->GetVisible());
++        .SetViewHidden(toolbar_divider_, mast::IsOneRowWindow() ||  // Mast: none
++                                             !extensions_container_->GetVisible());
+   }
+   // Cast button visibility is controlled externally.
+ }
 diff -ruN a/chrome/browser/ui/webui/BUILD.gn b/chrome/browser/ui/webui/BUILD.gn
 --- a/chrome/browser/ui/webui/BUILD.gn
 +++ b/chrome/browser/ui/webui/BUILD.gn

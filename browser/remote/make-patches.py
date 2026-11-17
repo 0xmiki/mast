@@ -164,6 +164,40 @@ edit(H, "chrome/browser/ui/views/toolbar/toolbar_view.cc", lambda t: once(t,
     '        AvatarToolbarButtonInterface::CanShowForProfile(browser_->GetProfile());\n',
     '        false;  // Mast: no sign-in, so no profile button.\n'))
 
+# The one-row window's toolbar (mast_one_row_layout.h) is exactly as wide as it wants to be.
+# The extensions area and the pinned actions (downloads) slide their size in while their
+# icons change, and report that in-between size as what they want, so a new extension icon
+# made the row resize every frame, which restarted the slide: the toolbar shook, and the
+# icons stopped at a wrong height. In one row they report their final size at once (their
+# icons still slide inside it), and there's no divider after the extensions.
+edit(H, "chrome/browser/ui/views/toolbar/toolbar_view.cc", lambda t: once(once(once(once(t,
+    '#include "chrome/browser/ui/views/toolbar/toolbar_divider.h"\n',
+    '#include "chrome/browser/ui/views/toolbar/toolbar_divider.h"\n#include "mast/common/mast_features.h"\n'),
+    '    extensions_container_->SetProperty(views::kFlexBehaviorKey,\n'
+    '                                       extensions_flex_rule);\n',
+    '    extensions_container_->SetProperty(views::kFlexBehaviorKey,\n'
+    '                                       extensions_flex_rule);\n'
+    '    if (mast::IsOneRowWindow()) {  // Mast: final size at once (see make-patches.py)\n'
+    '      extensions_container_->GetAnimatingLayoutManager()->SetBoundsAnimationMode(\n'
+    '          views::AnimatingLayoutManager::BoundsAnimationMode::kUseHostBounds);\n'
+    '    }\n'),
+    '            .WithOrder(kToolbarActionsFlexOrder));\n',
+    '            .WithOrder(kToolbarActionsFlexOrder));\n'
+    '    if (mast::IsOneRowWindow()) {  // Mast: final size at once\n'
+    '      pinned_toolbar_actions_container_->GetAnimatingLayoutManager()\n'
+    '          ->SetBoundsAnimationMode(views::AnimatingLayoutManager::\n'
+    '                                       BoundsAnimationMode::kUseHostBounds);\n'
+    '    }\n'),
+    '        .SetViewHidden(toolbar_divider_, !extensions_container_->GetVisible());\n',
+    '        .SetViewHidden(toolbar_divider_, mast::IsOneRowWindow() ||  // Mast: none\n'
+    '                                             !extensions_container_->GetVisible());\n'))
+
+# Extensions aren't pinned to the toolbar when installed (157 started pinning them): they
+# live behind the extensions (puzzle) button, which the one row has room for.
+edit(H, "chrome/browser/ui/ui_features.cc", lambda t: once(t,
+    'BASE_FEATURE(kExtensionsPinnedByDefault, base::FEATURE_ENABLED_BY_DEFAULT);',
+    'BASE_FEATURE(kExtensionsPinnedByDefault, base::FEATURE_DISABLED_BY_DEFAULT);  // Mast'))
+
 # (Page info's "Block this site" row, opening mast/browser/ui/mast_block_bubble.cc, was
 # removed 2026-11-09: few would find it there. The bubble's code is parked in the repo.)
 

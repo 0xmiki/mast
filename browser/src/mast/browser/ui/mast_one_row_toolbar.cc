@@ -129,10 +129,15 @@ void OnBrowserWindowReady(BrowserWindowInterface* browser) {
       views::FlexSpecification(views::MinimumFlexSizeRule::kPreferred,
                                views::MaximumFlexSizeRule::kPreferred));
 
-  // back, address, forward (the design's ← [ address ☆ ] →).
+  // back, address, forward (the design's ← [ address ☆ ] →), then the rest
+  // (extensions, downloads, the menu). Forward starts before the address bar,
+  // so taking it out moves the bar one place left: its new place is the bar's
+  // old index. (Bar + 1 put it after the extensions.)
   if (views::View* forward = toolbar->forward_button()) {
-    if (const std::optional<size_t> at = toolbar->GetIndexOf(location_bar)) {
-      toolbar->ReorderChildView(forward, *at + 1);
+    const std::optional<size_t> at = toolbar->GetIndexOf(location_bar);
+    const std::optional<size_t> from = toolbar->GetIndexOf(forward);
+    if (at && from) {
+      toolbar->ReorderChildView(forward, *from < *at ? *at : *at + 1);
     }
   }
   // No reload button in the one row; Ctrl+R and F5 still reload.

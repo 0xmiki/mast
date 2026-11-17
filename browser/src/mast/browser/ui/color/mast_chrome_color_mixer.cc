@@ -282,6 +282,13 @@ void AddMastChromeColorMixer(ui::ColorProvider* provider,
       AddSiteRow(mixer, *row);
     }
   }
+
+  // The download button's progress ring: Chromium picks a Google colour near
+  // the throbber with barely visible contrast (a pale yellow on a light row).
+  // It's the row's own strong icon colour instead, whatever the row is.
+  mixer[kColorDownloadToolbarButtonActive] = {kColorToolbarButtonIconHovered};
+  mixer[kColorDownloadToolbarButtonAnimationForeground] = {
+      kColorToolbarButtonIconHovered};
 }
 
 }  // namespace mast
