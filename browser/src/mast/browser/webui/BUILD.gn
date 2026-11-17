@@ -17,6 +17,7 @@ source_set("webui") {
     "//components/bookmarks/common",
     "//components/favicon_base",
     "//components/prefs",
+    "//components/url_formatter",
     "//content/public/browser",
     "//content/public/common",
     "//mast/browser",

@@ -35,6 +35,7 @@ void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry) {
   registry->RegisterStringPref(kTabBarPref, "site");
   registry->RegisterBooleanPref(kWelcomedPref, false);
   registry->RegisterStringPref(kWallpaperPresetPref, std::string());
+  registry->RegisterListPref(kShortcutsPref);
 }
 
 }  // namespace mast

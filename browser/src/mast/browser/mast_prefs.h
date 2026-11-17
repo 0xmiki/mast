@@ -3,6 +3,8 @@
 #ifndef MAST_BROWSER_MAST_PREFS_H_
 #define MAST_BROWSER_MAST_PREFS_H_
 
+#include <string_view>
+
 namespace user_prefs {
 class PrefRegistrySyncable;
 }  // namespace user_prefs
@@ -33,6 +35,17 @@ inline constexpr char kWelcomedPref[] = "mast.welcomed";
 // Which built-in picture is the wallpaper (mast_wallpapers.h); empty for an
 // uploaded one or none.
 inline constexpr char kWallpaperPresetPref[] = "mast.ntp.wallpaper_preset";
+// Alt + letter shortcuts (the blocklist panel's Shortcuts tab, design C32): a
+// list of {"key": "N", "name": "NVIDIA stock", "url": "https://..."}. Each opens
+// its page in a new tab, in any window (mast/browser/ui/mast_shortcuts.h).
+inline constexpr char kShortcutsPref[] = "mast.shortcuts";
+
+// A letter a shortcut may use: A to Z, except the ones Chromium has (Alt+D the
+// address bar, Alt+E and Alt+F the menu; Alt+digits switch tabs). Upper case.
+inline bool IsShortcutKey(std::string_view key) {
+  return key.size() == 1 && key[0] >= 'A' && key[0] <= 'Z' &&
+         std::string_view("DEF").find(key[0]) == std::string_view::npos;
+}
 
 // Profile prefs: Mast's own, and Mast's defaults for some of Chromium's. Called
 // last in RegisterProfilePrefs(), so every upstream pref is already registered.

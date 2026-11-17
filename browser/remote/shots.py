@@ -301,6 +301,20 @@ keys("Escape")
 p.go("chrome://newtab")
 p.js("document.getElementById('editList').click()")
 shot("17-blocklist-panel")
+# Its Shortcuts tab (design C32): add Alt + N for a search, then try Alt + F (taken).
+p.js("document.querySelector('.bl [data-tab=sc]').click()")
+p.js("""(() => { const u = document.querySelector('.bl [data-scurl]'); u.value = 'google.com/search?q=nvidia+stock';
+  u.dispatchEvent(new Event('input', {bubbles: true}));
+  document.querySelector('.bl [data-act=sckey]').click();
+  document.querySelector('.bl [data-act=sckey]').dispatchEvent(new KeyboardEvent('keydown',
+    {key: 'n', code: 'KeyN', altKey: true, bubbles: true, cancelable: true}));
+  document.querySelector('.bl [data-act=scadd]').click(); })()""")
+time.sleep(0.5)
+p.js("""(() => { document.querySelector('.bl [data-act=sckey]').click();
+  document.querySelector('.bl [data-act=sckey]').dispatchEvent(new KeyboardEvent('keydown',
+    {key: 'f', code: 'KeyF', altKey: true, bubbles: true, cancelable: true})); })()""")
+shot("17b-shortcuts")
+p.js("document.querySelector('.bl [data-tab=bl]').click()")
 p.js("document.getElementById('blClose').click()")
 # Customize: the panel, then a palette (the whole window should follow), then an image.
 p.js("document.getElementById('customize').click()")

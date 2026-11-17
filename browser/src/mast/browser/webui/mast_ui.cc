@@ -56,6 +56,7 @@
 #include "mast/common/mast_tab_bar_state.h"
 #include "mast/ui/color/mast_palette.h"
 #include "components/prefs/pref_service.h"
+#include "components/url_formatter/url_fixer.h"
 #include "services/network/public/mojom/content_security_policy.mojom.h"
 #include "url/gurl.h"
 
@@ -221,6 +222,8 @@ class MastHandler : public content::WebUIMessageHandler,
     On("undo", &MastHandler::HandleUndo);
     On("addSite", &MastHandler::HandleAddSite);
     On("removeSite", &MastHandler::HandleRemoveSite);
+    On("addShortcut", &MastHandler::HandleAddShortcut);
+    On("removeShortcut", &MastHandler::HandleRemoveShortcut);
     On("blockDistractions", &MastHandler::HandleBlockDistractions);
     On("setDistractions", &MastHandler::HandleSetDistractions);
     On("desktopAdd", &MastHandler::HandleDesktopAdd);
@@ -597,6 +600,62 @@ class MastHandler : public content::WebUIMessageHandler,
     SendState();
   }
 
+  // ["addShortcut", key, name, url]: Alt + key opens url in a new tab
+  // (Shortcuts tab, MastShortcuts). The key is a free letter (IsShortcutKey,
+  // not one another shortcut has); the url, a web address as typed.
+  void HandleAddShortcut(const base::ListValue& args) {
+    const std::string key = base::ToUpperASCII(StringArg(args, 0));
+    std::string name(
+        base::TrimWhitespaceASCII(StringArg(args, 1), base::TRIM_ALL));
+    const GURL url = url_formatter::FixupURL(
+        std::string(
+            base::TrimWhitespaceASCII(StringArg(args, 2), base::TRIM_ALL)),
+        std::string());
+    PrefService* prefs = profile_->GetPrefs();
+    const base::ListValue& list = prefs->GetList(kShortcutsPref);
+    bool taken = false;
+    for (const base::Value& item : list) {
+      const std::string* k = item.is_dict() ? item.GetDict().FindString("key")
+                                            : nullptr;
+      taken = taken || (k && *k == key);
+    }
+    if (!IsShortcutKey(key) || taken) {
+      return SendState(base::DictValue().Set("shortcut", "badKey"));
+    }
+    if (!url.is_valid() || !url.SchemeIsHTTPOrHTTPS() || url.host().empty()) {
+      return SendState(base::DictValue().Set("shortcut", "badUrl"));
+    }
+    if (name.empty()) {
+      name = url.host();
+      if (name.starts_with("www.")) {
+        name = name.substr(4);
+      }
+    }
+    base::ListValue next = list.Clone();
+    next.Append(base::DictValue()
+                    .Set("key", key)
+                    .Set("name", name.substr(0, 80))
+                    .Set("url", url.spec()));
+    prefs->SetList(kShortcutsPref, std::move(next));
+    SendState(base::DictValue().Set("shortcut", "added").Set("key", key));
+  }
+
+  // ["removeShortcut", key].
+  void HandleRemoveShortcut(const base::ListValue& args) {
+    const std::string key = StringArg(args);
+    PrefService* prefs = profile_->GetPrefs();
+    base::ListValue next;
+    for (const base::Value& item : prefs->GetList(kShortcutsPref)) {
+      const std::string* k = item.is_dict() ? item.GetDict().FindString("key")
+                                            : nullptr;
+      if (!k || *k != key) {
+        next.Append(item.Clone());
+      }
+    }
+    prefs->SetList(kShortcutsPref, std::move(next));
+    SendState();
+  }
+
   void SendState(base::DictValue result = {}) {
     AllowJavascript();
     // Warm the blocked page's copy of the picture (it is read off the UI
@@ -652,6 +711,8 @@ class MastHandler : public content::WebUIMessageHandler,
                        profile_->GetPrefs()->GetString(kWallpaperPresetPref))
                   .Set("presets", PresetsValue()));
     state.Set("palettes", PalettesValue());
+    state.Set("shortcuts",
+              profile_->GetPrefs()->GetList(kShortcutsPref).Clone());
     state.Set("result", std::move(result));
     CallJavascriptFunction("mastState", base::Value(std::move(state)));
   }

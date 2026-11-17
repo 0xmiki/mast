@@ -13,25 +13,60 @@
 <style>
 .bl header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
 .bl h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+/* The panel's two tabs are its titles (design C32): the other one dimmed. */
+.bl .tabs { display: flex; align-items: baseline; gap: 22px; margin: 0; }
+.bl .tabs button { padding: 0; border: 0; background: none; color: var(--text-3); font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+.bl .tabs button:hover { color: var(--text-2); }
+.bl .tabs button.on { color: var(--text); }
 .bl .meta { color: var(--text-3); font-size: 12px; white-space: nowrap; }
 .bl .meta b { color: var(--text-2); font-weight: 500; }
 .bl .search { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 14px; border-radius: 8px; background: var(--field); color: var(--text-3); cursor: text; }
 .bl .search:focus-within { box-shadow: 0 0 0 1px var(--text-3); }
 .bl .search input { flex: 1; min-width: 0; width: auto; height: 100%; margin: 0; padding: 0; border: 0; border-radius: 0; outline: 0; background: none; box-shadow: none; }
 .bl .search input::placeholder { color: var(--text-3); }
-/* YouTube: open, music only, or blocked, always on show (design C24, C28a). */
-.bl .yt { display: flex; align-items: center; gap: 12px; margin-top: 16px; padding: 12px 12px 12px 14px; border-radius: 10px; background: var(--field); }
-.bl .yt .tx { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
-.bl .yt b { font-size: 14px; font-weight: 500; }
-.bl .yt .hint { color: var(--text-3); font-size: 12px; }
-.bl .yt .hint.on { color: var(--signal); font-weight: 500; }
-.bl .ytc { display: flex; flex: none; gap: 2px; padding: 3px; border-radius: 8px; background: var(--bg); }
-.bl .ytc button { display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 0; border-radius: 6px; background: none;
-  color: var(--text-2); font-size: 12px; font-weight: 500; }
-.bl .ytc button svg { color: var(--text-3); }
-.bl .ytc button:hover { color: var(--text); }
-.bl .ytc button.on { background: color-mix(in srgb, var(--text) 12%, transparent); color: var(--text); font-weight: 600; }
-.bl .ytc button.on svg { color: var(--text); }
+/* YouTube: its title (and the block in force), then its three choices, always
+   on show (design C32). */
+.bl .yt { margin-top: 16px; padding: 14px; border-radius: 10px; background: var(--field); }
+.bl .yt .top { display: flex; align-items: baseline; gap: 10px; margin: 0 2px 12px; }
+.bl .yt b { font-size: 14px; font-weight: 600; }
+.bl .yt .st { color: var(--signal); font-size: 12px; font-weight: 500; }
+.bl .ytc { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.bl .ytc button { display: flex; align-items: center; gap: 8px; padding: 12px; border: 0; border-radius: 8px; background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line); color: var(--text); font-size: 13px; font-weight: 600; text-align: left; }
+.bl .ytc button:hover { background: var(--pressed); }
+.bl .ytc .dot { width: 16px; height: 16px; flex: none; border-radius: 50%; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--text) 30%, transparent); }
+.bl .ytc button.on { background: var(--pressed); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 35%, transparent); }
+.bl .ytc button.on .dot { box-shadow: inset 0 0 0 5px var(--text); }
+/* Shortcuts: Alt + a letter opens a page (design C32, MastShortcuts). */
+.bl .sc-intro { margin: 0 0 18px; color: var(--text-2); }
+.bl .keys { display: inline-flex; align-items: center; gap: 4px; }
+.bl kbd { display: inline-grid; place-items: center; min-width: 26px; height: 24px; padding: 0 7px; border-radius: 5px; background: var(--pressed);
+  box-shadow: inset 0 -1px 0 var(--line), inset 0 0 0 1px var(--line); color: var(--text); font: 600 12px var(--font, inherit); }
+.bl .sc-list { display: flex; flex-direction: column; gap: 6px; }
+.bl .sc-row { display: grid; grid-template-columns: 96px 1fr auto; align-items: center; gap: 14px; padding: 10px 10px 10px 12px; border-radius: 8px; background: var(--field); }
+.bl .sc-row .t { min-width: 0; }
+.bl .sc-row .t b { display: block; font-size: 14px; font-weight: 500; }
+.bl .sc-row .t span { display: block; overflow: hidden; color: var(--text-3); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.bl .sc-row .rm { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--text-3); }
+.bl .sc-row .rm:hover { background: var(--pressed); color: var(--text); }
+.bl .sc-add { margin-top: 14px; padding: 16px; border-radius: 10px; background: var(--field); }
+.bl .sc-add h3 { margin: 0 0 12px; font-size: 14px; font-weight: 600; }
+.bl .sc-fields { display: grid; grid-template-columns: 1fr 1.6fr; gap: 8px; }
+.bl .sc-f { display: flex; flex-direction: column; gap: 5px; color: var(--text-3); font-size: 12px; }
+.bl .sc-f input { width: 100%; height: 36px; margin: 0; padding: 0 12px; border: 0; border-radius: 7px; outline: 0; background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line); color: var(--text); font-size: 13px; }
+.bl .sc-f input:focus { box-shadow: inset 0 0 0 1px var(--text-3); }
+.bl .sc-f input::placeholder { color: var(--text-3); }
+.bl .sc-rec { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.bl .sc-key { display: flex; flex: 1; align-items: center; gap: 10px; height: 44px; padding: 0 12px; border: 0; border-radius: 7px; background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line); color: var(--text-3); text-align: left; }
+.bl .sc-key.listening { box-shadow: inset 0 0 0 1px var(--text-2); color: var(--text-2); }
+.bl .sc-key.bad { box-shadow: inset 0 0 0 1px var(--signal); }
+.bl .sc-msg { min-height: 18px; margin-top: 8px; color: var(--text-2); font-size: 12px; }
+.bl .sc-msg.bad { color: var(--signal); }
+.bl .sc-taken { margin: 16px 0 26px; color: var(--text-3); font-size: 12px; line-height: 1.8; }
+.bl .sc-taken kbd { min-width: 22px; height: 20px; font-size: 11px; color: var(--text-2); }
+.bl.on-sc .search, .bl.on-sc .action { display: none; }
 .bl .lbl { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 22px 0 10px; color: var(--text-3); font-size: 12px; }
 .bl .lbl b { color: var(--text-2); font-weight: 500; }
 /* A tile picks the whole category; its › opens the sites (design C28a). Ember
@@ -97,9 +132,8 @@
 @media (max-width: 640px) {
   .bl .tiles { grid-template-columns: repeat(2, 1fr); }
   .bl .sites { grid-template-columns: 1fr; }
-  .bl .yt { flex-wrap: wrap; }
-  .bl .ytc { width: 100%; }
-  .bl .ytc button { flex: 1; justify-content: center; }
+  .bl .ytc { grid-template-columns: 1fr; }
+  .bl .sc-fields { grid-template-columns: 1fr; }
   .bl .action .row { flex-direction: column; align-items: stretch; }
   .bl .seg { grid-template-columns: repeat(3, 1fr); }
 }
@@ -161,9 +195,6 @@ function mastConfirmForever(what, confirm) {
 // Line icons (Lucide, ISC licence): mastIcon('lock', 12).
 const mastIcon = (() => {
   const P = {
-    music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
-    ban: '<circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/>',
-    circle: '<circle cx="12" cy="12" r="10"/>',
     lock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
     minus: '<path d="M5 12h14"/>',
     check: '<path d="M20 6 9 17l-5-5"/>',
@@ -275,6 +306,10 @@ const MastBlocklist = (() => {
   let toastTimer = 0;
   let pending = '';   // what the last Block press was for, e.g. "News" or "10 categories"
   let asked = false;  // a block/undo from this list is waiting for its result
+  let tab = 'bl';     // 'bl' (Blocklist) or 'sc' (Shortcuts)
+  // The Shortcuts tab's form, kept across re-renders.
+  const sc = {name: '', url: '', key: '', listening: false, msg: '', bad: false, err: false};
+  const SC_TAKEN = {D: 'focuses the address bar', E: 'opens the menu', F: 'opens the menu'};
 
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
   const hm = (t) => new Date(t).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
@@ -351,15 +386,12 @@ const MastBlocklist = (() => {
     const mode = !S.has(sel, c, s) ? 'open' : sel.music ? 'music' : 'site';
     const b = S.blockOf(state, s);
     const live = b && !b.partial;
-    const hint = live ? blockText(b) : {
-      open: `Stays open when you block ${c.name}.`,
-      music: 'Mixes and songs stay. Other videos and Shorts are blocked.',
-      site: `Blocked with ${c.name}. Pick Music only to keep songs and mixes.`}[mode];
-    const choices = [['open', 'circle', 'Open'], ['music', 'music', 'Music only'], ['site', 'ban', 'Block']];
+    // Names that say what happens to YouTube (design C32); no descriptions.
+    const choices = [['open', 'Allow all'], ['music', 'Allow music only'], ['site', 'Block all']];
     return `<div class="yt">
-      <span class="tx"><b>YouTube</b><span class="hint ${live ? 'on' : ''}">${esc(hint)}</span></span>
-      <span class="ytc" role="radiogroup" aria-label="YouTube">${choices.map(([id, icon, label]) =>
-        `<button role="radio" aria-checked="${mode === id}" data-yt="${id}" class="${mode === id ? 'on' : ''}">${mastIcon(icon, 13)}${label}</button>`).join('')}</span>
+      <div class="top"><b>YouTube</b>${live ? `<span class="st">${esc(blockText(b))}</span>` : ''}</div>
+      <div class="ytc" role="radiogroup" aria-label="YouTube">${choices.map(([id, label]) =>
+        `<button role="radio" aria-checked="${mode === id}" data-yt="${id}" class="${mode === id ? 'on' : ''}"><i class="dot"></i>${label}</button>`).join('')}</div>
     </div>`;
   }
 
@@ -450,8 +482,60 @@ const MastBlocklist = (() => {
       </div>`;
   }
 
+  const keysHtml = (k) => `<span class="keys"><kbd>Alt</kbd><kbd>${esc(k)}</kbd></span>`;
+  function shortcutsView() {
+    const list = state.shortcuts || [];
+    const rows = list.map((s) => `<div class="sc-row">${keysHtml(s.key)}<div class="t"><b>${esc(s.name)}</b>
+      <span>${esc(s.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, ''))}</span></div>
+      <button class="rm" data-scrm="${esc(s.key)}" aria-label="Remove ${esc(s.name)}">${mastIcon('x', 12)}</button></div>`).join('');
+    const keyBox = sc.key ? keysHtml(sc.key) : `<span>${sc.listening ? 'Press Alt + a letter…' : 'Click, then press Alt + a letter'}</span>`;
+    return `<p class="sc-intro">Press Alt and a letter anywhere in Mast to open a page in a new tab.</p>
+      ${rows ? `<div class="sc-list">${rows}</div>` : ''}
+      <div class="sc-add">
+        <h3>Add a shortcut</h3>
+        <div class="sc-fields">
+          <label class="sc-f">Name<input data-scname placeholder="NVIDIA stock" spellcheck="false" autocomplete="off"></label>
+          <label class="sc-f">Opens<input data-scurl placeholder="A link, or a search like google.com/search?q=nvidia+stock" spellcheck="false" autocomplete="off"></label>
+        </div>
+        <div class="sc-rec">
+          <button class="sc-key ${sc.listening ? 'listening' : ''} ${sc.bad ? 'bad' : ''}" data-act="sckey">${keyBox}</button>
+          <button class="primary" data-act="scadd" ${sc.key && !sc.bad && sc.url.trim() ? '' : 'disabled'}>Add</button>
+        </div>
+        <div class="sc-msg ${sc.bad || sc.err ? 'bad' : ''}">${esc(sc.msg)}</div>
+      </div>
+      <p class="sc-taken">Mast already uses <kbd>Alt</kbd>+<kbd>D</kbd> (address bar), <kbd>Alt</kbd>+<kbd>E</kbd> and <kbd>Alt</kbd>+<kbd>F</kbd> (menu),
+        and <kbd>Alt</kbd>+<kbd>1</kbd>–<kbd>9</kbd> (tabs). The other letters are yours.</p>`;
+  }
+  // A recorded key: free, or why not.
+  function pickKey(k) {
+    const taken = (state.shortcuts || []).find((s) => s.key === k);
+    sc.key = k;
+    sc.bad = true;
+    if (/\d/.test(k)) sc.msg = `Alt + ${k} switches to tab ${k}. Pick a letter.`;
+    else if (SC_TAKEN[k]) sc.msg = `Alt + ${k} ${SC_TAKEN[k]}. Pick another letter.`;
+    else if (taken) sc.msg = `Alt + ${k} already opens ${taken.name}.`;
+    else { sc.bad = false; sc.listening = false; sc.msg = `Alt + ${k} is free.`; }
+  }
+
   function render() {
     if (!root || !state) return;
+    root.classList.toggle('on-sc', tab === 'sc');
+    for (const b of root.querySelectorAll('.tabs button')) b.classList.toggle('on', b.dataset.tab === tab);
+    if (tab === 'sc') {
+      const n = (state.shortcuts || []).length;
+      metaEl.innerHTML = `<b>${n}</b> ${n === 1 ? 'shortcut' : 'shortcuts'}`;
+      // Keep the form's fields (and the caret) across re-renders.
+      const f = document.activeElement;
+      const which = f && root.contains(f) ? ('scname' in f.dataset ? 'scname' : 'scurl' in f.dataset ? 'scurl' : '') : '';
+      const caret = which ? f.selectionStart : 0;
+      bodyEl.innerHTML = shortcutsView();
+      bodyEl.querySelector('[data-scname]').value = sc.name;
+      bodyEl.querySelector('[data-scurl]').value = sc.url;
+      if (which) { const el = bodyEl.querySelector(`[data-${which}]`); el.focus(); el.setSelectionRange(caret, caret); }
+      if (sc.listening) bodyEl.querySelector('[data-act=sckey]').focus();
+      actionEl.innerHTML = '';
+      return;
+    }
     const sel = S.read(state);
     let blocked = 0;
     for (const c of S.categories(state)) for (const s of c.services) {
@@ -493,7 +577,21 @@ const MastBlocklist = (() => {
     const t = e.target.closest('button');
     if (!t || !state) return;
     const cats = S.categories(state);
-    if (t.dataset.cat) {
+    if (t.dataset.tab) {
+      tab = t.dataset.tab;
+      sc.listening = false;
+      toTop();
+    } else if (t.dataset.act === 'sckey') {
+      sc.listening = true;
+      sc.key = '';
+      sc.bad = false;
+      sc.msg = '';
+    } else if (t.dataset.act === 'scadd') {
+      if (!sc.key || sc.bad || !sc.url.trim()) return;
+      return chrome.send('addShortcut', [sc.key, sc.name, sc.url]);
+    } else if (t.dataset.scrm) {
+      return chrome.send('removeShortcut', [t.dataset.scrm]);
+    } else if (t.dataset.cat) {
       const c = cats.find((x) => x.id === t.dataset.cat);
       if (!c) return;
       const sel = S.read(state);
@@ -533,12 +631,35 @@ const MastBlocklist = (() => {
     render();
   }
   function onInput(e) {
+    if (e.target.matches('[data-scname]')) { sc.name = e.target.value; return; }
+    if (e.target.matches('[data-scurl]')) {
+      sc.err = false;
+      const ready = !!sc.url.trim() === !!e.target.value.trim();
+      sc.url = e.target.value;
+      if (!ready) render();  // Add turns on or off
+      return;
+    }
     if (!e.target.matches('[data-q]')) return;
     query = e.target.value;
     render();
   }
   function onKey(e) {
     e.stopPropagation();
+    // Recording a shortcut: Alt + a letter (Escape stops).
+    if (tab === 'sc' && sc.listening) {
+      if (e.key === 'Escape') { e.preventDefault(); sc.listening = false; sc.msg = ''; sc.bad = false; return render(); }
+      if (['Alt', 'Shift', 'Control', 'Meta', 'AltGraph'].includes(e.key)) return;
+      e.preventDefault();
+      if (!e.altKey || e.ctrlKey || e.metaKey) {
+        sc.bad = true;
+        sc.msg = 'Hold Alt and press a letter.';
+        return render();
+      }
+      const k = e.code.startsWith('Key') ? e.code.slice(3) : e.code.startsWith('Digit') ? e.code.slice(5) : '';
+      if (!k) return;
+      pickKey(k);
+      return render();
+    }
     if (e.target.matches('[data-q]')) {
       if (e.key === 'Escape' && e.target.value) {
         e.preventDefault();  // clears the search; a second Escape closes the panel
@@ -561,7 +682,8 @@ const MastBlocklist = (() => {
       root = el;
       root.classList.add('bl');
       root.innerHTML = `<div class="bl-app">
-          <header><h1>Blocklist</h1><span class="meta"></span></header>
+          <header><nav class="tabs"><button data-tab="bl" class="on">Blocklist</button><button data-tab="sc">Shortcuts</button></nav>
+            <span class="meta"></span></header>
           <label class="search">${mastIcon('search', 16)}<input data-q placeholder="Search sites, or add one like example.com"
             spellcheck="false" autocomplete="off" aria-label="Search sites"></label>
           <div class="bl-body"></div>
@@ -579,6 +701,7 @@ const MastBlocklist = (() => {
     },
     // Back to the tiles, search cleared (the new tab opens the panel this way).
     reset() {
+      tab = 'bl';
       view = '';
       query = '';
       if (searchEl) searchEl.value = '';
@@ -590,6 +713,16 @@ const MastBlocklist = (() => {
       if (first) dur = s.lastDuration || 'today';
       let handled = false;
       const r = s.result || {};
+      if (r.shortcut) {
+        handled = true;
+        if (r.shortcut === 'added') {
+          Object.assign(sc, {name: '', url: '', key: '', listening: false, bad: false, err: false, msg: `Added. Press Alt + ${r.key} anywhere in Mast.`});
+        } else if (r.shortcut === 'badUrl') {
+          Object.assign(sc, {err: true, msg: 'That doesn’t look like a web address.'});
+        } else {
+          pickKey(sc.key);  // taken meanwhile, e.g. in another tab
+        }
+      }
       if (asked && (r.undone || 'changed' in r)) {
         asked = false;
         handled = true;

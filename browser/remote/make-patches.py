@@ -578,7 +578,8 @@ edit(R, "chrome/browser/ui/browser_window/internal/embedder_browser_window_featu
 edit(R, "chrome/browser/ui/browser_window/internal/BUILD.gn", lambda t: add_dep(add_dep(add_dep(add_dep(add_dep(add_dep(add_dep(once(t,
     '      "embedder_browser_window_features.cc",\n',
     '      "embedder_browser_window_features.cc",\n      "//mast/browser/ui/mast_one_row_toolbar.cc",\n      "//mast/browser/ui/mast_one_row_toolbar.h",\n'
-    '      "//mast/browser/ui/mast_tab_bar.cc",\n      "//mast/browser/ui/mast_tab_bar.h",\n'),
+    '      "//mast/browser/ui/mast_tab_bar.cc",\n      "//mast/browser/ui/mast_tab_bar.h",\n'
+    '      "//mast/browser/ui/mast_shortcuts.cc",\n      "//mast/browser/ui/mast_shortcuts.h",\n'),
     'source_set("internal") {', "//mast/common"),
     'source_set("internal") {', "//components/prefs"),
     'source_set("internal") {', "//content/public/browser"),

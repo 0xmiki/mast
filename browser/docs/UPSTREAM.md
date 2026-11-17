@@ -13,9 +13,9 @@ and re-run. `./mast check-rebase <version>` checks all of this against another r
 | `mast-branding.patch` | 5 edits |
 | `mast-ungoogled.patch` | 2 edits |
 | `mast-webstore.patch` | 11 edits |
-| Chromium headers included by `src/mast` | 168 |
-| Upstream methods overridden | 39 |
-| Upstream GN deps | 27 |
+| Chromium headers included by `src/mast` | 174 |
+| Upstream methods overridden | 43 |
+| Upstream GN deps | 28 |
 | ungoogled patches dropped / added | 1 / 1 |
 
 ## 1. Edits to upstream files
@@ -77,9 +77,9 @@ patch run fails. "Why" is the comment above the edit.
 | `ui/views/layout/layout_provider.cc` | [478](../remote/make-patches.py#L478) | theme | One radius table for dialogs, menus, comboboxes, textfields and buttons: tighter corners (Mast's bubbles are 10px, its buttons 6px; Chromium's are 12-16px and pills). |
 | `ui/gfx/platform_font_skia.cc` | [481](../remote/make-patches.py#L481) | theme | Inter for the native UI too (fontconfig falls back to the system sans without it). |
 | `chrome/browser/ui/tabs/tab_style.cc` | [487](../remote/make-patches.py#L487) | theme | Tabs: 8px top corners and a small foot (4px) instead of Chrome's swoop. The foot stays above the separator width so the tab-overlap maths stays positive. |
-| `chrome/browser/ui/views/location_bar/location_bar_view.cc` | [730](../remote/make-patches.py#L730) | one row | On Customize's image the address field is translucent (mast_chrome_color_mixer.cc). Its textfield copies the field's colour as its own background, which would paint a darker rectangle inside the pill; with a translucent field it paints none. |
-| `ui/color/color_provider_manager.cc` | [784](../remote/make-patches.py#L784) | one row | Each website colour gets its own ColorProvider, and Chromium keeps every provider it builds. Keep the 24 newest Mast row colours; older ones go once no window shows them. |
-| `ui/color/BUILD.gn` | [804](../remote/make-patches.py#L804) | one row | Each website colour gets its own ColorProvider, and Chromium keeps every provider it builds. Keep the 24 newest Mast row colours; older ones go once no window shows them. |
+| `chrome/browser/ui/views/location_bar/location_bar_view.cc` | [731](../remote/make-patches.py#L731) | one row | On Customize's image the address field is translucent (mast_chrome_color_mixer.cc). Its textfield copies the field's colour as its own background, which would paint a darker rectangle inside the pill; with a translucent field it paints none. |
+| `ui/color/color_provider_manager.cc` | [785](../remote/make-patches.py#L785) | one row | Each website colour gets its own ColorProvider, and Chromium keeps every provider it builds. Keep the 24 newest Mast row colours; older ones go once no window shows them. |
+| `ui/color/BUILD.gn` | [805](../remote/make-patches.py#L805) | one row | Each website colour gets its own ColorProvider, and Chromium keeps every provider it builds. Keep the 24 newest Mast row colours; older ones go once no window shows them. |
 
 ### mast-onerow.patch
 
@@ -93,60 +93,60 @@ patch run fails. "Why" is the comment above the edit.
 | `chrome/browser/ui/views/omnibox/BUILD.gn` | [569](../remote/make-patches.py#L569) | one row | The suggestion list opens wider than the narrow address bar, growing left. |
 | `chrome/browser/ui/browser_window/internal/embedder_browser_window_features.cc` | [573](../remote/make-patches.py#L573) | one row | The toolbar's one-row arrangement, once the window and its toolbar exist (the embedder hook Chromium leaves for forks). |
 | `chrome/browser/ui/browser_window/internal/BUILD.gn` | [578](../remote/make-patches.py#L578) | one row | The toolbar's one-row arrangement, once the window and its toolbar exist (the embedder hook Chromium leaves for forks). |
-| `chrome/browser/ui/views/tabs/common/horizontal_tab_style_views.cc` | [593](../remote/make-patches.py#L593) | one row | No dividers between tabs in the one-row window: tabs are pills with space between them. (Chromium paints dividers with SkColorSetA(colour, opacity), which overrides the colour's alpha, so a transparent divider colour came out as an opaque black line on a picture.) |
-| `chrome/browser/ui/tabs/tab_favicon_theming.cc` | [602](../remote/make-patches.py#L602) | one row | Browser pages' tab icons (the new tab's sails, Settings' gear...) are one colour in the one-row window: the tabs' text colour, so they read on any palette or picture, light or dark. Chromium only recolours them when their contrast looks low, and it measures that against the pill colour as if it were opaque. Sites' own favicons are untouched. |
-| `chrome/browser/ui/tabs/BUILD.gn` | [615](../remote/make-patches.py#L615) | one row | Browser pages' tab icons (the new tab's sails, Settings' gear...) are one colour in the one-row window: the tabs' text colour, so they read on any palette or picture, light or dark. Chromium only recolours them when their contrast looks low, and it measures that against the pill colour as if it were opaque. Sites' own favicons are untouched. |
-| `chrome/browser/ui/views/tabs/tab_group_header.cc` | [621](../remote/make-patches.py#L621) | one row | Tab groups as pills (design C22, option A). In the one-row window a group's header is a pill like the tabs, tinted with the group's colour, and the group's header and pills sit in a faint lane of that colour. Chromium's 2px underline along the row's edge and the group-coloured outline around the active tab go. |
-| `chrome/browser/ui/views/tabs/tab_group_underline.cc` | [663](../remote/make-patches.py#L663) | one row | Tab groups as pills (design C22, option A). In the one-row window a group's header is a pill like the tabs, tinted with the group's colour, and the group's header and pills sit in a faint lane of that colour. Chromium's 2px underline along the row's edge and the group-coloured outline around the active tab go. |
-| `chrome/browser/ui/views/tabs/z_orderable_tab_container_element.cc` | [704](../remote/make-patches.py#L704) | one row | Tab groups as pills (design C22, option A). In the one-row window a group's header is a pill like the tabs, tinted with the group's colour, and the group's header and pills sit in a faint lane of that colour. Chromium's 2px underline along the row's edge and the group-coloured outline around the active tab go. |
-| `chrome/browser/ui/views/tabs/common/horizontal_tab_style_views.cc` | [711](../remote/make-patches.py#L711) | one row | No group-coloured outline around a grouped tab's pill (the lane shows the group). |
-| `chrome/browser/ui/views/tabs/BUILD.gn` | [716](../remote/make-patches.py#L716) | one row | No group-coloured outline around a grouped tab's pill (the lane shows the group). |
-| `chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc` | [721](../remote/make-patches.py#L721) | one row | No 1px line between the tab row and the page: in the one-row window the page meets the row directly (with a wallpaper the line cut the picture in two). |
-| `chrome/browser/ui/views/frame/browser_frame_view.cc` | [741](../remote/make-patches.py#L741) | one row | Customize's image behind the tab row (mast/browser/ui/mast_wallpaper.h). The two places Chromium paints a theme's frame image: the frame view's GetFrameImage() (every platform's frame tiles it behind the tabs and window buttons) and ThemedBackground (the toolbar, which is in the row in the one-row window). Both align it to the same origin. |
-| `chrome/browser/ui/views/frame/themed_background.cc` | [749](../remote/make-patches.py#L749) | one row | Customize's image behind the tab row (mast/browser/ui/mast_wallpaper.h). The two places Chromium paints a theme's frame image: the frame view's GetFrameImage() (every platform's frame tiles it behind the tabs and window buttons) and ThemedBackground (the toolbar, which is in the row in the one-row window). Both align it to the same origin. |
-| `chrome/browser/ui/views/frame/BUILD.gn` | [757](../remote/make-patches.py#L757) | one row | Customize's image behind the tab row (mast/browser/ui/mast_wallpaper.h). The two places Chromium paints a theme's frame image: the frame view's GetFrameImage() (every platform's frame tiles it behind the tabs and window buttons) and ThemedBackground (the toolbar, which is in the row in the one-row window). Both align it to the same origin. |
-| `chrome/browser/ui/views/frame/browser_widget.cc` | [770](../remote/make-patches.py#L770) | one row | Customize's "Tab bar on websites" (mast/browser/ui/mast_tab_bar.h): each one-row window's row can take the active website's colour, or the palette instead of the picture. Done the way Chromium recolours an installed web app's window from its theme-color: the window's ColorProviderKey carries the colour (app_background_color, which only app windows set and no mixer reads), and mast_chrome_color_mixer.cc builds the row from it. |
-| `chrome/browser/ui/views/frame/BUILD.gn` | [781](../remote/make-patches.py#L781) | one row | Customize's "Tab bar on websites" (mast/browser/ui/mast_tab_bar.h): each one-row window's row can take the active website's colour, or the palette instead of the picture. Done the way Chromium recolours an installed web app's window from its theme-color: the window's ColorProviderKey carries the colour (app_background_color, which only app windows set and no mixer reads), and mast_chrome_color_mixer.cc builds the row from it. |
+| `chrome/browser/ui/views/tabs/common/horizontal_tab_style_views.cc` | [594](../remote/make-patches.py#L594) | one row | No dividers between tabs in the one-row window: tabs are pills with space between them. (Chromium paints dividers with SkColorSetA(colour, opacity), which overrides the colour's alpha, so a transparent divider colour came out as an opaque black line on a picture.) |
+| `chrome/browser/ui/tabs/tab_favicon_theming.cc` | [603](../remote/make-patches.py#L603) | one row | Browser pages' tab icons (the new tab's sails, Settings' gear...) are one colour in the one-row window: the tabs' text colour, so they read on any palette or picture, light or dark. Chromium only recolours them when their contrast looks low, and it measures that against the pill colour as if it were opaque. Sites' own favicons are untouched. |
+| `chrome/browser/ui/tabs/BUILD.gn` | [616](../remote/make-patches.py#L616) | one row | Browser pages' tab icons (the new tab's sails, Settings' gear...) are one colour in the one-row window: the tabs' text colour, so they read on any palette or picture, light or dark. Chromium only recolours them when their contrast looks low, and it measures that against the pill colour as if it were opaque. Sites' own favicons are untouched. |
+| `chrome/browser/ui/views/tabs/tab_group_header.cc` | [622](../remote/make-patches.py#L622) | one row | Tab groups as pills (design C22, option A). In the one-row window a group's header is a pill like the tabs, tinted with the group's colour, and the group's header and pills sit in a faint lane of that colour. Chromium's 2px underline along the row's edge and the group-coloured outline around the active tab go. |
+| `chrome/browser/ui/views/tabs/tab_group_underline.cc` | [664](../remote/make-patches.py#L664) | one row | Tab groups as pills (design C22, option A). In the one-row window a group's header is a pill like the tabs, tinted with the group's colour, and the group's header and pills sit in a faint lane of that colour. Chromium's 2px underline along the row's edge and the group-coloured outline around the active tab go. |
+| `chrome/browser/ui/views/tabs/z_orderable_tab_container_element.cc` | [705](../remote/make-patches.py#L705) | one row | Tab groups as pills (design C22, option A). In the one-row window a group's header is a pill like the tabs, tinted with the group's colour, and the group's header and pills sit in a faint lane of that colour. Chromium's 2px underline along the row's edge and the group-coloured outline around the active tab go. |
+| `chrome/browser/ui/views/tabs/common/horizontal_tab_style_views.cc` | [712](../remote/make-patches.py#L712) | one row | No group-coloured outline around a grouped tab's pill (the lane shows the group). |
+| `chrome/browser/ui/views/tabs/BUILD.gn` | [717](../remote/make-patches.py#L717) | one row | No group-coloured outline around a grouped tab's pill (the lane shows the group). |
+| `chrome/browser/ui/views/frame/layout/browser_view_tabbed_layout_impl.cc` | [722](../remote/make-patches.py#L722) | one row | No 1px line between the tab row and the page: in the one-row window the page meets the row directly (with a wallpaper the line cut the picture in two). |
+| `chrome/browser/ui/views/frame/browser_frame_view.cc` | [742](../remote/make-patches.py#L742) | one row | Customize's image behind the tab row (mast/browser/ui/mast_wallpaper.h). The two places Chromium paints a theme's frame image: the frame view's GetFrameImage() (every platform's frame tiles it behind the tabs and window buttons) and ThemedBackground (the toolbar, which is in the row in the one-row window). Both align it to the same origin. |
+| `chrome/browser/ui/views/frame/themed_background.cc` | [750](../remote/make-patches.py#L750) | one row | Customize's image behind the tab row (mast/browser/ui/mast_wallpaper.h). The two places Chromium paints a theme's frame image: the frame view's GetFrameImage() (every platform's frame tiles it behind the tabs and window buttons) and ThemedBackground (the toolbar, which is in the row in the one-row window). Both align it to the same origin. |
+| `chrome/browser/ui/views/frame/BUILD.gn` | [758](../remote/make-patches.py#L758) | one row | Customize's image behind the tab row (mast/browser/ui/mast_wallpaper.h). The two places Chromium paints a theme's frame image: the frame view's GetFrameImage() (every platform's frame tiles it behind the tabs and window buttons) and ThemedBackground (the toolbar, which is in the row in the one-row window). Both align it to the same origin. |
+| `chrome/browser/ui/views/frame/browser_widget.cc` | [771](../remote/make-patches.py#L771) | one row | Customize's "Tab bar on websites" (mast/browser/ui/mast_tab_bar.h): each one-row window's row can take the active website's colour, or the palette instead of the picture. Done the way Chromium recolours an installed web app's window from its theme-color: the window's ColorProviderKey carries the colour (app_background_color, which only app windows set and no mixer reads), and mast_chrome_color_mixer.cc builds the row from it. |
+| `chrome/browser/ui/views/frame/BUILD.gn` | [782](../remote/make-patches.py#L782) | one row | Customize's "Tab bar on websites" (mast/browser/ui/mast_tab_bar.h): each one-row window's row can take the active website's colour, or the palette instead of the picture. Done the way Chromium recolours an installed web app's window from its theme-color: the window's ColorProviderKey carries the colour (app_background_color, which only app windows set and no mixer reads), and mast_chrome_color_mixer.cc builds the row from it. |
 
 ### mast-branding.patch
 
 | Upstream file | Line | Section | Why |
 |---|---|---|---|
-| `ui/webui/resources/cr_elements/icons.html.ts` | [820](../remote/make-patches.py#L820) | branding | The shared WebUI "chrome-product" glyph (Settings header, About) -> Mast sails. |
-| `chrome/app/generated_resources.grd` | [824](../remote/make-patches.py#L824) | branding | The empty address bar says "Search": the one-row bar is narrow, and the engine's name isn't worth the room. (Other languages fall back to this English text.) |
-| `chrome/common/channel_info_posix.cc` | [829](../remote/make-patches.py#L829) | branding | Linux identity: desktop file (and so WM_CLASS) is "mast". |
-| `chrome/common/chrome_paths_linux.cc` | [831](../remote/make-patches.py#L831) | branding | Linux identity: desktop file (and so WM_CLASS) is "mast". |
-| `chrome/browser/ui/startup/infobar_utils.cc` | [833](../remote/make-patches.py#L833) | branding | Linux identity: desktop file (and so WM_CLASS) is "mast". |
+| `ui/webui/resources/cr_elements/icons.html.ts` | [821](../remote/make-patches.py#L821) | branding | The shared WebUI "chrome-product" glyph (Settings header, About) -> Mast sails. |
+| `chrome/app/generated_resources.grd` | [825](../remote/make-patches.py#L825) | branding | The empty address bar says "Search": the one-row bar is narrow, and the engine's name isn't worth the room. (Other languages fall back to this English text.) |
+| `chrome/common/channel_info_posix.cc` | [830](../remote/make-patches.py#L830) | branding | Linux identity: desktop file (and so WM_CLASS) is "mast". |
+| `chrome/common/chrome_paths_linux.cc` | [832](../remote/make-patches.py#L832) | branding | Linux identity: desktop file (and so WM_CLASS) is "mast". |
+| `chrome/browser/ui/startup/infobar_utils.cc` | [834](../remote/make-patches.py#L834) | branding | Linux identity: desktop file (and so WM_CLASS) is "mast". |
 
 ### mast-ungoogled.patch
 
 | Upstream file | Line | Section | Why |
 |---|---|---|---|
-| `components/search_engines/search_terms_data.cc` | [843](../remote/make-patches.py#L843) | ungoogled adjustments | Google stays the default search engine. Domain substitution rewrote kGoogleHomepageURL (to a dead *.qjz9zk host), and the Google engine's search and suggest URLs are built from this one value. Only searches the user types go to Google; background services stay off. |
-| `chrome/browser/preloading/preloading_prefs.cc` | [850](../remote/make-patches.py#L850) | ungoogled adjustments | Page preloading off by default. With Google as the search engine, Chromium otherwise prefetches Google's results page (and its trackers) while you type in the omnibox. People can still turn it on in Settings > Performance. |
+| `components/search_engines/search_terms_data.cc` | [844](../remote/make-patches.py#L844) | ungoogled adjustments | Google stays the default search engine. Domain substitution rewrote kGoogleHomepageURL (to a dead *.qjz9zk host), and the Google engine's search and suggest URLs are built from this one value. Only searches the user types go to Google; background services stay off. |
+| `chrome/browser/preloading/preloading_prefs.cc` | [851](../remote/make-patches.py#L851) | ungoogled adjustments | Page preloading off by default. With Google as the search engine, Chromium otherwise prefetches Google's results page (and its trackers) while you type in the omnibox. People can still turn it on in Settings > Performance. |
 
 ### mast-webstore.patch
 
 | Upstream file | Line | Section | Why |
 |---|---|---|---|
-| `chrome/browser/extensions/chrome_content_browser_client_extensions_part.cc` | [871](../remote/make-patches.py#L871) | web store | Undo disable-webstore-urls.patch in these files. |
-| `chrome/browser/extensions/chrome_content_verifier_delegate.cc` | [871](../remote/make-patches.py#L871) | web store | Undo disable-webstore-urls.patch in these files. |
-| `chrome/browser/extensions/extension_migrator.cc` | [871](../remote/make-patches.py#L871) | web store | Undo disable-webstore-urls.patch in these files. |
-| `chrome/browser/extensions/extension_migrator.h` | [871](../remote/make-patches.py#L871) | web store | Undo disable-webstore-urls.patch in these files. |
-| `extensions/browser/updater/extension_downloader.cc` | [871](../remote/make-patches.py#L871) | web store | Undo disable-webstore-urls.patch in these files. |
-| `extensions/common/extension_urls.cc` | [874](../remote/make-patches.py#L874) | web store | The store's real URLs, and no utm_source tag on store links. |
-| `extensions/browser/webstore_installer.cc` | [891](../remote/make-patches.py#L891) | web store | The store's Install button: inox's 0005-disable-default-extensions.patch (in ungoogled's series) empties WebstoreInstaller's download and install steps, so a store install was accepted and then never started (the button just spun). Undo that file's part only; the rest of the patch (no default extensions) stays. |
-| `extensions/common/api/_api_features.json` | [895](../remote/make-patches.py#L895) | web store | The store's pages may use the install API (webstorePrivate) and management again. |
-| `chrome/browser/resources/webstore_app/manifest.json` | [898](../remote/make-patches.py#L898) | web store | The store's pages may use the install API (webstorePrivate) and management again. |
-| `chrome/app/extensions_strings.grdp` | [901](../remote/make-patches.py#L901) | web store | Links: the extensions page's "Web Store" (empty state) and Settings' current-theme link. |
-| `chrome/browser/resources/settings/appearance_page/appearance_page.ts` | [904](../remote/make-patches.py#L904) | web store | Links: the extensions page's "Web Store" (empty state) and Settings' current-theme link. |
+| `chrome/browser/extensions/chrome_content_browser_client_extensions_part.cc` | [872](../remote/make-patches.py#L872) | web store | Undo disable-webstore-urls.patch in these files. |
+| `chrome/browser/extensions/chrome_content_verifier_delegate.cc` | [872](../remote/make-patches.py#L872) | web store | Undo disable-webstore-urls.patch in these files. |
+| `chrome/browser/extensions/extension_migrator.cc` | [872](../remote/make-patches.py#L872) | web store | Undo disable-webstore-urls.patch in these files. |
+| `chrome/browser/extensions/extension_migrator.h` | [872](../remote/make-patches.py#L872) | web store | Undo disable-webstore-urls.patch in these files. |
+| `extensions/browser/updater/extension_downloader.cc` | [872](../remote/make-patches.py#L872) | web store | Undo disable-webstore-urls.patch in these files. |
+| `extensions/common/extension_urls.cc` | [875](../remote/make-patches.py#L875) | web store | The store's real URLs, and no utm_source tag on store links. |
+| `extensions/browser/webstore_installer.cc` | [892](../remote/make-patches.py#L892) | web store | The store's Install button: inox's 0005-disable-default-extensions.patch (in ungoogled's series) empties WebstoreInstaller's download and install steps, so a store install was accepted and then never started (the button just spun). Undo that file's part only; the rest of the patch (no default extensions) stays. |
+| `extensions/common/api/_api_features.json` | [896](../remote/make-patches.py#L896) | web store | The store's pages may use the install API (webstorePrivate) and management again. |
+| `chrome/browser/resources/webstore_app/manifest.json` | [899](../remote/make-patches.py#L899) | web store | The store's pages may use the install API (webstorePrivate) and management again. |
+| `chrome/app/extensions_strings.grdp` | [902](../remote/make-patches.py#L902) | web store | Links: the extensions page's "Web Store" (empty state) and Settings' current-theme link. |
+| `chrome/browser/resources/settings/appearance_page/appearance_page.ts` | [905](../remote/make-patches.py#L905) | web store | Links: the extensions page's "Web Store" (empty state) and Settings' current-theme link. |
 
 ## 2. Chromium code that `src/mast` builds against
 
 These break at compile time, not in the patch run. `check-rebase` compares each header
 between releases and flags changes to the names below.
 
-**Overridden methods** (39): `AnimationEnded`, `AnimationProgressed`, `BookmarkModelChanged`, `CreateInstallPrompt`, `CreateWebUIController`, `DOMContentLoaded`, `DesktopSaveLocationProvider`, `DidChangeThemeColor`, `DidFinishNavigation`, `DidFirstVisuallyNonEmptyPaint`, `DidStopLoading`, `DocumentOnLoadCompletedInPrimaryMainFrame`, `Draw`, `FirefoxImport`, `GetBackoffTime`, `GetFeatureNameForMetrics`, `GetNameForLogging`, `GetSuggestion`, `ImportEnded`, `ImportItemEnded`, `ImportItemStarted`, `ImportStarted`, `MastHandler`, `MastNavigationThrottle`, `MastTabBar`, `MastUI`, `MastYouTube`, `OnBackgroundColorChanged`, `OnJavascriptAllowed`, `OnJavascriptDisallowed`, `OnSuggestionRejected`, `OnTabStripModelChanged`, `OnWidgetInitialized`, `PrimaryPageChanged`, `RegisterMessages`, `ShouldShowPostInstallUI`, `SilentInstall`, `WillRedirectRequest`, `WillStartRequest`
+**Overridden methods** (43): `AcceleratorPressed`, `AnimationEnded`, `AnimationProgressed`, `BookmarkModelChanged`, `CanHandleAccelerators`, `CreateInstallPrompt`, `CreateWebUIController`, `DOMContentLoaded`, `DesktopSaveLocationProvider`, `DidChangeThemeColor`, `DidFinishNavigation`, `DidFirstVisuallyNonEmptyPaint`, `DidStopLoading`, `DocumentOnLoadCompletedInPrimaryMainFrame`, `Draw`, `FirefoxImport`, `GetBackoffTime`, `GetFeatureNameForMetrics`, `GetNameForLogging`, `GetSuggestion`, `ImportEnded`, `ImportItemEnded`, `ImportItemStarted`, `ImportStarted`, `MastHandler`, `MastNavigationThrottle`, `MastShortcuts`, `MastTabBar`, `MastUI`, `MastYouTube`, `OnBackgroundColorChanged`, `OnJavascriptAllowed`, `OnJavascriptDisallowed`, `OnSuggestionRejected`, `OnTabStripModelChanged`, `OnWidgetDestroying`, `OnWidgetInitialized`, `PrimaryPageChanged`, `RegisterMessages`, `ShouldShowPostInstallUI`, `SilentInstall`, `WillRedirectRequest`, `WillStartRequest`
 
 <details><summary>Headers included, by directory</summary>
 
@@ -155,7 +155,7 @@ between releases and flags changes to the names below.
 | `base/barrier_closure.h` | mast/browser/import/mast_import.cc |
 | `base/base64.h` | mast/browser/mast_page_backdrop.cc, mast/browser/webui/mast_ui.cc |
 | `base/base_paths.h` | mast/browser/import/mast_import.cc, mast/browser/mast_feeds.cc, mast/browser/mast_wallpapers.cc |
-| `base/callback_list.h` | mast/browser/ui/mast_tab_bar.h, mast/common/mast_tab_bar_state.h |
+| `base/callback_list.h` | mast/browser/ui/mast_shortcuts.h, mast/browser/ui/mast_tab_bar.h, mast/common/mast_tab_bar_state.h |
 | `base/check.h` | mast/browser/mast_blocklist.cc |
 | `base/containers/flat_map.h` | mast/common/mast_tab_bar_state.cc |
 | `base/containers/flat_set.h` | mast/browser/mast_feeds.h |
@@ -165,19 +165,19 @@ between releases and flags changes to the names below.
 | `base/files/file_path.h` | mast/browser/import/mast_import.h, mast/browser/mast_feeds.cc, mast/browser/mast_page_backdrop.cc, mast/browser/mast_wallpapers.h, mast/browser/ui/mast_wallpaper.cc, mast/browser/webui/mast_ui.cc |
 | `base/files/file_util.h` | mast/browser/import/mast_import.cc, mast/browser/mast_feeds.cc, mast/browser/mast_page_backdrop.cc, mast/browser/mast_wallpapers.cc, mast/browser/ui/mast_wallpaper.cc, mast/browser/webui/mast_ui.cc |
 | `base/files/scoped_temp_dir.h` | mast/browser/import/mast_import.cc |
-| `base/functional/bind.h` | mast/browser/import/mast_import.cc, mast/browser/mast_feeds.cc, mast/browser/mast_navigation_throttle.cc, mast/browser/mast_page_backdrop.cc, mast/browser/mast_wallpapers.cc, mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_one_row_toolbar.cc, mast/browser/ui/mast_tab_bar.cc, mast/browser/ui/mast_wallpaper.cc, mast/browser/webui/mast_ui.cc |
+| `base/functional/bind.h` | mast/browser/import/mast_import.cc, mast/browser/mast_feeds.cc, mast/browser/mast_navigation_throttle.cc, mast/browser/mast_page_backdrop.cc, mast/browser/mast_wallpapers.cc, mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_one_row_toolbar.cc, mast/browser/ui/mast_shortcuts.cc, mast/browser/ui/mast_tab_bar.cc, mast/browser/ui/mast_wallpaper.cc, mast/browser/webui/mast_ui.cc |
 | `base/functional/callback.h` | mast/browser/import/mast_import.h, mast/browser/mast_feeds.h, mast/browser/mast_wallpapers.h, mast/common/mast_tab_bar_state.cc |
 | `base/functional/callback_forward.h` | mast/browser/ui/mast_block_bubble.h, mast/common/mast_tab_bar_state.h |
 | `base/functional/callback_helpers.h` | mast/browser/mast_youtube.cc |
 | `base/json/json_reader.h` | mast/browser/import/mast_import.cc, mast/browser/mast_blocklist.cc |
 | `base/logging.h` | mast/browser/mast_feeds.cc |
-| `base/memory/raw_ptr.h` | mast/browser/desktop/mast_desktop.cc, mast/browser/import/mast_import.cc, mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_tab_bar.h, mast/browser/webui/mast_ui.cc |
+| `base/memory/raw_ptr.h` | mast/browser/desktop/mast_desktop.cc, mast/browser/import/mast_import.cc, mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_shortcuts.h, mast/browser/ui/mast_tab_bar.h, mast/browser/webui/mast_ui.cc |
 | `base/memory/ref_counted.h` | mast/browser/import/mast_import.cc |
 | `base/memory/ref_counted_memory.h` | mast/browser/webui/mast_ui.cc |
 | `base/memory/weak_ptr.h` | mast/browser/import/mast_import.cc, mast/browser/mast_navigation_throttle.h, mast/browser/mast_wallpapers.cc, mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_one_row_toolbar.cc, mast/browser/ui/mast_tab_bar.h, mast/browser/webui/mast_ui.cc |
-| `base/no_destructor.h` | mast/browser/import/mast_import.cc, mast/browser/mast_blocklist.cc, mast/browser/mast_feeds.cc, mast/browser/mast_feeds.h, mast/browser/mast_page_backdrop.cc, mast/browser/ui/mast_tab_bar.cc, mast/browser/ui/mast_wallpaper.cc, mast/browser/webui/mast_ui.cc, mast/common/mast_tab_bar_state.cc |
+| `base/no_destructor.h` | mast/browser/import/mast_import.cc, mast/browser/mast_blocklist.cc, mast/browser/mast_feeds.cc, mast/browser/mast_feeds.h, mast/browser/mast_page_backdrop.cc, mast/browser/ui/mast_shortcuts.cc, mast/browser/ui/mast_tab_bar.cc, mast/browser/ui/mast_wallpaper.cc, mast/browser/webui/mast_ui.cc, mast/common/mast_tab_bar_state.cc |
 | `base/path_service.h` | mast/browser/import/mast_import.cc, mast/browser/mast_feeds.cc, mast/browser/mast_wallpapers.cc |
-| `base/scoped_observation.h` | mast/browser/webui/mast_ui.cc |
+| `base/scoped_observation.h` | mast/browser/ui/mast_shortcuts.h, mast/browser/webui/mast_ui.cc |
 | `base/strings/escape.h` | mast/browser/mast_pages.cc |
 | `base/strings/strcat.h` | mast/browser/mast_blocks.cc |
 | `base/strings/string_number_conversions.h` | mast/browser/import/mast_import.cc, mast/browser/mast_pages.cc, mast/browser/mast_youtube.cc, mast/browser/ui/mast_block_bubble.cc, mast/browser/webui/mast_ui.cc |
@@ -190,7 +190,7 @@ between releases and flags changes to the names below.
 | `base/task/thread_pool.h` | mast/browser/import/mast_import.cc, mast/browser/mast_feeds.cc, mast/browser/mast_page_backdrop.cc, mast/browser/mast_wallpapers.cc, mast/browser/ui/mast_wallpaper.cc, mast/browser/webui/mast_ui.cc |
 | `base/time/time.h` | mast/browser/desktop/mast_desktop.cc, mast/browser/import/mast_import.h, mast/browser/mast_blocks.h, mast/browser/ui/mast_block_bubble.cc |
 | `base/timer/timer.h` | mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_tab_bar.h |
-| `base/values.h` | mast/browser/import/mast_import.cc, mast/browser/mast_blocklist.cc, mast/browser/mast_blocks.cc, mast/browser/mast_prefs.cc, mast/browser/webui/mast_ui.cc |
+| `base/values.h` | mast/browser/import/mast_import.cc, mast/browser/mast_blocklist.cc, mast/browser/mast_blocks.cc, mast/browser/mast_prefs.cc, mast/browser/ui/mast_shortcuts.cc, mast/browser/webui/mast_ui.cc |
 | `build/build_config.h` | mast/browser/import/mast_import.cc |
 | `chrome/browser/bookmarks/bookmark_model_factory.h` | mast/browser/import/mast_import.cc, mast/browser/webui/mast_ui.cc |
 | `chrome/browser/browser_process.h` | mast/browser/import/mast_import.cc, mast/browser/mast_blocks.cc |
@@ -201,18 +201,18 @@ between releases and flags changes to the names below.
 | `chrome/browser/importer/importer_progress_observer.h` | mast/browser/import/mast_import.cc |
 | `chrome/browser/importer/profile_writer.h` | mast/browser/import/mast_import.cc |
 | `chrome/browser/prefs/session_startup_pref.h` | mast/browser/mast_prefs.cc |
-| `chrome/browser/profiles/profile.h` | mast/browser/import/mast_import.cc, mast/browser/mast_wallpapers.cc, mast/browser/ui/mast_one_row_toolbar.cc, mast/browser/ui/mast_tab_bar.cc, mast/browser/ui/mast_wallpaper.cc, mast/browser/webui/mast_ui.cc |
+| `chrome/browser/profiles/profile.h` | mast/browser/import/mast_import.cc, mast/browser/mast_wallpapers.cc, mast/browser/ui/mast_one_row_toolbar.cc, mast/browser/ui/mast_shortcuts.cc, mast/browser/ui/mast_tab_bar.cc, mast/browser/ui/mast_wallpaper.cc, mast/browser/webui/mast_ui.cc |
 | `chrome/browser/shell_integration.h` | mast/browser/webui/mast_ui.cc |
 | `chrome/browser/themes/theme_properties.h` | mast/browser/mast_page_backdrop.cc, mast/browser/ui/mast_wallpaper.cc, mast/browser/webui/mast_ui.cc |
 | `chrome/browser/ui/browser_window.h` | mast/browser/ui/mast_tab_bar.cc |
-| `chrome/browser/ui/browser_window/public/browser_window_interface.h` | mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_one_row_toolbar.cc, mast/browser/ui/mast_tab_bar.cc |
+| `chrome/browser/ui/browser_window/public/browser_window_interface.h` | mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_one_row_toolbar.cc, mast/browser/ui/mast_shortcuts.cc, mast/browser/ui/mast_tab_bar.cc |
 | `chrome/browser/ui/browser_window_theme_observer.h` | mast/browser/ui/mast_tab_bar.cc |
 | `chrome/browser/ui/color/chrome_color_id.h` | mast/browser/ui/color/mast_chrome_color_mixer.cc, mast/browser/ui/mast_block_bubble.cc |
 | `chrome/browser/ui/omnibox/omnibox_view.h` | mast/browser/ui/mast_tab_bar.cc |
 | `chrome/browser/ui/tabs/tab_strip_model.h` | mast/browser/ui/mast_one_row_toolbar.cc, mast/browser/ui/mast_tab_bar.cc |
 | `chrome/browser/ui/tabs/tab_strip_model_observer.h` | mast/browser/ui/mast_tab_bar.h |
 | `chrome/browser/ui/views/controls/rich_hover_button.h` | mast/browser/ui/mast_block_bubble.cc |
-| `chrome/browser/ui/views/frame/browser_view.h` | mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_one_row_toolbar.cc, mast/browser/ui/mast_tab_bar.cc, mast/browser/ui/mast_wallpaper.cc |
+| `chrome/browser/ui/views/frame/browser_view.h` | mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_one_row_toolbar.cc, mast/browser/ui/mast_shortcuts.cc, mast/browser/ui/mast_tab_bar.cc, mast/browser/ui/mast_wallpaper.cc |
 | `chrome/browser/ui/views/frame/toolbar_button_provider.h` | mast/browser/ui/mast_one_row_toolbar.cc |
 | `chrome/browser/ui/views/location_bar/location_bar_view.h` | mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_one_row_toolbar.cc, mast/browser/ui/mast_tab_bar.cc |
 | `chrome/browser/ui/views/location_bar/location_icon_view.h` | mast/browser/ui/mast_block_bubble.cc |
@@ -235,11 +235,12 @@ between releases and flags changes to the names below.
 | `components/keyed_service/core/service_access_type.h` | mast/browser/import/mast_import.cc |
 | `components/power_bookmarks/core/suggested_save_location_provider.h` | mast/browser/desktop/mast_desktop.cc |
 | `components/pref_registry/pref_registry_syncable.h` | mast/browser/mast_prefs.cc |
-| `components/prefs/pref_change_registrar.h` | mast/browser/ui/mast_tab_bar.h |
+| `components/prefs/pref_change_registrar.h` | mast/browser/ui/mast_shortcuts.h, mast/browser/ui/mast_tab_bar.h |
 | `components/prefs/pref_registry_simple.h` | mast/browser/mast_blocks.cc |
-| `components/prefs/pref_service.h` | mast/browser/mast_blocks.cc, mast/browser/mast_page_backdrop.cc, mast/browser/mast_theme.h, mast/browser/mast_wallpapers.cc, mast/browser/ui/mast_one_row_toolbar.cc, mast/browser/ui/mast_tab_bar.cc, mast/browser/ui/mast_wallpaper.cc, mast/browser/webui/mast_ui.cc |
+| `components/prefs/pref_service.h` | mast/browser/mast_blocks.cc, mast/browser/mast_page_backdrop.cc, mast/browser/mast_theme.h, mast/browser/mast_wallpapers.cc, mast/browser/ui/mast_one_row_toolbar.cc, mast/browser/ui/mast_shortcuts.cc, mast/browser/ui/mast_tab_bar.cc, mast/browser/ui/mast_wallpaper.cc, mast/browser/webui/mast_ui.cc |
 | `components/prefs/scoped_user_pref_update.h` | mast/browser/mast_blocks.cc |
 | `components/tabs/public/tab_interface.h` | mast/browser/ui/mast_block_bubble.cc |
+| `components/url_formatter/url_fixer.h` | mast/browser/webui/mast_ui.cc |
 | `components/user_data_importer/common/importer_data_types.h` | mast/browser/import/mast_import.cc |
 | `components/user_prefs/user_prefs.h` | mast/browser/mast_page_backdrop.cc |
 | `components/viz/common/frame_sinks/copy_output_result.h` | mast/browser/ui/mast_tab_bar.cc |
@@ -272,12 +273,14 @@ between releases and flags changes to the names below.
 | `sql/statement.h` | mast/browser/import/mast_import.cc |
 | `third_party/skia/include/core/SkBitmap.h` | mast/browser/ui/mast_tab_bar.cc, mast/browser/ui/mast_wallpaper.cc |
 | `third_party/skia/include/core/SkColor.h` | mast/browser/ui/mast_tab_bar.h, mast/browser/ui/mast_wallpaper.cc, mast/ui/color/mast_palette.h, mast/ui/color/mast_ref_color_mixer.cc, mast/ui/color/mast_site_color.h |
+| `ui/base/accelerators/accelerator.h` | mast/browser/ui/mast_shortcuts.h |
+| `ui/base/accelerators/accelerator_manager.h` | mast/browser/ui/mast_shortcuts.cc |
 | `ui/base/metadata/metadata_header_macros.h` | mast/browser/ui/mast_block_bubble.cc |
 | `ui/base/metadata/metadata_impl_macros.h` | mast/browser/ui/mast_block_bubble.cc |
 | `ui/base/models/simple_combobox_model.h` | mast/browser/ui/mast_block_bubble.cc |
 | `ui/base/mojom/dialog_button.mojom.h` | mast/browser/ui/mast_block_bubble.cc |
 | `ui/base/ui_base_types.h` | mast/browser/ui/mast_block_bubble.cc |
-| `ui/base/window_open_disposition.h` | mast/browser/ui/mast_one_row_toolbar.cc |
+| `ui/base/window_open_disposition.h` | mast/browser/ui/mast_one_row_toolbar.cc, mast/browser/ui/mast_shortcuts.cc |
 | `ui/color/color_id.h` | mast/browser/ui/color/mast_chrome_color_mixer.cc, mast/browser/ui/mast_wallpaper.cc, mast/ui/color/mast_ref_color_mixer.cc |
 | `ui/color/color_mixer.h` | mast/browser/ui/color/mast_chrome_color_mixer.cc, mast/ui/color/mast_ref_color_mixer.cc |
 | `ui/color/color_provider.h` | mast/browser/ui/color/mast_chrome_color_mixer.cc, mast/browser/ui/mast_wallpaper.cc, mast/ui/color/mast_ref_color_mixer.cc |
@@ -288,6 +291,8 @@ between releases and flags changes to the names below.
 | `ui/color/color_variant.h` | mast/browser/ui/mast_block_bubble.cc |
 | `ui/display/display.h` | mast/browser/ui/mast_wallpaper.cc |
 | `ui/display/screen.h` | mast/browser/ui/mast_wallpaper.cc |
+| `ui/events/event_constants.h` | mast/browser/ui/mast_shortcuts.cc |
+| `ui/events/keycodes/keyboard_codes.h` | mast/browser/ui/mast_shortcuts.cc |
 | `ui/gfx/animation/animation_delegate.h` | mast/browser/ui/mast_tab_bar.h |
 | `ui/gfx/animation/linear_animation.h` | mast/browser/ui/mast_tab_bar.h |
 | `ui/gfx/canvas.h` | mast/browser/ui/mast_wallpaper.cc |
@@ -310,16 +315,17 @@ between releases and flags changes to the names below.
 | `ui/views/controls/combobox/combobox.h` | mast/browser/ui/mast_block_bubble.cc |
 | `ui/views/controls/focus_ring.h` | mast/browser/ui/mast_block_bubble.cc |
 | `ui/views/controls/label.h` | mast/browser/ui/mast_block_bubble.cc |
-| `ui/views/focus/focus_manager.h` | mast/browser/ui/mast_tab_bar.cc |
+| `ui/views/focus/focus_manager.h` | mast/browser/ui/mast_shortcuts.cc, mast/browser/ui/mast_tab_bar.cc |
 | `ui/views/layout/box_layout.h` | mast/browser/ui/mast_block_bubble.cc |
 | `ui/views/layout/flex_layout_types.h` | mast/browser/ui/mast_one_row_toolbar.cc |
 | `ui/views/style/typography.h` | mast/browser/ui/mast_block_bubble.cc |
 | `ui/views/view.h` | mast/browser/ui/mast_one_row_layout.h, mast/browser/ui/mast_wallpaper.cc |
 | `ui/views/view_class_properties.h` | mast/browser/ui/mast_one_row_toolbar.cc |
 | `ui/views/view_tracker.h` | mast/browser/ui/mast_block_bubble.cc |
-| `ui/views/widget/widget.h` | mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_tab_bar.cc, mast/browser/ui/mast_wallpaper.cc |
+| `ui/views/widget/widget.h` | mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_shortcuts.h, mast/browser/ui/mast_tab_bar.cc, mast/browser/ui/mast_wallpaper.cc |
+| `ui/views/widget/widget_observer.h` | mast/browser/ui/mast_shortcuts.h |
 | `ui/views/window/dialog_delegate.h` | mast/browser/ui/mast_block_bubble.cc |
-| `url/gurl.h` | mast/browser/desktop/mast_desktop.cc, mast/browser/import/mast_import.cc, mast/browser/mast_blocklist.cc, mast/browser/mast_blocks.cc, mast/browser/mast_navigation_throttle.cc, mast/browser/mast_scheme.cc, mast/browser/mast_youtube.cc, mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_one_row_toolbar.cc, mast/browser/ui/mast_tab_bar.cc, mast/browser/webui/mast_ui.cc |
+| `url/gurl.h` | mast/browser/desktop/mast_desktop.cc, mast/browser/import/mast_import.cc, mast/browser/mast_blocklist.cc, mast/browser/mast_blocks.cc, mast/browser/mast_navigation_throttle.cc, mast/browser/mast_scheme.cc, mast/browser/mast_youtube.cc, mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_one_row_toolbar.cc, mast/browser/ui/mast_shortcuts.h, mast/browser/ui/mast_tab_bar.cc, mast/browser/webui/mast_ui.cc |
 
 </details>
 
@@ -341,6 +347,7 @@ between releases and flags changes to the names below.
 | `//components/power_bookmarks/core` | mast/browser/desktop/BUILD.gn |
 | `//components/pref_registry` | mast/browser/BUILD.gn |
 | `//components/prefs` | mast/browser/BUILD.gn, mast/browser/webui/BUILD.gn |
+| `//components/url_formatter` | mast/browser/webui/BUILD.gn |
 | `//components/user_data_importer/common` | mast/browser/import/BUILD.gn |
 | `//components/user_prefs` | mast/browser/BUILD.gn |
 | `//content/public/browser` | mast/browser/BUILD.gn, mast/browser/import/BUILD.gn, mast/browser/webui/BUILD.gn |
