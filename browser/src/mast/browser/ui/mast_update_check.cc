@@ -31,6 +31,7 @@
 #include "chrome/browser/ui/browser_window/public/browser_window_interface_iterator.h"
 #include "components/infobars/content/content_infobar_manager.h"
 #include "components/infobars/core/confirm_infobar_delegate.h"
+#include "components/infobars/core/infobar.h"
 #include "components/prefs/pref_service.h"
 #include "components/tabs/public/tab_interface.h"
 #include "content/public/browser/web_contents.h"
@@ -186,7 +187,8 @@ class Checker {
     if (!body) {
       return;  // offline: tomorrow
     }
-    std::optional<base::Value> json = base::JSONReader::Read(*body);
+    std::optional<base::Value> json =
+        base::JSONReader::Read(*body, base::JSON_PARSE_RFC);
     const std::string* latest =
         json && json->is_dict() ? json->GetDict().FindString("version")
                                 : nullptr;

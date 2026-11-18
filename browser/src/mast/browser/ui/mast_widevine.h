@@ -4,6 +4,7 @@
 #define MAST_BROWSER_UI_MAST_WIDEVINE_H_
 
 #include "base/callback_list.h"
+#include "base/no_destructor.h"
 
 namespace mast {
 
@@ -23,6 +24,8 @@ class MastWidevine {
   MastWidevine& operator=(const MastWidevine&) = delete;
 
  private:
+  friend class base::NoDestructor<MastWidevine>;
+
   MastWidevine();
   ~MastWidevine();
 
