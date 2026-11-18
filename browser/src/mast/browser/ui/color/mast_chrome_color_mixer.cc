@@ -289,6 +289,20 @@ void AddMastChromeColorMixer(ui::ColorProvider* provider,
   mixer[kColorDownloadToolbarButtonActive] = {kColorToolbarButtonIconHovered};
   mixer[kColorDownloadToolbarButtonAnimationForeground] = {
       kColorToolbarButtonIconHovered};
+
+  // The + after the tabs hovers like every other button in the row (back,
+  // forward, extensions, the menu). Chromium gives tab strip buttons their own
+  // ink drop, built from the new tab button's colours: an opaque dark grey.
+  for (ui::ColorId id : std::initializer_list<ui::ColorId>{
+           kColorTabStripControlButtonInkDrop,
+           kColorTabStripControlButtonInkDropFrameInactive}) {
+    mixer[id] = {kColorToolbarInkDropHover};
+  }
+  for (ui::ColorId id : std::initializer_list<ui::ColorId>{
+           kColorTabStripControlButtonInkDropRipple,
+           kColorTabStripControlButtonInkDropRippleFrameInactive}) {
+    mixer[id] = {kColorToolbarInkDropRipple};
+  }
 }
 
 }  // namespace mast
