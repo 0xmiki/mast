@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["createrepo_c"]
+# dependencies = []
 # ///
 """Package-source metadata for a release in dist/release (run by package.sh, through uv):
 
@@ -24,7 +24,8 @@ import sys
 import tarfile
 import time
 
-import createrepo_c as cr
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import rpmrepo  # packaging/rpmrepo.py: plain Python, so no GLib or librpm is needed
 
 out, version, rpm_base = sys.argv[1:4]
 
@@ -80,26 +81,9 @@ for name in ("Packages", "Packages.gz"):
 open(os.path.join(out, "Release"), "w").write("\n".join(release) + "\n")
 
 # dnf ------------------------------------------------------------------------------------
-rpm = os.path.join(out, "mast.x86_64.rpm")
-repodata = os.path.join(out, "rpm", "repodata")
-os.makedirs(repodata, exist_ok=True)
-files = {
-    "primary": cr.PrimaryXmlFile(os.path.join(repodata, "primary.xml.gz")),
-    "filelists": cr.FilelistsXmlFile(os.path.join(repodata, "filelists.xml.gz")),
-    "other": cr.OtherXmlFile(os.path.join(repodata, "other.xml.gz")),
-}
-pkg = cr.package_from_rpm(rpm, cr.SHA256, "mast.x86_64.rpm", rpm_base.rstrip("/") + "/", 10)
-for f in files.values():
-    f.set_num_of_pkgs(1)
-    f.add_pkg(pkg)
-    f.close()
-repomd = cr.Repomd()
-for name in files:
-    record = cr.RepomdRecord(name, os.path.join(repodata, f"{name}.xml.gz"))
-    record.fill(cr.SHA256)
-    record.rename_file()  # <checksum>-primary.xml.gz, so caches never mix two releases
-    repomd.set_record(record)
-open(os.path.join(repodata, "repomd.xml"), "w").write(repomd.xml_dump())
+rpmrepo.write_repodata(os.path.join(out, "rpm", "repodata"),
+                       [(os.path.join(out, "mast.x86_64.rpm"), "mast.x86_64.rpm")],
+                       rpm_base.rstrip("/") + "/")
 
 # Mast's own check -------------------------------------------------------------------------
 tarball = os.path.join(out, "mast-linux-x86_64.tar.xz")

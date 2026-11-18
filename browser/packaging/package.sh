@@ -217,7 +217,7 @@ cp "$P/mast-release-key.asc" "$OUT/mast-release-key.asc"
 
 log "package sources"
 uv run --quiet "$P/repo.py" "$OUT" "$FULL" \
-	"https://github.com/$MAST_RELEASES_REPO/releases/download/$TAG" 2>&1 | grep -v rpmrc || true
+	"https://github.com/$MAST_RELEASES_REPO/releases/download/$TAG"
 [[ -f $OUT/rpm/repodata/repomd.xml ]] || die "the dnf source wasn't written"
 
 if [[ -n $SIGN ]]; then
