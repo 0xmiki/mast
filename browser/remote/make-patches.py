@@ -162,6 +162,11 @@ edit(H, "content/browser/media/key_system_support_impl.cc", lambda t: once(once(
     '      WebContentsImpl::FromRenderFrameHostImpl(\n'
     '          static_cast<RenderFrameHostImpl*>(&render_frame_host()))));\n'))
 edit(H, "content/browser/BUILD.gn", lambda t: add_dep(t, 'source_set("browser") {', "//mast/common"))
+# ungoogled's block-requests.patch makes every component update check return at once without
+# answering, so Widevine's download waited forever (the bar went away, nothing followed).
+# Undone for Mast: the only component ever registered is Widevine, after a yes.
+edit(H, "components/update_client/update_checker.cc", lambda t: unpatch(
+    t, "components/update_client/update_checker.cc", "core/ungoogled-chromium/block-requests.patch"))
 edit(H, "components/infobars/core/infobar_delegate.h", lambda t: once(t,
     '    CONTEXTUAL_CUE_INFOBAR_DELEGATE_IOS = 140,\n  };\n',
     '    CONTEXTUAL_CUE_INFOBAR_DELEGATE_IOS = 140,\n    MAST_WIDEVINE_INFOBAR_DELEGATE = 141,  // Mast: mast_widevine.cc\n'

@@ -12,6 +12,7 @@
 #include "base/memory/weak_ptr.h"
 #include "base/no_destructor.h"
 #include "base/path_service.h"
+#include "base/task/sequenced_task_runner.h"
 #include "base/task/thread_pool.h"
 #include "chrome/browser/browser_process.h"
 #include "chrome/browser/infobars/confirm_infobar_creator.h"
@@ -55,7 +56,7 @@ void Install(base::WeakPtr<content::WebContents> contents);
 // One message in the tab, the only one of its kind there.
 class Bar : public ConfirmInfoBarDelegate {
  public:
-  enum class Kind { kAsk, kReady, kFailed };
+  enum class Kind { kAsk, kDownloading, kReady, kFailed };
   explicit Bar(Kind kind, base::WeakPtr<content::WebContents> contents)
       : kind_(kind), contents_(std::move(contents)) {}
 
@@ -68,6 +69,8 @@ class Bar : public ConfirmInfoBarDelegate {
       case Kind::kAsk:
         return u"This site plays protected audio or video, which needs "
                u"Google Widevine. Mast can download it from Google.";
+      case Kind::kDownloading:
+        return u"Downloading Widevine from Google…";
       case Kind::kReady:
         return u"Widevine is ready. Restart Mast to play.";
       case Kind::kFailed:
@@ -81,6 +84,7 @@ class Bar : public ConfirmInfoBarDelegate {
         return BUTTON_OK | BUTTON_CANCEL;
       case Kind::kReady:
         return BUTTON_OK;
+      case Kind::kDownloading:
       case Kind::kFailed:
         return BUTTON_NONE;
     }
@@ -135,6 +139,7 @@ void Install(base::WeakPtr<content::WebContents> contents) {
     return;
   }
   installing = true;
+  base::WeakPtr<content::WebContents> tab = contents;
   const bool started = InstallWidevine(base::BindOnce(
       [](base::WeakPtr<content::WebContents> contents, bool ok) {
         installing = false;
@@ -150,7 +155,18 @@ void Install(base::WeakPtr<content::WebContents> contents) {
       std::move(contents)));
   if (!started) {
     installing = false;
+    return;
   }
+  // Said while it downloads (it can take a while on a slow connection); the
+  // answer replaces it. Posted, so the bar that asked is gone first.
+  base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
+      FROM_HERE, base::BindOnce(
+                     [](base::WeakPtr<content::WebContents> contents) {
+                       if (contents && installing) {
+                         ShowInfoBar(contents.get(), Bar::Kind::kDownloading);
+                       }
+                     },
+                     std::move(tab)));
 }
 
 }  // namespace
