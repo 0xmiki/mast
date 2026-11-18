@@ -28,6 +28,7 @@
 #include "mast/browser/mast_wallpapers.h"
 #include "mast/browser/ui/mast_shortcuts.h"
 #include "mast/browser/ui/mast_tab_bar.h"
+#include "mast/browser/ui/mast_widevine.h"
 #include "mast/common/mast_features.h"
 #include "ui/gfx/geometry/size.h"
 #include "ui/views/layout/flex_layout_types.h"
@@ -105,6 +106,8 @@ void OnBrowserWindowReady(BrowserWindowInterface* browser) {
   }
   // The user's Alt + letter shortcuts, in every normal window.
   MastShortcuts::Attach(browser);
+  // Widevine on request (Spotify, Netflix): once for the whole browser.
+  MastWidevine::Start();
   if (!IsOneRowWindow() || !browser ||
       browser->GetType() != BrowserWindowInterface::TYPE_NORMAL) {
     return;

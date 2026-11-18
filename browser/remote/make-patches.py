@@ -125,11 +125,46 @@ edit(H, "chrome/browser/prefs/browser_prefs.cc", lambda t: once(once(once(t,
     '#include "chrome/browser/prefs/incognito_mode_prefs.h"\n',
     '#include "chrome/browser/prefs/incognito_mode_prefs.h"\n#include "mast/browser/mast_blocks.h"\n#include "mast/browser/mast_prefs.h"\n'),
     '  BrowserProcessImpl::RegisterPrefs(registry);\n',
-    '  BrowserProcessImpl::RegisterPrefs(registry);\n  mast::MastBlocks::RegisterLocalStatePrefs(registry);\n'),
+    '  BrowserProcessImpl::RegisterPrefs(registry);\n  mast::RegisterLocalStatePrefs(registry);\n'),
     # Last in RegisterProfilePrefs(), so Mast can change upstream defaults.
     '  registry->RegisterBooleanPref(prefs::kStaticStorageQuotaEnabled, false);\n}\n',
     '  registry->RegisterBooleanPref(prefs::kStaticStorageQuotaEnabled, false);\n  mast::RegisterProfilePrefs(registry);\n}\n'))
 edit(H, "chrome/browser/prefs/BUILD.gn", lambda t: add_dep(t, 'source_set("impl") {', "//mast/browser"))
+
+# Widevine on request (mast/browser/ui/mast_widevine.h), the way Brave does it. The component
+# updater registers Widevine only, and only once the user said yes on a page that needed it:
+# with Google's real update address back (substitution-exclude.list), every other component
+# would call Google too, and under ungoogled-chromium none of them ever downloaded anyway.
+edit(H, "chrome/browser/component_updater/registration.cc", lambda t: once(once(t,
+    '#include "chrome/browser/component_updater/registration.h"\n',
+    '#include "chrome/browser/component_updater/registration.h"\n#include "mast/browser/component_updater/mast_components.h"\n'),
+    'void RegisterComponentsForUpdate() {\n  auto* const cus = g_browser_process->component_updater();\n',
+    'void RegisterComponentsForUpdate() {\n  auto* const cus = g_browser_process->component_updater();\n'
+    '  // Mast: Widevine only, on the user\'s word (mast_components.h).\n'
+    '  if (cus) {\n    MastRegisterComponents(cus);\n    return;\n  }\n'))
+edit(H, "chrome/browser/component_updater/BUILD.gn", lambda t: add_dep(once(t,
+    '    "registration.cc",\n',
+    '    "registration.cc",\n    "//mast/browser/component_updater/mast_components.cc",\n    "//mast/browser/component_updater/mast_components.h",\n'),
+    'source_set("impl") {', "//mast/common"))
+# Its download runs now, not at the next scheduled check (hours away): a friend, the way
+# speech and translation's one-off downloads are.
+edit(H, "components/component_updater/component_updater_service.h", lambda t: once(t,
+    '  friend class OnDemandTester;\n',
+    '  friend class OnDemandTester;\n  friend class MastWidevineUpdater;  // Mast: mast_components.cc\n'))
+# A page starting to use protected media (EME) is what asks the user.
+edit(H, "content/browser/media/key_system_support_impl.cc", lambda t: once(once(t,
+    '#include "content/public/browser/render_frame_host.h"\n',
+    '#include "content/public/browser/render_frame_host.h"\n#include "mast/common/mast_widevine_state.h"\n'),
+    '  observer_remote_.Bind(std::move(observer));\n',
+    '  observer_remote_.Bind(std::move(observer));\n'
+    '  // Mast: the page wants protected media; Mast may offer Widevine.\n'
+    '  mast::ProtectedMediaRequested(static_cast<WebContents*>(\n'
+    '      WebContentsImpl::FromRenderFrameHostImpl(\n'
+    '          static_cast<RenderFrameHostImpl*>(&render_frame_host()))));\n'))
+edit(H, "content/browser/BUILD.gn", lambda t: add_dep(t, 'source_set("browser") {', "//mast/common"))
+edit(H, "components/infobars/core/infobar_delegate.h", lambda t: once(t,
+    '    CONTEXTUAL_CUE_INFOBAR_DELEGATE_IOS = 140,\n  };\n',
+    '    CONTEXTUAL_CUE_INFOBAR_DELEGATE_IOS = 140,\n    MAST_WIDEVINE_INFOBAR_DELEGATE = 141,  // Mast: mast_widevine.cc\n  };\n'))
 # Incognito stays available: blocks live in Local State and the navigation throttle runs
 # for every profile, so a private window is blocked exactly like a normal one.
 
@@ -609,18 +644,20 @@ edit(R, "chrome/browser/ui/browser_window/internal/embedder_browser_window_featu
     '#include "chrome/browser/ui/views/frame/browser_view.h"\n#include "mast/browser/ui/mast_one_row_toolbar.h"\n'),
     'void EmbedderBrowserWindowFeatures::InitPostWindowConstruction(\n    BrowserWindowInterface* browser) {\n  // Embedder implementation goes here.\n}',
     'void EmbedderBrowserWindowFeatures::InitPostWindowConstruction(\n    BrowserWindowInterface* browser) {\n  mast::OnBrowserWindowReady(browser);\n}'))
-edit(R, "chrome/browser/ui/browser_window/internal/BUILD.gn", lambda t: add_dep(add_dep(add_dep(add_dep(add_dep(add_dep(add_dep(once(t,
+edit(R, "chrome/browser/ui/browser_window/internal/BUILD.gn", lambda t: add_dep(add_dep(add_dep(add_dep(add_dep(add_dep(add_dep(add_dep(once(t,
     '      "embedder_browser_window_features.cc",\n',
     '      "embedder_browser_window_features.cc",\n      "//mast/browser/ui/mast_one_row_toolbar.cc",\n      "//mast/browser/ui/mast_one_row_toolbar.h",\n'
     '      "//mast/browser/ui/mast_tab_bar.cc",\n      "//mast/browser/ui/mast_tab_bar.h",\n'
-    '      "//mast/browser/ui/mast_shortcuts.cc",\n      "//mast/browser/ui/mast_shortcuts.h",\n'),
+    '      "//mast/browser/ui/mast_shortcuts.cc",\n      "//mast/browser/ui/mast_shortcuts.h",\n'
+    '      "//mast/browser/ui/mast_widevine.cc",\n      "//mast/browser/ui/mast_widevine.h",\n'),
     'source_set("internal") {', "//mast/common"),
     'source_set("internal") {', "//components/prefs"),
     'source_set("internal") {', "//content/public/browser"),
     'source_set("internal") {', "//skia"),
     'source_set("internal") {', "//components/viz/common"),
     'source_set("internal") {', "//ui/gfx/animation"),
-    'source_set("internal") {', "//ui/gfx/geometry"))
+    'source_set("internal") {', "//ui/gfx/geometry"),
+    'source_set("internal") {', "//third_party/widevine/cdm:buildflags"))  # mast_widevine.cc
 
 # No dividers between tabs in the one-row window: tabs are pills with space between them.
 # (Chromium paints dividers with SkColorSetA(colour, opacity), which overrides the colour's

@@ -9,8 +9,16 @@
 #include "chrome/browser/prefs/session_startup_pref.h"
 #include "chrome/common/pref_names.h"
 #include "components/pref_registry/pref_registry_syncable.h"
+#include "components/prefs/pref_registry_simple.h"
+#include "mast/browser/mast_blocks.h"
+#include "mast/common/mast_widevine_state.h"
 
 namespace mast {
+
+void RegisterLocalStatePrefs(PrefRegistrySimple* registry) {
+  MastBlocks::RegisterLocalStatePrefs(registry);
+  registry->RegisterIntegerPref(kWidevinePref, kWidevineAsk);
+}
 
 void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry) {
   // No tab-search button at the start of the tab strip. Ctrl+Shift+A still

@@ -6,6 +6,7 @@ records every view's class, screen bounds and properties (with Background/Border
 ids) next to the screenshot, and finds native controls to click by their properties.
 """
 import json
+import os
 import subprocess
 import sys
 import time
@@ -445,3 +446,15 @@ shot("29-tab-group", settle=1.5)
 p.go("chrome://newtab")
 p.js("chrome.send('setPalette', ['onyx']); chrome.send('clearWallpaper')")
 time.sleep(1)
+# Widevine on request (mast_widevine.h): a page that uses protected media (Shaka Player's demo
+# checks Widevine as it loads) asks; Download fetches it from Google, then the tab offers a
+# restart. Not restarted here: the session ends with these scenes.
+p.go("https://shaka-player-demo.appspot.com/demo/", 8)
+shot("54-widevine-ask", settle=1)
+native_dump("54-widevine-ask", click=("MdTextButton", "Download"))
+time.sleep(25)
+shot("55-widevine-ready", settle=1)
+hint = "/tmp/mast-shot-profile/WidevineCdm/latest-component-updated-widevine-cdm"
+print("widevine hint:", open(hint).read() if os.path.exists(hint) else "missing", flush=True)
+print("widevine dir:", sorted(os.listdir("/tmp/mast-shot-profile/WidevineCdm"))
+      if os.path.isdir("/tmp/mast-shot-profile/WidevineCdm") else "missing", flush=True)

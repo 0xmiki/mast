@@ -368,6 +368,24 @@ first (4 are colour mixer only; the rest are 1–3 line hooks).
   `./mast check-patches` (free) to see which anchors moved, fix them, then one full build
   (most of Chromium recompiles: several hours, about $1–2).
 
+### L. Spotify and Netflix: codecs and Widevine (written 2026-11-18, not built yet)
+
+- **Codecs:** `proprietary_codecs = true`, `ffmpeg_branding = "Chrome"` (remote/args.gn), like
+  Brave, Vivaldi and Opera. Spotify streams AAC; Netflix and most MP4 video use H.264. Widevine
+  only decrypts, the browser still decodes. Almost a full rebuild, so it rides with the move to
+  157.0.8103.78.
+- **Widevine on request, like Brave** (`mast/browser/ui/mast_widevine.h`): off until a page uses
+  protected media (EME, seen in `KeySystemSupportImpl::SetObserver`). That tab asks: Download
+  (from Google's update server) or Don't ask again. Then it offers a restart, since Linux loads
+  Widevine at startup through its hint file. The answer is `mast.widevine` in Local State.
+- **Only Widevine reaches Google:** the component updater's real address is kept out of domain
+  substitution (`patches/substitution-exclude.list`), and `RegisterComponentsForUpdate`
+  registers Widevine alone, only after a yes (`mast/browser/component_updater/mast_components.h`).
+  Every other component stays unregistered; under ungoogled none of them ever downloaded.
+- **After the build:** scenes 54/55 (the ask, then the restart offer after the download) and the
+  hint file's contents in the shots log. Then on a real machine: restart, and check Spotify plays.
+- **Still to do:** a settings switch to turn it on or off later (today: `mast.widevine`).
+
 ### H. Leftovers from the de-Google pass
 
 - "Your Mast" in the app menu (string). Warm greys in settings (WebUI colour tokens, `DESIGN-PLAN.md` §F).

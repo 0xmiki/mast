@@ -4,6 +4,14 @@ One entry per release we check or move to. Record what `./mast check-rebase` fou
 build and screenshots found that it didn't (then teach the check, if it can be taught), and how
 long it took. Reports: `docs/rebase/<version>.md`. What is checked: [UPSTREAM.md](UPSTREAM.md).
 
+## 157.0.8103.78 (ungoogled 157.0.8103.78-1): checked 2026-11-18, not built yet
+
+A security point release. 158 is Stable upstream, but ungoogled hasn't tagged it yet.
+**Check:** 0 of 92 edits failed, nothing to review (a first run reported 3 failures that were
+network errors fetching base files, not moved anchors). Report:
+[rebase/157.0.8103.78.md](rebase/157.0.8103.78.md). Built together with AAC/H.264 and Widevine
+on request (ROADMAP §L), which need about a full rebuild anyway.
+
 ## 157.0.8103.50 (ungoogled 157.0.8103.50-1): moved 2026-11-11
 
 Moved once the features were in, to the newest release both projects had (158 reaches

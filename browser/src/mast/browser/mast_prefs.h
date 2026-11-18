@@ -5,6 +5,8 @@
 
 #include <string_view>
 
+class PrefRegistrySimple;
+
 namespace user_prefs {
 class PrefRegistrySyncable;
 }  // namespace user_prefs
@@ -51,6 +53,10 @@ inline bool IsShortcutKey(std::string_view key) {
 // last in RegisterProfilePrefs(), so every upstream pref is already registered.
 // (Blocks live in Local State instead; see MastBlocks.)
 void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry);
+
+// Mast's Local State prefs: blocks (MastBlocks, shared by every profile) and
+// the Widevine answer (mast/common/mast_widevine_state.h).
+void RegisterLocalStatePrefs(PrefRegistrySimple* registry);
 
 }  // namespace mast
 

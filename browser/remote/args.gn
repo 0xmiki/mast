@@ -7,6 +7,8 @@ symbol_level = 0
 blink_symbol_level = 0
 v8_symbol_level = 0
 chrome_pgo_phase = 0
-proprietary_codecs = false
-ffmpeg_branding = "Chromium"
+# AAC and H.264, like Brave, Vivaldi and Opera: Spotify streams AAC, Netflix and most MP4
+# video on the web use H.264. Widevine only decrypts; the browser still decodes.
+proprietary_codecs = true
+ffmpeg_branding = "Chrome"
 treat_warnings_as_errors = false

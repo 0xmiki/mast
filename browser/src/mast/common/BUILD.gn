@@ -1,6 +1,7 @@
 # Copyright 2026 The Mast Authors
 # Mast's feature switches. Tiny and base-only, so any upstream target can depend
-# on it (layout, tabs, omnibox, colours, window features).
+# on it (layout, tabs, omnibox, colours, window features, content, the
+# component updater).
 
 source_set("common") {
   sources = [
@@ -8,6 +9,8 @@ source_set("common") {
     "mast_features.h",
     "mast_tab_bar_state.cc",
     "mast_tab_bar_state.h",
+    "mast_widevine_state.cc",
+    "mast_widevine_state.h",
   ]
   deps = [ "//base" ]
 }

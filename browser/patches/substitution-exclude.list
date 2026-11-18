@@ -1,4 +1,7 @@
 # Files kept out of ungoogled-chromium's domain substitution (substring match on the path).
 # Mast's own code (mast/) is never in the list: it isn't part of upstream.
-# (None needed yet: the search engine definitions aren't in ungoogled's list. Google search's
+# (The search engine definitions aren't in ungoogled's list. Google search's
 # base URL is restored by mast-ungoogled.patch instead.)
+# Widevine's download (mast_components.cc): the component updater's Google address stays real.
+# Only Widevine is ever registered, and only after the user says yes (mast_widevine.h).
+components/component_updater/component_updater_url_constants.cc
