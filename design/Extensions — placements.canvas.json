@@ -20,12 +20,32 @@
       "width": 1440,
       "height": 900,
       "clip": true,
-      "fill": "#ffffff",
+      "fill": [
+        {
+          "type": "linear",
+          "angle": 180,
+          "stops": [
+            {
+              "color": "rgba(0,0,0,0.22)",
+              "position": 0
+            },
+            {
+              "color": "rgba(0,0,0,0.22)",
+              "position": 1
+            }
+          ]
+        },
+        {
+          "type": "image",
+          "src": "assets/trident.jpg",
+          "fit": "cover"
+        }
+      ],
       "layout": "none",
       "children": [
         {
           "type": "frame",
-          "name": "Header (Match site)",
+          "name": "Header (picture)",
           "x": 0,
           "y": 0,
           "absolute": true,
@@ -40,7 +60,7 @@
             0,
             4
           ],
-          "fill": "#ffffff",
+          "fill": "transparent",
           "id": "mpz19",
           "children": [
             {
@@ -56,7 +76,7 @@
                 10
               ],
               "radius": 8,
-              "fill": "#ececec",
+              "fill": "rgba(255,255,255,0.10)",
               "id": "jlldl",
               "children": [
                 {
@@ -72,7 +92,7 @@
                   "type": "text",
                   "text": "Field Notes — Slow mornings",
                   "fontSize": 13,
-                  "color": "#1f1f1f",
+                  "color": "#ededed",
                   "width": "fill",
                   "maxLines": 1,
                   "id": "f9b1e"
@@ -81,7 +101,7 @@
                   "type": "icon",
                   "icon": "x",
                   "size": 14,
-                  "color": "#5f5f5f",
+                  "color": "#c9c9c9",
                   "id": "q3kfp"
                 }
               ]
@@ -115,7 +135,7 @@
                   "type": "text",
                   "text": "Weather — this week",
                   "fontSize": 13,
-                  "color": "#5f5f5f",
+                  "color": "#c9c9c9",
                   "width": "fill",
                   "maxLines": 1,
                   "id": "ewgjt"
@@ -126,7 +146,7 @@
               "type": "icon",
               "icon": "plus",
               "size": 16,
-              "color": "#5f5f5f",
+              "color": "#c9c9c9",
               "id": "ktj4g"
             },
             {
@@ -141,7 +161,7 @@
               "type": "icon",
               "icon": "arrow-left",
               "size": 18,
-              "color": "#5f5f5f",
+              "color": "#c9c9c9",
               "id": "mj3v4"
             },
             {
@@ -157,21 +177,21 @@
                 10
               ],
               "radius": 16,
-              "fill": "#ececec",
+              "fill": "rgba(10,10,10,0.6)",
               "id": "bsjb4",
               "children": [
                 {
                   "type": "icon",
                   "icon": "sliders-horizontal",
                   "size": 14,
-                  "color": "#5f5f5f",
+                  "color": "#c9c9c9",
                   "id": "ft036"
                 },
                 {
                   "type": "text",
                   "text": "field-notes.example",
                   "fontSize": 13,
-                  "color": "#1f1f1f",
+                  "color": "#ededed",
                   "width": "fill",
                   "maxLines": 1,
                   "id": "rom0x"
@@ -180,14 +200,14 @@
                   "type": "icon",
                   "icon": "puzzle",
                   "size": 14,
-                  "color": "#5f5f5f",
+                  "color": "#c9c9c9",
                   "id": "h2sqb"
                 },
                 {
                   "type": "icon",
                   "icon": "star",
                   "size": 14,
-                  "color": "#5f5f5f",
+                  "color": "#c9c9c9",
                   "id": "r5jxl"
                 }
               ]
@@ -196,21 +216,21 @@
               "type": "icon",
               "icon": "arrow-right",
               "size": 18,
-              "color": "#b5b5b5",
+              "color": "#6b6b6b",
               "id": "lhdrz"
             },
             {
               "type": "icon",
               "icon": "download",
               "size": 17,
-              "color": "#5f5f5f",
+              "color": "#c9c9c9",
               "id": "f3q4g"
             },
             {
               "type": "icon",
               "icon": "ellipsis-vertical",
               "size": 18,
-              "color": "#5f5f5f",
+              "color": "#c9c9c9",
               "id": "efvox"
             }
           ]
@@ -324,7 +344,8 @@
               "fill": "#e5e7eb",
               "id": "l2ghc"
             }
-          ]
+          ],
+          "visible": false
         },
         {
           "type": "frame",
@@ -738,12 +759,32 @@
       "width": 1440,
       "height": 900,
       "clip": true,
-      "fill": "#ffffff",
+      "fill": [
+        {
+          "type": "linear",
+          "angle": 180,
+          "stops": [
+            {
+              "color": "rgba(0,0,0,0.22)",
+              "position": 0
+            },
+            {
+              "color": "rgba(0,0,0,0.22)",
+              "position": 1
+            }
+          ]
+        },
+        {
+          "type": "image",
+          "src": "assets/trident.jpg",
+          "fit": "cover"
+        }
+      ],
       "layout": "none",
       "children": [
         {
           "type": "frame",
-          "name": "Header (Match site)",
+          "name": "Header (picture)",
           "x": 0,
           "y": 0,
           "absolute": true,
@@ -758,7 +799,7 @@
             0,
             4
           ],
-          "fill": "#ffffff",
+          "fill": "transparent",
           "id": "ut3tc",
           "children": [
             {
@@ -774,7 +815,7 @@
                 10
               ],
               "radius": 8,
-              "fill": "#ececec",
+              "fill": "rgba(255,255,255,0.10)",
               "id": "s9ly9",
               "children": [
                 {
@@ -790,7 +831,7 @@
                   "type": "text",
                   "text": "Field Notes — Slow mornings",
                   "fontSize": 13,
-                  "color": "#1f1f1f",
+                  "color": "#ededed",
                   "width": "fill",
                   "maxLines": 1,
                   "id": "hyvyh"
@@ -799,7 +840,7 @@
                   "type": "icon",
                   "icon": "x",
                   "size": 14,
-                  "color": "#5f5f5f",
+                  "color": "#c9c9c9",
                   "id": "ep986"
                 }
               ]
@@ -833,7 +874,7 @@
                   "type": "text",
                   "text": "Weather — this week",
                   "fontSize": 13,
-                  "color": "#5f5f5f",
+                  "color": "#c9c9c9",
                   "width": "fill",
                   "maxLines": 1,
                   "id": "w0i4t"
@@ -844,7 +885,7 @@
               "type": "icon",
               "icon": "plus",
               "size": 16,
-              "color": "#5f5f5f",
+              "color": "#c9c9c9",
               "id": "yh2ac"
             },
             {
@@ -859,7 +900,7 @@
               "type": "icon",
               "icon": "arrow-left",
               "size": 18,
-              "color": "#5f5f5f",
+              "color": "#c9c9c9",
               "id": "crzrp"
             },
             {
@@ -875,21 +916,21 @@
                 10
               ],
               "radius": 16,
-              "fill": "#ececec",
+              "fill": "rgba(10,10,10,0.6)",
               "id": "cfg97",
               "children": [
                 {
                   "type": "icon",
                   "icon": "sliders-horizontal",
                   "size": 14,
-                  "color": "#5f5f5f",
+                  "color": "#c9c9c9",
                   "id": "q64lb"
                 },
                 {
                   "type": "text",
                   "text": "field-notes.example",
                   "fontSize": 13,
-                  "color": "#1f1f1f",
+                  "color": "#ededed",
                   "width": "fill",
                   "maxLines": 1,
                   "id": "m8ymw"
@@ -898,7 +939,7 @@
                   "type": "icon",
                   "icon": "star",
                   "size": 14,
-                  "color": "#5f5f5f",
+                  "color": "#c9c9c9",
                   "id": "s4djc"
                 }
               ]
@@ -907,21 +948,21 @@
               "type": "icon",
               "icon": "arrow-right",
               "size": 18,
-              "color": "#b5b5b5",
+              "color": "#6b6b6b",
               "id": "lxm0x"
             },
             {
               "type": "icon",
               "icon": "download",
               "size": 17,
-              "color": "#5f5f5f",
+              "color": "#c9c9c9",
               "id": "gtq8c"
             },
             {
               "type": "icon",
               "icon": "ellipsis-vertical",
               "size": 18,
-              "color": "#5f5f5f",
+              "color": "#c9c9c9",
               "id": "ci4ja"
             }
           ]
@@ -1035,7 +1076,8 @@
               "fill": "#e5e7eb",
               "id": "gk9g8"
             }
-          ]
+          ],
+          "visible": false
         },
         {
           "type": "rect",
@@ -1045,7 +1087,7 @@
           "width": 3,
           "height": 100,
           "radius": 2,
-          "fill": "rgba(0,0,0,0.15)",
+          "fill": "rgba(255,255,255,0.35)",
           "id": "c4dcg"
         },
         {
@@ -1331,12 +1373,32 @@
       "width": 1440,
       "height": 900,
       "clip": true,
-      "fill": "#ffffff",
+      "fill": [
+        {
+          "type": "linear",
+          "angle": 180,
+          "stops": [
+            {
+              "color": "rgba(0,0,0,0.22)",
+              "position": 0
+            },
+            {
+              "color": "rgba(0,0,0,0.22)",
+              "position": 1
+            }
+          ]
+        },
+        {
+          "type": "image",
+          "src": "assets/trident.jpg",
+          "fit": "cover"
+        }
+      ],
       "layout": "none",
       "children": [
         {
           "type": "frame",
-          "name": "Header (Match site)",
+          "name": "Header (picture)",
           "x": 0,
           "y": 0,
           "absolute": true,
@@ -1351,7 +1413,7 @@
             0,
             4
           ],
-          "fill": "#ffffff",
+          "fill": "transparent",
           "id": "tti9g",
           "children": [
             {
@@ -1367,7 +1429,7 @@
                 10
               ],
               "radius": 8,
-              "fill": "#ececec",
+              "fill": "rgba(255,255,255,0.10)",
               "id": "eqs43",
               "children": [
                 {
@@ -1383,7 +1445,7 @@
                   "type": "text",
                   "text": "Field Notes — Slow mornings",
                   "fontSize": 13,
-                  "color": "#1f1f1f",
+                  "color": "#ededed",
                   "width": "fill",
                   "maxLines": 1,
                   "id": "cclue"
@@ -1392,7 +1454,7 @@
                   "type": "icon",
                   "icon": "x",
                   "size": 14,
-                  "color": "#5f5f5f",
+                  "color": "#c9c9c9",
                   "id": "wr6wk"
                 }
               ]
@@ -1426,7 +1488,7 @@
                   "type": "text",
                   "text": "Weather — this week",
                   "fontSize": 13,
-                  "color": "#5f5f5f",
+                  "color": "#c9c9c9",
                   "width": "fill",
                   "maxLines": 1,
                   "id": "wfw8c"
@@ -1437,7 +1499,7 @@
               "type": "icon",
               "icon": "plus",
               "size": 16,
-              "color": "#5f5f5f",
+              "color": "#c9c9c9",
               "id": "qiobh"
             },
             {
@@ -1452,7 +1514,7 @@
               "type": "icon",
               "icon": "arrow-left",
               "size": 18,
-              "color": "#5f5f5f",
+              "color": "#c9c9c9",
               "id": "ka0fw"
             },
             {
@@ -1468,21 +1530,21 @@
                 10
               ],
               "radius": 16,
-              "fill": "#ececec",
+              "fill": "rgba(10,10,10,0.6)",
               "id": "pyofj",
               "children": [
                 {
                   "type": "icon",
                   "icon": "sliders-horizontal",
                   "size": 14,
-                  "color": "#5f5f5f",
+                  "color": "#c9c9c9",
                   "id": "jx2h7"
                 },
                 {
                   "type": "text",
                   "text": "field-notes.example",
                   "fontSize": 13,
-                  "color": "#1f1f1f",
+                  "color": "#ededed",
                   "width": "fill",
                   "maxLines": 1,
                   "id": "w2ysw"
@@ -1491,7 +1553,7 @@
                   "type": "icon",
                   "icon": "star",
                   "size": 14,
-                  "color": "#5f5f5f",
+                  "color": "#c9c9c9",
                   "id": "sxjz4"
                 }
               ]
@@ -1500,21 +1562,21 @@
               "type": "icon",
               "icon": "arrow-right",
               "size": 18,
-              "color": "#b5b5b5",
+              "color": "#6b6b6b",
               "id": "ielhr"
             },
             {
               "type": "icon",
               "icon": "download",
               "size": 17,
-              "color": "#5f5f5f",
+              "color": "#c9c9c9",
               "id": "dhxpg"
             },
             {
               "type": "icon",
               "icon": "ellipsis-vertical",
               "size": 18,
-              "color": "#5f5f5f",
+              "color": "#c9c9c9",
               "id": "zucfn"
             }
           ]
@@ -1628,7 +1690,8 @@
               "fill": "#e5e7eb",
               "id": "r560s"
             }
-          ]
+          ],
+          "visible": false
         },
         {
           "type": "frame",
@@ -1804,7 +1867,7 @@
           "x": 1156,
           "y": 786,
           "fontSize": 12,
-          "color": "#6b7280",
+          "color": "#d4d4d4",
           "id": "rv3e9"
         }
       ]
@@ -1848,12 +1911,32 @@
       "width": 1440,
       "height": 900,
       "clip": true,
-      "fill": "#ffffff",
+      "fill": [
+        {
+          "type": "linear",
+          "angle": 180,
+          "stops": [
+            {
+              "color": "rgba(0,0,0,0.22)",
+              "position": 0
+            },
+            {
+              "color": "rgba(0,0,0,0.22)",
+              "position": 1
+            }
+          ]
+        },
+        {
+          "type": "image",
+          "src": "assets/trident.jpg",
+          "fit": "cover"
+        }
+      ],
       "layout": "none",
       "children": [
         {
           "type": "frame",
-          "name": "Header (Match site)",
+          "name": "Header (picture)",
           "x": 0,
           "y": 0,
           "absolute": true,
@@ -1868,7 +1951,7 @@
             0,
             4
           ],
-          "fill": "#ffffff",
+          "fill": "transparent",
           "id": "ufskl",
           "children": [
             {
@@ -1884,7 +1967,7 @@
                 10
               ],
               "radius": 8,
-              "fill": "#ececec",
+              "fill": "rgba(255,255,255,0.10)",
               "id": "i6chr",
               "children": [
                 {
@@ -1900,7 +1983,7 @@
                   "type": "text",
                   "text": "Field Notes — Slow mornings",
                   "fontSize": 13,
-                  "color": "#1f1f1f",
+                  "color": "#ededed",
                   "width": "fill",
                   "maxLines": 1,
                   "id": "k8ijm"
@@ -1909,7 +1992,7 @@
                   "type": "icon",
                   "icon": "x",
                   "size": 14,
-                  "color": "#5f5f5f",
+                  "color": "#c9c9c9",
                   "id": "lw083"
                 }
               ]
@@ -1943,7 +2026,7 @@
                   "type": "text",
                   "text": "Weather — this week",
                   "fontSize": 13,
-                  "color": "#5f5f5f",
+                  "color": "#c9c9c9",
                   "width": "fill",
                   "maxLines": 1,
                   "id": "t0al1"
@@ -1954,7 +2037,7 @@
               "type": "icon",
               "icon": "plus",
               "size": 16,
-              "color": "#5f5f5f",
+              "color": "#c9c9c9",
               "id": "lcz24"
             },
             {
@@ -1969,7 +2052,7 @@
               "type": "icon",
               "icon": "arrow-left",
               "size": 18,
-              "color": "#5f5f5f",
+              "color": "#c9c9c9",
               "id": "k9yut"
             },
             {
@@ -1985,21 +2068,21 @@
                 10
               ],
               "radius": 16,
-              "fill": "#ececec",
+              "fill": "rgba(10,10,10,0.6)",
               "id": "kiwl8",
               "children": [
                 {
                   "type": "icon",
                   "icon": "sliders-horizontal",
                   "size": 14,
-                  "color": "#5f5f5f",
+                  "color": "#c9c9c9",
                   "id": "zyg2g"
                 },
                 {
                   "type": "text",
                   "text": "field-notes.example",
                   "fontSize": 13,
-                  "color": "#1f1f1f",
+                  "color": "#ededed",
                   "width": "fill",
                   "maxLines": 1,
                   "id": "nkv9n"
@@ -2008,7 +2091,7 @@
                   "type": "icon",
                   "icon": "star",
                   "size": 14,
-                  "color": "#5f5f5f",
+                  "color": "#c9c9c9",
                   "id": "y3sgd"
                 }
               ]
@@ -2017,21 +2100,21 @@
               "type": "icon",
               "icon": "arrow-right",
               "size": 18,
-              "color": "#b5b5b5",
+              "color": "#6b6b6b",
               "id": "hscfh"
             },
             {
               "type": "icon",
               "icon": "download",
               "size": 17,
-              "color": "#5f5f5f",
+              "color": "#c9c9c9",
               "id": "ap7fg"
             },
             {
               "type": "icon",
               "icon": "ellipsis-vertical",
               "size": 18,
-              "color": "#5f5f5f",
+              "color": "#c9c9c9",
               "id": "vnyuo"
             }
           ]
@@ -2145,7 +2228,8 @@
               "fill": "#e5e7eb",
               "id": "rhwz7"
             }
-          ]
+          ],
+          "visible": false
         },
         {
           "type": "frame",
@@ -2588,12 +2672,32 @@
       "width": 1440,
       "height": 900,
       "clip": true,
-      "fill": "#ffffff",
+      "fill": [
+        {
+          "type": "linear",
+          "angle": 180,
+          "stops": [
+            {
+              "color": "rgba(0,0,0,0.22)",
+              "position": 0
+            },
+            {
+              "color": "rgba(0,0,0,0.22)",
+              "position": 1
+            }
+          ]
+        },
+        {
+          "type": "image",
+          "src": "assets/trident.jpg",
+          "fit": "cover"
+        }
+      ],
       "layout": "none",
       "children": [
         {
           "type": "frame",
-          "name": "Header (Match site)",
+          "name": "Header (picture)",
           "x": 0,
           "y": 0,
           "absolute": true,
@@ -2608,7 +2712,7 @@
             0,
             4
           ],
-          "fill": "#ffffff",
+          "fill": "transparent",
           "id": "c848h",
           "children": [
             {
@@ -2624,7 +2728,7 @@
                 10
               ],
               "radius": 8,
-              "fill": "#ececec",
+              "fill": "rgba(255,255,255,0.10)",
               "id": "xhuiu",
               "children": [
                 {
@@ -2640,7 +2744,7 @@
                   "type": "text",
                   "text": "Field Notes — Slow mornings",
                   "fontSize": 13,
-                  "color": "#1f1f1f",
+                  "color": "#ededed",
                   "width": "fill",
                   "maxLines": 1,
                   "id": "wvx6r"
@@ -2649,7 +2753,7 @@
                   "type": "icon",
                   "icon": "x",
                   "size": 14,
-                  "color": "#5f5f5f",
+                  "color": "#c9c9c9",
                   "id": "c5n0d"
                 }
               ]
@@ -2683,7 +2787,7 @@
                   "type": "text",
                   "text": "Weather — this week",
                   "fontSize": 13,
-                  "color": "#5f5f5f",
+                  "color": "#c9c9c9",
                   "width": "fill",
                   "maxLines": 1,
                   "id": "z2ksq"
@@ -2694,7 +2798,7 @@
               "type": "icon",
               "icon": "plus",
               "size": 16,
-              "color": "#5f5f5f",
+              "color": "#c9c9c9",
               "id": "z2f8m"
             },
             {
@@ -2709,7 +2813,7 @@
               "type": "icon",
               "icon": "arrow-left",
               "size": 18,
-              "color": "#5f5f5f",
+              "color": "#c9c9c9",
               "id": "mah5h"
             },
             {
@@ -2725,21 +2829,21 @@
                 10
               ],
               "radius": 16,
-              "fill": "#ececec",
+              "fill": "rgba(10,10,10,0.6)",
               "id": "ioa3t",
               "children": [
                 {
                   "type": "icon",
                   "icon": "sliders-horizontal",
                   "size": 14,
-                  "color": "#5f5f5f",
+                  "color": "#c9c9c9",
                   "id": "h6kk5"
                 },
                 {
                   "type": "text",
                   "text": "field-notes.example",
                   "fontSize": 13,
-                  "color": "#1f1f1f",
+                  "color": "#ededed",
                   "width": "fill",
                   "maxLines": 1,
                   "id": "kz1xl"
@@ -2748,7 +2852,7 @@
                   "type": "icon",
                   "icon": "star",
                   "size": 14,
-                  "color": "#5f5f5f",
+                  "color": "#c9c9c9",
                   "id": "bcldd"
                 }
               ]
@@ -2757,21 +2861,21 @@
               "type": "icon",
               "icon": "arrow-right",
               "size": 18,
-              "color": "#b5b5b5",
+              "color": "#6b6b6b",
               "id": "brcbf"
             },
             {
               "type": "icon",
               "icon": "download",
               "size": 17,
-              "color": "#5f5f5f",
+              "color": "#c9c9c9",
               "id": "ezynb"
             },
             {
               "type": "icon",
               "icon": "ellipsis-vertical",
               "size": 18,
-              "color": "#5f5f5f",
+              "color": "#c9c9c9",
               "id": "vme0v"
             }
           ]
@@ -2885,7 +2989,8 @@
               "fill": "#e5e7eb",
               "id": "brbfw"
             }
-          ]
+          ],
+          "visible": false
         },
         {
           "type": "frame",

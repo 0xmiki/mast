@@ -67,7 +67,7 @@
               "color": "$text",
               "width": "fill",
               "maxLines": 1,
-              "fontFamily": "Libre Baskerville"
+              "fontFamily": "Inter"
             },
             {
               "type": "icon",
@@ -199,7 +199,7 @@
         },
         {
           "type": "image",
-          "src": "../browser/wallpapers/sunrise.jpg",
+          "src": "assets/trident.jpg",
           "fit": "cover"
         }
       ],
@@ -268,7 +268,7 @@
                     "color": "rgba(0,0,0,0.5)"
                   },
                   "id": "hjuww",
-                  "fontFamily": "Libre Baskerville"
+                  "fontFamily": "Inter"
                 }
               ]
             },
@@ -587,7 +587,7 @@
                   "fontWeight": 400,
                   "color": "rgba(242,242,242,0.82)",
                   "id": "org9f",
-                  "fontFamily": "Libre Baskerville"
+                  "fontFamily": "Inter"
                 },
                 {
                   "type": "text",
@@ -729,7 +729,7 @@
         },
         {
           "type": "image",
-          "src": "../browser/wallpapers/sunrise.jpg",
+          "src": "assets/trident.jpg",
           "fit": "cover"
         }
       ],
@@ -798,7 +798,7 @@
                     "color": "rgba(0,0,0,0.5)"
                   },
                   "id": "t1l02",
-                  "fontFamily": "Libre Baskerville"
+                  "fontFamily": "Inter"
                 }
               ]
             },
@@ -1117,7 +1117,7 @@
                   "fontWeight": 400,
                   "color": "rgba(242,242,242,0.82)",
                   "id": "kh5ha",
-                  "fontFamily": "Libre Baskerville"
+                  "fontFamily": "Inter"
                 },
                 {
                   "type": "text",
@@ -1895,7 +1895,7 @@
         },
         {
           "type": "image",
-          "src": "../browser/wallpapers/sunrise.jpg",
+          "src": "assets/trident.jpg",
           "fit": "cover"
         }
       ],
@@ -1964,7 +1964,7 @@
                     "color": "rgba(0,0,0,0.5)"
                   },
                   "id": "weqen",
-                  "fontFamily": "Libre Baskerville"
+                  "fontFamily": "Inter"
                 }
               ]
             },
@@ -2283,7 +2283,7 @@
                   "fontWeight": 400,
                   "color": "rgba(242,242,242,0.82)",
                   "id": "bm731",
-                  "fontFamily": "Libre Baskerville"
+                  "fontFamily": "Inter"
                 },
                 {
                   "type": "text",
