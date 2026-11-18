@@ -23,15 +23,33 @@ namespace mast {
 // navigation throttle act on it. Blocked like any entry: picked in the list,
 // lengthened but never shortened.
 inline constexpr char kYouTubeMusicKey[] = "music:youtube.com";
+// YouTube, Shorts only (design C32): YouTube stays open, Shorts don't (the
+// feed's shelves are hidden and /shorts/ addresses get the blocked page).
+inline constexpr char kYouTubeShortsKey[] = "shorts:youtube.com";
+
+// What the distraction set does to YouTube while it's in the set.
+enum class YouTubeMode { kSite, kMusic, kShorts };
+std::string_view YouTubeModeId(YouTubeMode mode);
+std::optional<YouTubeMode> YouTubeModeFromId(std::string_view id);
 
 // True for youtube.com and www./m. (not music.youtube.com, which stays open).
 bool IsYouTubeHost(std::string_view host);
 
 // "video/YouTube": how the distraction set names a site, by its category id
-// ("yours" for the user's own) and its name (the domain, for the user's own).
+// and its name (the domain, for a site the user added).
 std::string DistractionKey(std::string_view category_id,
                            std::string_view service_name);
+// The user's own category that sites blocked from the toolbar join (and that
+// the old "Your sites" list became).
 inline constexpr char kYourSitesId[] = "yours";
+
+// A category of the user's own (design C33): a name and its sites. Ids are
+// "yours" or "u<n>", never a built-in category's.
+struct UserCategory {
+  std::string id;
+  std::string name;
+  std::vector<std::string> sites;
+};
 
 // How long a block lasts. `until` is empty for forever.
 struct Block {
@@ -82,10 +100,13 @@ class MastBlocks {
   // The YouTube "Music only" block in force, unless the whole site is blocked
   // (that wins).
   std::optional<Block> YouTubeMusicOnly() const;
+  // The YouTube "Shorts" block in force, unless the whole site is blocked.
+  // (Music only hides Shorts too; mast_youtube.cc runs both.)
+  std::optional<Block> YouTubeShortsOnly() const;
 
   // Blocks `domains` until `until` (empty = forever). Entries already blocked
-  // at least that long keep their block. Domains not on any list join the
-  // user's own sites. Returns how many entries changed.
+  // at least that long keep their block. Domains not in any category join
+  // the user's own "Your sites". Returns how many entries changed.
   int BlockSites(const std::vector<std::string>& domains,
                  std::optional<base::Time> until);
   bool CanUndo() const;
@@ -95,11 +116,30 @@ class MastBlocks {
   std::string last_duration() const;
   void set_last_duration(std::string_view id);
 
-  std::vector<std::string> CustomSites() const;
-  // Adding is always allowed. Returns the cleaned domain, or empty if invalid.
-  std::string AddSite(const std::string& input);
-  // Only sites that aren't blocked can be removed.
-  bool RemoveSite(const std::string& domain);
+  // The user's own categories, in the order they were made.
+  std::vector<UserCategory> UserCategories() const;
+  // Sites the user added to built-in categories, by category id.
+  std::map<std::string, std::vector<std::string>> Additions() const;
+
+  // Adds a site to a category, built-in or the user's own (design C33).
+  // Adding is always allowed. A domain lives in one category only: one
+  // that's listed somewhere already isn't added again.
+  struct AddResult {
+    std::string domain;  // the cleaned domain, once added
+    std::string error;   // "invalid", "listed" (see where) or "unknown"
+    std::string where;   // the category it's listed in already
+  };
+  AddResult AddSite(const std::string& category_id, const std::string& input);
+  // Only sites the user added, and only while they aren't blocked. Mast's own
+  // sites are never removed, only left out of the set.
+  bool RemoveSite(const std::string& category_id, const std::string& domain);
+
+  // A new category of the user's own, in the distraction set from the start.
+  // Returns its id, or empty if the name is.
+  std::string CreateCategory(const std::string& name);
+  bool RenameCategory(const std::string& id, const std::string& name);
+  // Only the user's own, and only while none of its sites is blocked.
+  bool DeleteCategory(const std::string& id);
 
   // Called by the navigation throttle each time it shows the block page.
   void RecordBlocked();
@@ -115,16 +155,17 @@ class MastBlocks {
     // "video/Twitch"). The user's own sites are always in, unless left out
     // as "yours/<domain>", so a site added later starts out in the set.
     std::vector<std::string> skipped;
-    // YouTube, while it's in the set, is blocked as Music only (C24).
-    bool youtube_music = false;
+    // YouTube, while it's in the set: the whole site, Music only (C24), or
+    // just Shorts (C32).
+    YouTubeMode youtube = YouTubeMode::kSite;
   };
   Distractions GetDistractions() const;
   // Unknown categories and sites are dropped.
   void SetDistractions(const Distractions& distractions);
-  // The entries Block would block that aren't blocked yet: blocking the set
-  // adds what's still open and never touches a block already running (those
-  // are extended one by one, from the new tab's rows).
-  std::vector<std::string> OpenDistractionDomains() const;
+  // Every entry the set blocks. Blocking them (BlockSites) blocks what's open
+  // and lengthens what's running for less, never shortening anything; Block
+  // is how a block gets longer (the new tab's Extend is gone).
+  std::vector<std::string> DistractionEntries() const;
 
  private:
   struct Recent {
@@ -135,8 +176,16 @@ class MastBlocks {
 
   PrefService* prefs() const;
   // Tabs already showing a blocked site switch to the block page; with
-  // `youtube`, YouTube tabs reload too (Music only started or was undone).
+  // `youtube`, YouTube tabs reload too (Music only or Shorts started or was
+  // undone).
   void ReloadBlockedTabs(bool youtube = false);
+  // The category a domain is listed in already (built-in, added there by the
+  // user, or the user's own): its name, or empty.
+  std::string WhereListed(std::string_view domain) const;
+  // Domains blocked from outside any category (the toolbar's bubble) join the
+  // user's own "Your sites", made if it isn't there.
+  void AddToYourSites(const std::vector<std::string>& domains);
+  void RemoveFromYourSites(const std::vector<std::string>& domains);
 
   std::optional<Recent> recent_;
 };

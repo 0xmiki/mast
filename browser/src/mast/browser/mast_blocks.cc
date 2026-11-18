@@ -3,11 +3,15 @@
 #include "mast/browser/mast_blocks.h"
 
 #include <algorithm>
+#include <iterator>
+#include <map>
 #include <memory>
 #include <set>
 #include <utility>
 
 #include "base/strings/strcat.h"
+#include "base/strings/string_number_conversions.h"
+#include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
 #include "base/values.h"
 #include "chrome/browser/browser_process.h"
@@ -30,6 +34,8 @@ namespace {
 
 // {domain: {since: ms, until: ms}}; no "until" means forever.
 constexpr char kBlocksPref[] = "mast.blocks";
+// Before design C33, the user's own sites; now the category "yours"
+// (MigrateCustomSites).
 constexpr char kCustomSitesPref[] = "mast.custom_sites";
 constexpr char kLastDurationPref[] = "mast.last_duration";
 constexpr char kBlockedDayPref[] = "mast.stats.blocked_day";
@@ -40,11 +46,29 @@ constexpr char kBlockedCountPref[] = "mast.stats.blocked_count";
 // mast_feeds.h.)
 constexpr char kDistractionsPref[] = "mast.distractions";
 constexpr char kDistractionsSkippedPref[] = "mast.distractions_skipped";
+// Before C32, a bool for Music only; kDistractionsYouTubePref replaces it.
 constexpr char kDistractionsYouTubeMusicPref[] =
     "mast.distractions_youtube_music";
+// YouTubeModeId(): "site", "music" or "shorts"; empty until first set.
+constexpr char kDistractionsYouTubePref[] = "mast.distractions_youtube";
+// The user's own categories (design C33): [{id, name, sites: [domains]}].
+constexpr char kUserCategoriesPref[] = "mast.user_categories";
+// Sites the user added to built-in categories: {category id: [domains]}.
+constexpr char kAdditionsPref[] = "mast.category_additions";
+// A category's name, in bytes.
+constexpr size_t kMaxCategoryName = 60;
 
 bool IsYouTubeService(const Service& s) {
   return std::ranges::find(s.domains, "youtube.com") != s.domains.end();
+}
+
+const Category* BuiltIn(std::string_view id) {
+  for (const Category& c : Categories()) {
+    if (c.id == id) {
+      return &c;
+    }
+  }
+  return nullptr;
 }
 
 std::vector<std::string> StringList(const base::ListValue& list) {
@@ -57,9 +81,117 @@ std::vector<std::string> StringList(const base::ListValue& list) {
   return out;
 }
 
-// Entries that aren't domains: feeds ("feed:…") and YouTube's Music only.
+// Entries that aren't domains: feeds ("feed:…") and YouTube's Music only and
+// Shorts.
 bool IsSpecialEntry(std::string_view entry) {
-  return IsFeedKey(entry) || entry == kYouTubeMusicKey;
+  return IsFeedKey(entry) || entry == kYouTubeMusicKey ||
+         entry == kYouTubeShortsKey;
+}
+
+bool IsYouTubeEntry(std::string_view entry) {
+  return entry == kYouTubeMusicKey || entry == kYouTubeShortsKey;
+}
+
+std::vector<UserCategory> ReadUserCategories(const PrefService* p) {
+  std::vector<UserCategory> out;
+  for (const base::Value& v : p->GetList(kUserCategoriesPref)) {
+    if (!v.is_dict()) {
+      continue;
+    }
+    const std::string* id = v.GetDict().FindString("id");
+    const std::string* name = v.GetDict().FindString("name");
+    const base::ListValue* sites = v.GetDict().FindList("sites");
+    if (id && name) {
+      out.push_back({*id, *name,
+                     sites ? StringList(*sites) : std::vector<std::string>()});
+    }
+  }
+  return out;
+}
+
+void WriteUserCategories(PrefService* p,
+                         const std::vector<UserCategory>& categories) {
+  base::ListValue list;
+  for (const UserCategory& c : categories) {
+    base::ListValue sites;
+    for (const std::string& s : c.sites) {
+      sites.Append(s);
+    }
+    list.Append(base::DictValue()
+                    .Set("id", c.id)
+                    .Set("name", c.name)
+                    .Set("sites", std::move(sites)));
+  }
+  p->SetList(kUserCategoriesPref, std::move(list));
+}
+
+std::map<std::string, std::vector<std::string>> ReadAdditions(
+    const PrefService* p) {
+  std::map<std::string, std::vector<std::string>> out;
+  for (const auto [id, v] : p->GetDict(kAdditionsPref)) {
+    if (v.is_list() && BuiltIn(id)) {
+      out[id] = StringList(v.GetList());
+    }
+  }
+  return out;
+}
+
+void WriteAdditions(
+    PrefService* p,
+    const std::map<std::string, std::vector<std::string>>& additions) {
+  base::DictValue dict;
+  for (const auto& [id, sites] : additions) {
+    if (sites.empty()) {
+      continue;
+    }
+    base::ListValue list;
+    for (const std::string& s : sites) {
+      list.Append(s);
+    }
+    dict.Set(id, std::move(list));
+  }
+  p->SetDict(kAdditionsPref, std::move(dict));
+}
+
+std::string CleanName(std::string_view name) {
+  const std::string trimmed(base::TrimWhitespaceASCII(name, base::TRIM_ALL));
+  std::string out;
+  base::TruncateUTF8ToByteSize(trimmed, kMaxCategoryName, &out);
+  return out;
+}
+
+bool InSet(const base::ListValue& list, std::string_view id) {
+  for (const base::Value& v : list) {
+    if (v.is_string() && v.GetString() == id) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// The old "Your sites" list (mast.custom_sites, before design C33) becomes the
+// user's own category "Your sites", in the set as those sites always were.
+void MigrateCustomSites(PrefService* p) {
+  const std::vector<std::string> old = StringList(p->GetList(kCustomSitesPref));
+  if (old.empty()) {
+    return;
+  }
+  std::vector<UserCategory> categories = ReadUserCategories(p);
+  auto it = std::ranges::find(categories, kYourSitesId, &UserCategory::id);
+  if (it == categories.end()) {
+    categories.push_back({kYourSitesId, "Your sites", {}});
+    it = std::prev(categories.end());
+  }
+  for (const std::string& d : old) {
+    if (std::ranges::find(it->sites, d) == it->sites.end()) {
+      it->sites.push_back(d);
+    }
+  }
+  WriteUserCategories(p, categories);
+  if (!InSet(p->GetList(kDistractionsPref), kYourSitesId)) {
+    ScopedListPrefUpdate(p, kDistractionsPref)->Append(kYourSitesId);
+  }
+  p->ClearPref(kCustomSitesPref);
 }
 
 // A list entry: a domain, or a feed ("feed:gambling") that matches every
@@ -111,6 +243,27 @@ base::DictValue BlockToValue(const Block& block) {
 }
 
 }  // namespace
+
+std::string_view YouTubeModeId(YouTubeMode mode) {
+  switch (mode) {
+    case YouTubeMode::kSite:
+      return "site";
+    case YouTubeMode::kMusic:
+      return "music";
+    case YouTubeMode::kShorts:
+      return "shorts";
+  }
+}
+
+std::optional<YouTubeMode> YouTubeModeFromId(std::string_view id) {
+  for (YouTubeMode m :
+       {YouTubeMode::kSite, YouTubeMode::kMusic, YouTubeMode::kShorts}) {
+    if (YouTubeModeId(m) == id) {
+      return m;
+    }
+  }
+  return std::nullopt;
+}
 
 std::optional<base::Time> UntilFor(Duration duration, base::Time now) {
   switch (duration) {
@@ -182,10 +335,20 @@ void MastBlocks::RegisterLocalStatePrefs(PrefRegistrySimple* registry) {
   registry->RegisterListPref(kDistractionsPref, std::move(distractions));
   registry->RegisterListPref(kDistractionsSkippedPref);
   registry->RegisterBooleanPref(kDistractionsYouTubeMusicPref, false);
+  registry->RegisterStringPref(kDistractionsYouTubePref, std::string());
+  registry->RegisterListPref(kUserCategoriesPref);
+  registry->RegisterDictionaryPref(kAdditionsPref);
 }
 
 PrefService* MastBlocks::prefs() const {
-  return g_browser_process ? g_browser_process->local_state() : nullptr;
+  PrefService* p =
+      g_browser_process ? g_browser_process->local_state() : nullptr;
+  static bool migrated = false;
+  if (p && !migrated) {
+    migrated = true;
+    MigrateCustomSites(p);
+  }
+  return p;
 }
 
 std::optional<Block> MastBlocks::Of(std::string_view domain) const {
@@ -255,12 +418,11 @@ int MastBlocks::BlockSites(const std::vector<std::string>& domains,
   }
   const base::Time now = base::Time::Now();
   Recent recent{now, {}, {}};
-  std::vector<std::string> custom = CustomSites();
   {
     ScopedDictPrefUpdate blocks(p, kBlocksPref);
     for (const std::string& input : domains) {
       const std::string domain =
-          (IsFeedKey(input) && IsListed(input)) || input == kYouTubeMusicKey
+          (IsFeedKey(input) && IsListed(input)) || IsYouTubeEntry(input)
               ? input
               : CleanDomain(input);
       if (domain.empty() || recent.before.contains(domain)) {
@@ -272,9 +434,8 @@ int MastBlocks::BlockSites(const std::vector<std::string>& domains,
       }
       recent.before.emplace(domain, current);
       blocks->Set(domain, BlockToValue({current ? current->since : now, until}));
-      if (!IsListed(domain) && !IsSpecialEntry(domain) &&
-          std::ranges::find(custom, domain) == custom.end()) {
-        custom.push_back(domain);
+      if (!IsSpecialEntry(domain) && WhereListed(domain).empty() &&
+          std::ranges::find(recent.added, domain) == recent.added.end()) {
         recent.added.push_back(domain);
       }
     }
@@ -282,15 +443,11 @@ int MastBlocks::BlockSites(const std::vector<std::string>& domains,
   if (recent.before.empty()) {
     return 0;
   }
-  if (!recent.added.empty()) {
-    ScopedListPrefUpdate list(p, kCustomSitesPref);
-    for (const std::string& d : recent.added) {
-      list->Append(d);
-    }
-  }
+  AddToYourSites(recent.added);
   p->CommitPendingWrite();
   const int changed = static_cast<int>(recent.before.size());
-  const bool youtube = recent.before.contains(kYouTubeMusicKey);
+  const bool youtube = recent.before.contains(kYouTubeMusicKey) ||
+                       recent.before.contains(kYouTubeShortsKey);
   recent_ = std::move(recent);
   ReloadBlockedTabs(youtube);
   return changed;
@@ -315,13 +472,9 @@ bool MastBlocks::Undo() {
       }
     }
   }
-  if (!recent_->added.empty()) {
-    ScopedListPrefUpdate(p, kCustomSitesPref)->EraseIf([&](const base::Value& v) {
-      return v.is_string() &&
-             std::ranges::find(recent_->added, v.GetString()) != recent_->added.end();
-    });
-  }
-  const bool youtube = recent_->before.contains(kYouTubeMusicKey);
+  RemoveFromYourSites(recent_->added);
+  const bool youtube = recent_->before.contains(kYouTubeMusicKey) ||
+                       recent_->before.contains(kYouTubeShortsKey);
   recent_.reset();
   p->CommitPendingWrite();
   if (youtube) {
@@ -341,43 +494,195 @@ void MastBlocks::set_last_duration(std::string_view id) {
   }
 }
 
-std::vector<std::string> MastBlocks::CustomSites() const {
-  std::vector<std::string> sites;
-  if (PrefService* p = prefs()) {
-    for (const base::Value& v : p->GetList(kCustomSitesPref)) {
-      if (v.is_string()) {
-        sites.push_back(v.GetString());
-      }
+std::vector<UserCategory> MastBlocks::UserCategories() const {
+  PrefService* p = prefs();
+  return p ? ReadUserCategories(p) : std::vector<UserCategory>();
+}
+
+std::map<std::string, std::vector<std::string>> MastBlocks::Additions() const {
+  PrefService* p = prefs();
+  return p ? ReadAdditions(p)
+           : std::map<std::string, std::vector<std::string>>();
+}
+
+std::string MastBlocks::WhereListed(std::string_view domain) const {
+  if (std::string name = CategoryNameOf(domain); !name.empty()) {
+    return name;
+  }
+  for (const auto& [id, sites] : Additions()) {
+    if (std::ranges::find(sites, domain) != sites.end()) {
+      return BuiltIn(id)->name;
     }
   }
-  return sites;
+  for (const UserCategory& c : UserCategories()) {
+    if (std::ranges::find(c.sites, domain) != c.sites.end()) {
+      return c.name;
+    }
+  }
+  return std::string();
 }
 
-std::string MastBlocks::AddSite(const std::string& input) {
+MastBlocks::AddResult MastBlocks::AddSite(const std::string& category_id,
+                                          const std::string& input) {
+  AddResult r;
   PrefService* p = prefs();
   const std::string domain = CleanDomain(input);
-  if (!p || domain.empty() || IsListed(domain)) {
-    return std::string();
+  if (!p || domain.empty()) {
+    r.error = "invalid";
+    return r;
   }
-  const std::vector<std::string> custom = CustomSites();
-  if (std::ranges::find(custom, domain) == custom.end()) {
-    ScopedListPrefUpdate(p, kCustomSitesPref)->Append(domain);
+  if (std::string where = WhereListed(domain); !where.empty()) {
+    r.error = "listed";
+    r.where = std::move(where);
+    return r;
   }
-  return domain;
+  if (BuiltIn(category_id)) {
+    auto additions = ReadAdditions(p);
+    additions[category_id].push_back(domain);
+    WriteAdditions(p, additions);
+  } else {
+    std::vector<UserCategory> categories = ReadUserCategories(p);
+    auto it = std::ranges::find(categories, category_id, &UserCategory::id);
+    if (it == categories.end()) {
+      r.error = "unknown";
+      return r;
+    }
+    it->sites.push_back(domain);
+    WriteUserCategories(p, categories);
+  }
+  // Added again after a removal: in the set like the rest of its category.
+  ScopedListPrefUpdate(p, kDistractionsSkippedPref)
+      ->EraseValue(base::Value(DistractionKey(category_id, domain)));
+  r.domain = domain;
+  return r;
 }
 
-bool MastBlocks::RemoveSite(const std::string& domain) {
+bool MastBlocks::RemoveSite(const std::string& category_id,
+                            const std::string& domain) {
   PrefService* p = prefs();
   if (!p || Of(domain)) {
     return false;
   }
-  ScopedListPrefUpdate(p, kCustomSitesPref)->EraseIf([&](const base::Value& v) {
-    return v.is_string() && v.GetString() == domain;
-  });
-  // Added again later, it starts out in the distraction set.
-  ScopedListPrefUpdate(p, kDistractionsSkippedPref)
-      ->EraseValue(base::Value(DistractionKey(kYourSitesId, domain)));
+  bool removed = false;
+  if (BuiltIn(category_id)) {
+    auto additions = ReadAdditions(p);
+    removed = std::erase(additions[category_id], domain) > 0;
+    if (removed) {
+      WriteAdditions(p, additions);
+    }
+  } else {
+    std::vector<UserCategory> categories = ReadUserCategories(p);
+    auto it = std::ranges::find(categories, category_id, &UserCategory::id);
+    removed = it != categories.end() && std::erase(it->sites, domain) > 0;
+    if (removed) {
+      WriteUserCategories(p, categories);
+    }
+  }
+  if (removed) {
+    ScopedListPrefUpdate(p, kDistractionsSkippedPref)
+        ->EraseValue(base::Value(DistractionKey(category_id, domain)));
+  }
+  return removed;
+}
+
+std::string MastBlocks::CreateCategory(const std::string& name) {
+  PrefService* p = prefs();
+  const std::string clean = CleanName(name);
+  if (!p || clean.empty()) {
+    return std::string();
+  }
+  std::vector<UserCategory> categories = ReadUserCategories(p);
+  int last = 0;
+  for (const UserCategory& c : categories) {
+    int n = 0;
+    if (c.id.starts_with("u") &&
+        base::StringToInt(std::string_view(c.id).substr(1), &n)) {
+      last = std::max(last, n);
+    }
+  }
+  std::string id = base::StrCat({"u", base::NumberToString(last + 1)});
+  categories.push_back({id, clean, {}});
+  WriteUserCategories(p, categories);
+  ScopedListPrefUpdate(p, kDistractionsPref)->Append(id);
+  return id;
+}
+
+bool MastBlocks::RenameCategory(const std::string& id,
+                                const std::string& name) {
+  PrefService* p = prefs();
+  const std::string clean = CleanName(name);
+  if (!p || clean.empty()) {
+    return false;
+  }
+  std::vector<UserCategory> categories = ReadUserCategories(p);
+  auto it = std::ranges::find(categories, id, &UserCategory::id);
+  if (it == categories.end()) {
+    return false;
+  }
+  it->name = clean;
+  WriteUserCategories(p, categories);
   return true;
+}
+
+bool MastBlocks::DeleteCategory(const std::string& id) {
+  PrefService* p = prefs();
+  if (!p) {
+    return false;
+  }
+  std::vector<UserCategory> categories = ReadUserCategories(p);
+  auto it = std::ranges::find(categories, id, &UserCategory::id);
+  if (it == categories.end() ||
+      std::ranges::any_of(it->sites,
+                          [&](const std::string& d) { return Of(d).has_value(); })) {
+    return false;
+  }
+  categories.erase(it);
+  WriteUserCategories(p, categories);
+  const std::string prefix = id + "/";
+  ScopedListPrefUpdate(p, kDistractionsPref)->EraseValue(base::Value(id));
+  ScopedListPrefUpdate(p, kDistractionsSkippedPref)
+      ->EraseIf([&](const base::Value& v) {
+        return v.is_string() && v.GetString().starts_with(prefix);
+      });
+  return true;
+}
+
+void MastBlocks::AddToYourSites(const std::vector<std::string>& domains) {
+  PrefService* p = prefs();
+  if (!p || domains.empty()) {
+    return;
+  }
+  std::vector<UserCategory> categories = ReadUserCategories(p);
+  auto it = std::ranges::find(categories, kYourSitesId, &UserCategory::id);
+  if (it == categories.end()) {
+    categories.push_back({kYourSitesId, "Your sites", {}});
+    it = std::prev(categories.end());
+    if (!InSet(p->GetList(kDistractionsPref), kYourSitesId)) {
+      ScopedListPrefUpdate(p, kDistractionsPref)->Append(kYourSitesId);
+    }
+  }
+  for (const std::string& d : domains) {
+    if (std::ranges::find(it->sites, d) == it->sites.end()) {
+      it->sites.push_back(d);
+    }
+  }
+  WriteUserCategories(p, categories);
+}
+
+void MastBlocks::RemoveFromYourSites(const std::vector<std::string>& domains) {
+  PrefService* p = prefs();
+  if (!p || domains.empty()) {
+    return;
+  }
+  std::vector<UserCategory> categories = ReadUserCategories(p);
+  auto it = std::ranges::find(categories, kYourSitesId, &UserCategory::id);
+  if (it == categories.end()) {
+    return;
+  }
+  std::erase_if(it->sites, [&](const std::string& d) {
+    return std::ranges::find(domains, d) != domains.end();
+  });
+  WriteUserCategories(p, categories);
 }
 
 void MastBlocks::RecordBlocked() {
@@ -429,7 +734,10 @@ MastBlocks::Distractions MastBlocks::GetDistractions() const {
   if (PrefService* p = prefs()) {
     d.categories = StringList(p->GetList(kDistractionsPref));
     d.skipped = StringList(p->GetList(kDistractionsSkippedPref));
-    d.youtube_music = p->GetBoolean(kDistractionsYouTubeMusicPref);
+    d.youtube = YouTubeModeFromId(p->GetString(kDistractionsYouTubePref))
+                    .value_or(p->GetBoolean(kDistractionsYouTubeMusicPref)
+                                  ? YouTubeMode::kMusic
+                                  : YouTubeMode::kSite);
   }
   return d;
 }
@@ -447,8 +755,16 @@ void MastBlocks::SetDistractions(const Distractions& d) {
       known_sites.insert(DistractionKey(c.id, s.name));
     }
   }
-  for (const std::string& site : CustomSites()) {
-    known_sites.insert(DistractionKey(kYourSitesId, site));
+  for (const auto& [id, sites] : ReadAdditions(p)) {
+    for (const std::string& site : sites) {
+      known_sites.insert(DistractionKey(id, site));
+    }
+  }
+  for (const UserCategory& c : ReadUserCategories(p)) {
+    known_categories.insert(c.id);
+    for (const std::string& site : c.sites) {
+      known_sites.insert(DistractionKey(c.id, site));
+    }
   }
   // Sets, so a repeated id is stored once.
   std::set<std::string> categories;
@@ -473,14 +789,25 @@ void MastBlocks::SetDistractions(const Distractions& d) {
   }
   p->SetList(kDistractionsPref, std::move(category_list));
   p->SetList(kDistractionsSkippedPref, std::move(skipped_list));
-  p->SetBoolean(kDistractionsYouTubeMusicPref, d.youtube_music);
+  p->SetString(kDistractionsYouTubePref, std::string(YouTubeModeId(d.youtube)));
+  p->ClearPref(kDistractionsYouTubeMusicPref);
 }
 
-std::vector<std::string> MastBlocks::OpenDistractionDomains() const {
+std::vector<std::string> MastBlocks::DistractionEntries() const {
   const Distractions d = GetDistractions();
   const std::set<std::string> wanted(d.categories.begin(), d.categories.end());
   const std::set<std::string> skipped(d.skipped.begin(), d.skipped.end());
   std::vector<std::string> entries;
+  const auto sites = [&](std::string_view id,
+                         const std::vector<std::string>& domains) {
+    for (const std::string& site : domains) {
+      if (!skipped.contains(DistractionKey(id, site))) {
+        entries.push_back(site);
+      }
+    }
+  };
+  const std::map<std::string, std::vector<std::string>> additions =
+      Additions();
   for (const Category& c : Categories()) {
     if (!wanted.contains(c.id)) {
       continue;
@@ -489,22 +816,25 @@ std::vector<std::string> MastBlocks::OpenDistractionDomains() const {
       if (skipped.contains(DistractionKey(c.id, s.name))) {
         continue;
       }
-      if (d.youtube_music && IsYouTubeService(s)) {
-        entries.push_back(kYouTubeMusicKey);
+      if (IsYouTubeService(s) && d.youtube != YouTubeMode::kSite) {
+        entries.push_back(d.youtube == YouTubeMode::kMusic ? kYouTubeMusicKey
+                                                           : kYouTubeShortsKey);
       } else {
         entries.insert(entries.end(), s.domains.begin(), s.domains.end());
       }
     }
-  }
-  for (const std::string& site : CustomSites()) {
-    if (!skipped.contains(DistractionKey(kYourSitesId, site))) {
-      entries.push_back(site);
+    if (const auto it = additions.find(c.id); it != additions.end()) {
+      sites(c.id, it->second);
     }
   }
-  // Only what's still open. Music only adds nothing while all of YouTube is
-  // blocked.
+  for (const UserCategory& c : UserCategories()) {
+    if (wanted.contains(c.id)) {
+      sites(c.id, c.sites);
+    }
+  }
+  // Music only and Shorts add nothing while all of YouTube is blocked.
   std::erase_if(entries, [&](const std::string& e) {
-    return Of(e) || (e == kYouTubeMusicKey && Of("youtube.com"));
+    return IsYouTubeEntry(e) && Of("youtube.com");
   });
   return entries;
 }
@@ -523,6 +853,13 @@ std::optional<Block> MastBlocks::YouTubeMusicOnly() const {
     return std::nullopt;  // the whole site is blocked
   }
   return Of(kYouTubeMusicKey);
+}
+
+std::optional<Block> MastBlocks::YouTubeShortsOnly() const {
+  if (Of("youtube.com")) {
+    return std::nullopt;
+  }
+  return Of(kYouTubeShortsKey);
 }
 
 }  // namespace mast

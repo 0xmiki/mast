@@ -1,128 +1,142 @@
-<!-- The blocklist (design C28a/C28d): YouTube's three choices, the categories
-     as tiles, how long, Block. A fragment, not a page: chrome://mast shows it
-     full page and the new tab page in a panel (embedded as the BLOCKLIST
-     placeholder by mast_pages.cc). Styles are scoped under .bl, clicks stay
-     inside its root, so it doesn't clash with the page around it.
+<!-- The blocklist (design C33, C34): YouTube's four choices, the categories in
+     one box (Mast's and the user's own), how long, Block; and the Shortcuts
+     tab. A fragment, not a page: chrome://mast shows it full page and the new
+     tab page in a panel (embedded as the BLOCKLIST placeholder by
+     mast_pages.cc). Styles are scoped under .bl, clicks stay inside its root,
+     so it doesn't clash with the page around it.
      What's picked here is the distraction set (MastBlocks::Distractions): every
      category to begin with, saved as it changes, and the same thing the new
      tab's Block button blocks.
      API: MastBlocklist.mount(element), MastBlocklist.update(state) -> true if it
      handled the result of its own request (so the host page shouldn't also
-     react), MastBlocklist.reset() (back to the tiles). MastSet reads the set
-     and the running blocks, for the new tab's dock too. -->
+     react), MastBlocklist.reset() (back to the categories). MastSet reads the
+     set and the running blocks, for the new tab's dock too. -->
 <style>
 .bl header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
-.bl h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
-/* The panel's two tabs are its titles (design C32): the other one dimmed. */
+/* The panel's two tabs are its titles (design C32, kept in C35): the other one
+   dimmed. A click leaves no focus box; the keyboard still gets one. */
 .bl .tabs { display: flex; align-items: baseline; gap: 22px; margin: 0; }
-.bl .tabs button { padding: 0; border: 0; background: none; color: var(--text-3); font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+.bl .tabs button { padding: 0; border: 0; border-radius: 4px; background: none; color: var(--text-3); font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
 .bl .tabs button:hover { color: var(--text-2); }
 .bl .tabs button.on { color: var(--text); }
+.bl .tabs button:focus:not(:focus-visible) { outline: none; }
 .bl .meta { color: var(--text-3); font-size: 12px; white-space: nowrap; }
 .bl .meta b { color: var(--text-2); font-weight: 500; }
 .bl .search { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 14px; border-radius: 8px; background: var(--field); color: var(--text-3); cursor: text; }
-.bl .search:focus-within { box-shadow: 0 0 0 1px var(--text-3); }
-.bl .search input { flex: 1; min-width: 0; width: auto; height: 100%; margin: 0; padding: 0; border: 0; border-radius: 0; outline: 0; background: none; box-shadow: none; }
-.bl .search input::placeholder { color: var(--text-3); }
-/* YouTube: its title (and the block in force), then its three choices, always
-   on show (design C32). */
+.bl .search:focus-within, .bl .addsite:focus-within { box-shadow: 0 0 0 1px var(--text-3); }
+.bl .search input, .bl .addsite input, .bl .newcat input { flex: 1; min-width: 0; width: auto; height: 100%; margin: 0; padding: 0; border: 0; border-radius: 0;
+  outline: 0; background: none; box-shadow: none; color: var(--text); font-size: 13px; }
+.bl input::placeholder { color: var(--text-3); }
+/* YouTube: its four choices, always on show, and under them, in grey, the
+   block in force (design C32). */
 .bl .yt { margin-top: 16px; padding: 14px; border-radius: 10px; background: var(--field); }
-.bl .yt .top { display: flex; align-items: baseline; gap: 10px; margin: 0 2px 12px; }
-.bl .yt b { font-size: 14px; font-weight: 600; }
-.bl .yt .st { color: var(--signal); font-size: 12px; font-weight: 500; }
-.bl .ytc { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.bl .ytc button { display: flex; align-items: center; gap: 8px; padding: 12px; border: 0; border-radius: 8px; background: var(--surface);
-  box-shadow: inset 0 0 0 1px var(--line); color: var(--text); font-size: 13px; font-weight: 600; text-align: left; }
+.bl .yt .top { margin: 0 2px 12px; font-size: 14px; font-weight: 600; }
+.bl .ytc { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.bl .ytc button { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 12px; border: 0; border-radius: 8px; background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line); color: var(--text); font-size: 13px; font-weight: 600; text-align: left; white-space: nowrap; }
 .bl .ytc button:hover { background: var(--pressed); }
 .bl .ytc .dot { width: 16px; height: 16px; flex: none; border-radius: 50%; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--text) 30%, transparent); }
 .bl .ytc button.on { background: var(--pressed); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 35%, transparent); }
 .bl .ytc button.on .dot { box-shadow: inset 0 0 0 5px var(--text); }
-/* Shortcuts: Alt + a letter opens a page (design C32, MastShortcuts). */
-.bl .sc-intro { margin: 0 0 18px; color: var(--text-2); }
-.bl .keys { display: inline-flex; align-items: center; gap: 4px; }
-.bl kbd { display: inline-grid; place-items: center; min-width: 26px; height: 24px; padding: 0 7px; border-radius: 5px; background: var(--pressed);
-  box-shadow: inset 0 -1px 0 var(--line), inset 0 0 0 1px var(--line); color: var(--text); font: 600 12px var(--font, inherit); }
-.bl .sc-list { display: flex; flex-direction: column; gap: 6px; }
-.bl .sc-row { display: grid; grid-template-columns: 96px 1fr auto; align-items: center; gap: 14px; padding: 10px 10px 10px 12px; border-radius: 8px; background: var(--field); }
-.bl .sc-row .t { min-width: 0; }
-.bl .sc-row .t b { display: block; font-size: 14px; font-weight: 500; }
-.bl .sc-row .t span { display: block; overflow: hidden; color: var(--text-3); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
-.bl .sc-row .acts { display: flex; gap: 2px; }
-.bl .sc-row.editing { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 35%, transparent); }
-.bl .sc-row .rm { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--text-3); }
-.bl .sc-row .rm:hover { background: var(--pressed); color: var(--text); }
-.bl .sc-add { margin-top: 14px; padding: 16px; border-radius: 10px; background: var(--field); }
-.bl .sc-add h3 { margin: 0 0 12px; font-size: 14px; font-weight: 600; }
-.bl .sc-fields { display: grid; grid-template-columns: 1fr 1.6fr; gap: 8px; }
-.bl .sc-f { display: flex; flex-direction: column; gap: 5px; color: var(--text-3); font-size: 12px; }
-.bl .sc-f input { width: 100%; height: 36px; margin: 0; padding: 0 12px; border: 0; border-radius: 7px; outline: 0; background: var(--surface);
-  box-shadow: inset 0 0 0 1px var(--line); color: var(--text); font-size: 13px; }
-.bl .sc-f input:focus { box-shadow: inset 0 0 0 1px var(--text-3); }
-.bl .sc-f input::placeholder { color: var(--text-3); }
-.bl .sc-rec { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
-.bl .sc-cancel { height: 36px; padding: 0 14px; border: 0; border-radius: 18px; background: none; box-shadow: inset 0 0 0 1px var(--line); color: var(--text-2); font-weight: 500; }
-.bl .sc-cancel:hover { color: var(--text); }
-.bl .sc-key { display: flex; flex: 1; align-items: center; gap: 10px; height: 44px; padding: 0 12px; border: 0; border-radius: 7px; background: var(--surface);
-  box-shadow: inset 0 0 0 1px var(--line); color: var(--text-3); text-align: left; }
-.bl .sc-key.listening { box-shadow: inset 0 0 0 1px var(--text-2); color: var(--text-2); }
-.bl .sc-key.bad { box-shadow: inset 0 0 0 1px var(--signal); }
-.bl .sc-msg { min-height: 18px; margin-top: 8px; color: var(--text-2); font-size: 12px; }
-.bl .sc-msg.bad { color: var(--signal); }
-.bl .sc-taken { margin: 16px 0 26px; color: var(--text-3); font-size: 12px; line-height: 1.8; }
-.bl .sc-taken kbd { min-width: 22px; height: 20px; font-size: 11px; color: var(--text-2); }
-.bl.on-sc .search, .bl.on-sc .action { display: none; }
-.bl .lbl { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 22px 0 10px; color: var(--text-3); font-size: 12px; }
-.bl .lbl b { color: var(--text-2); font-weight: 500; }
-/* A tile picks the whole category; its › opens the sites (design C28a). Ember
-   means picked, as everywhere else that ember means blocked. */
-.bl .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.bl .tile { position: relative; min-width: 0; border-radius: 10px; background: var(--field); }
-.bl .tile:hover { background: var(--pressed); }
-.bl .tile .tg { display: flex; flex-direction: column; gap: 6px; width: 100%; padding: 12px 12px 12px 14px; border: 0; border-radius: inherit;
+.bl .yt .st { display: flex; align-items: center; gap: 5px; margin: 12px 2px 0; color: var(--text-2); font-size: 12px; }
+.bl .yt .st svg, .bl .lock svg { flex: none; color: var(--text-3); }
+/* A box: the categories, a category's sites, search results (design C33). */
+.bl .box { margin-top: 16px; padding: 6px 6px 8px; border-radius: 10px; background: var(--field); }
+.bl .box-h { display: flex; align-items: center; gap: 8px; min-height: 28px; margin-bottom: 4px; padding: 6px 6px 8px 12px; border-bottom: 1px solid var(--line); }
+.bl .box-h b { font-size: 14px; font-weight: 600; white-space: nowrap; }
+.bl .box-h .n { flex: 1; min-width: 0; overflow: hidden; color: var(--text-3); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.bl .box + .box { margin-top: 12px; }
+.bl .pill { display: inline-flex; flex: none; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border: 0; border-radius: 14px; background: var(--pressed);
+  color: var(--text); font-size: 12px; font-weight: 600; }
+.bl .pill .cb { width: 16px; height: 16px; border-radius: 4px; }
+.bl .rows { display: grid; grid-template-columns: 1fr 1fr; column-gap: 8px; }
+/* A category: its checkbox picks all of it, its › opens its sites. */
+.bl .cat { position: relative; min-width: 0; }
+.bl .cat .tg { display: flex; align-items: center; gap: 10px; width: 100%; height: 40px; padding: 0 38px 0 12px; border: 0; border-radius: 6px;
   background: none; text-align: left; }
-.bl .tile .top { position: absolute; top: 12px; right: 12px; display: flex; pointer-events: none; }
-.bl .tile .nm { padding-right: 28px; font-size: 14px; font-weight: 500; }
-.bl .tile .sm { overflow: hidden; padding-right: 22px; color: var(--text-3); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
-.bl .tile .sm.blk { display: flex; align-items: center; gap: 5px; color: var(--signal); font-weight: 500; }
-/* Picked is a checkbox and nothing else (design C31): white with a tick, a dash when only
-   some sites are, an empty outline when none. Ember stays for what's blocked. */
-.bl .cb { display: grid; place-items: center; width: 18px; height: 18px; flex: none; border-radius: 5px;
+.bl .cat .tg:hover { background: var(--pressed); }
+/* The name keeps its room; the grey text after it gives way. */
+.bl .cat .nm { flex: 0 1 auto; min-width: 0; overflow: hidden; font-size: 13px; font-weight: 500; white-space: nowrap; text-overflow: ellipsis; }
+.bl .cat .sm { display: flex; flex: 1 1 0; justify-content: flex-end; align-items: center; gap: 5px; min-width: 0; color: var(--text-3); font-size: 12px; }
+.bl .cat .sm.blk { color: var(--text-2); }
+.bl .sm span, .bl .lock span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.bl .cat .more, .bl .site .rm { position: absolute; top: 7px; right: 6px; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0;
+  border-radius: 13px; background: none; color: var(--text-3); }
+.bl .cat .more:hover, .bl .site .rm:hover { background: var(--pressed); color: var(--text); }
+.bl .newcat { display: flex; align-items: center; gap: 10px; width: 100%; height: 40px; padding: 0 12px; border: 1px dashed color-mix(in srgb, var(--text) 16%, transparent);
+  border-radius: 6px; background: none; color: var(--text-2); font-size: 13px; font-weight: 500; text-align: left; }
+.bl button.newcat:hover { color: var(--text); }
+.bl .newcat.on { border-style: solid; border-color: var(--text-3); cursor: text; }
+/* Picked is a checkbox and nothing else (design C31): white with a tick, a dash
+   when only some sites are, an empty outline when none. */
+.bl .cb { display: grid; place-items: center; width: 16px; height: 16px; flex: none; border-radius: 4px;
   box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--text) 30%, transparent); color: var(--bg); }
 .bl .cb.on, .bl .cb.part { background: var(--text); box-shadow: none; }
-.bl .tile .more { position: absolute; right: 6px; bottom: 6px; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0;
-  border-radius: 6px; background: none; color: var(--text-3); }
-.bl .tile .more:hover { background: rgb(255 255 255/.06); color: var(--text); }
-/* A category's sites. */
-.bl .sv { display: flex; align-items: center; gap: 10px; margin: 20px 0 12px; }
-.bl .sv .back { display: flex; align-items: center; gap: 2px; height: 28px; padding: 0 8px 0 2px; border: 0; border-radius: 6px; background: none; color: var(--text-2); }
-.bl .sv .back:hover { background: var(--field); color: var(--text); }
-.bl .sv h2 { margin: 0; font-size: 15px; font-weight: 600; }
-.bl .sv .n { flex: 1; color: var(--text-3); font-size: 12px; }
-.bl .sv .all { height: 28px; padding: 0 10px; border: 0; border-radius: 6px; background: none; box-shadow: inset 0 0 0 1px var(--line);
+/* A category's page (C33b, C33c). */
+.bl .sv { display: flex; align-items: center; gap: 10px; margin: 20px 0 14px; }
+.bl .sv .back { display: grid; flex: none; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 15px; background: var(--field); color: var(--text-2); }
+.bl .sv .back:hover { color: var(--text); }
+.bl .sv h2 { margin: 0; overflow: hidden; font-size: 16px; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
+.bl .sv .ren { display: grid; flex: none; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 13px; background: none; color: var(--text-3); }
+.bl .sv .ren:hover { background: var(--field); color: var(--text); }
+.bl .sv .ren-in { width: 240px; height: 30px; margin: 0; padding: 0 10px; border: 0; border-radius: 6px; outline: 0; background: var(--field);
+  box-shadow: inset 0 0 0 1px var(--text-3); color: var(--text); font-size: 15px; font-weight: 600; }
+.bl .sv .n { flex: 1; min-width: 0; color: var(--text-3); font-size: 12px; white-space: nowrap; }
+.bl .sv .act { display: inline-flex; flex: none; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 0; border-radius: 15px; background: var(--field);
   color: var(--text-2); font-size: 12px; font-weight: 500; }
-.bl .sv .all:hover { color: var(--text); }
+.bl .sv .act:hover:not(:disabled) { color: var(--text); }
+.bl .sv .act:disabled { opacity: .5; cursor: default; }
+.bl .sv .act.sure { color: var(--signal); }
 .bl .sv + .yt { margin: 0 0 12px; }
-.bl .sites { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.bl .addsite { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 4px 0 14px; border-radius: 8px; background: var(--field); color: var(--text-3); cursor: text; }
+.bl .addsite button { height: 32px; padding: 0 16px; border: 0; border-radius: 6px; background: var(--pressed); color: var(--text); font-size: 12px; font-weight: 600; }
+.bl .addsite button:disabled { color: var(--text-3); cursor: default; }
+.bl .note { margin: 8px 2px 0; color: var(--text-2); font-size: 12px; }
+.bl .note.bad { color: var(--signal); }
+.bl .empty { padding: 12px; color: var(--text-3); font-size: 12px; }
+/* One site, to pick or leave out; the user's own can be removed. */
 .bl .site { position: relative; min-width: 0; }
-.bl .site .tg { display: flex; align-items: center; gap: 9px; width: 100%; height: 38px; padding: 0 10px 0 8px; border: 0; border-radius: 8px;
-  background: var(--field); text-align: left; }
+.bl .site .tg { display: flex; align-items: center; gap: 10px; width: 100%; height: 40px; padding: 0 10px 0 12px; border: 0; border-radius: 6px; background: none; text-align: left; }
 .bl .site .tg:hover { background: var(--pressed); }
-.bl .site.rmv .tg { padding-right: 36px; }
-.bl .site img { width: 20px; height: 20px; flex: none; border-radius: 5px; }
-.bl .site .s { font-weight: 500; white-space: nowrap; }
+.bl .site.rmv .tg { padding-right: 38px; }
+.bl .site img { width: 18px; height: 18px; flex: none; border-radius: 4px; }
+.bl .site .s { overflow: hidden; font-size: 13px; font-weight: 500; white-space: nowrap; text-overflow: ellipsis; }
+.bl .site .tg[aria-pressed=false] .s { color: var(--text-2); }
 .bl .site .d { flex: 1; min-width: 0; overflow: hidden; color: var(--text-3); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
-.bl .site .lk { display: flex; align-items: center; gap: 4px; color: var(--signal); font-size: 11px; font-weight: 500; white-space: nowrap; }
-.bl .site .rm { position: absolute; top: 9px; right: 8px; display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0;
-  border-radius: 50%; background: none; color: var(--text-3); }
-.bl .site .rm:hover { background: var(--pressed); color: var(--text); }
-.bl .addrow { display: flex; align-items: center; gap: 9px; height: 38px; margin-top: 6px; padding: 0 12px; border-radius: 8px;
-  box-shadow: inset 0 0 0 1px var(--line); color: var(--text-3); cursor: text; }
-.bl .addrow:focus-within { box-shadow: inset 0 0 0 1px var(--text-3); }
-.bl .addrow input { flex: 1; min-width: 0; width: auto; height: 100%; margin: 0; padding: 0; border: 0; border-radius: 0; outline: 0; background: none; box-shadow: none; }
-.bl .addhit { display: flex; align-items: center; gap: 9px; width: 100%; height: 38px; margin-top: 6px; padding: 0 12px; border: 0; border-radius: 8px;
-  background: none; box-shadow: inset 0 0 0 1px var(--line); color: var(--text-2); text-align: left; }
-.bl .addhit:hover { color: var(--text); }
-.bl .addhit b { color: var(--text); font-weight: 600; }
+.bl .site .lock { display: flex; flex: none; align-items: center; gap: 4px; color: var(--text-2); font-size: 12px; }
+/* Shortcuts (design C34): the form stays on top, the list is a table under it. */
+.bl .sc-form { padding: 12px 12px 12px 14px; border-radius: 10px; background: var(--field); }
+.bl .sc-line { display: flex; align-items: center; gap: 8px; }
+.bl .sc-line input { flex: 1; min-width: 0; height: 36px; margin: 0; padding: 0 12px; border: 0; border-radius: 7px; outline: 0; background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line); color: var(--text); font-size: 13px; }
+.bl .sc-line input.url { flex: 1.5; }
+.bl .sc-line input:focus { box-shadow: inset 0 0 0 1px var(--text-3); }
+.bl .sc-key { display: flex; flex: none; align-items: center; gap: 4px; width: 104px; height: 36px; overflow: hidden; padding: 0 8px 0 10px; border: 0; border-radius: 7px;
+  background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); color: var(--text-3); font-size: 13px; text-align: left; white-space: nowrap; }
+.bl .sc-key.listening { box-shadow: inset 0 0 0 1px var(--text-2); color: var(--text-2); }
+.bl .sc-key.bad { box-shadow: inset 0 0 0 1px var(--signal); }
+.bl .sc-cancel { flex: none; height: 36px; padding: 0 14px; border: 0; border-radius: 18px; background: none; box-shadow: inset 0 0 0 1px var(--line); color: var(--text-2); font-weight: 500; }
+.bl .sc-cancel:hover { color: var(--text); }
+.bl .sc-line .primary { flex: none; }
+.bl .sc-msg { margin: 10px 2px 0; color: var(--text-3); font-size: 12px; line-height: 1.5; }
+.bl .sc-msg.ok { color: var(--text-2); }
+.bl .sc-msg.bad { color: var(--signal); }
+.bl .keys { display: inline-flex; align-items: center; gap: 3px; }
+.bl kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 4px; background: var(--pressed);
+  box-shadow: inset 0 -1px 0 var(--line), inset 0 0 0 1px var(--line); color: var(--text); font: 600 11px var(--font, inherit); }
+.bl .sc-table { margin-top: 16px; overflow: hidden; border-radius: 10px; background: var(--field); }
+.bl .sc-tr { display: grid; grid-template-columns: 88px minmax(0, 1fr) minmax(0, 1.5fr) 56px; align-items: center; gap: 12px; height: 40px; padding: 0 8px 0 14px;
+  border-top: 1px solid var(--line); }
+.bl .sc-tr.th { height: 32px; border-top: 0; background: rgb(255 255 255/.02); color: var(--text-3); font-size: 11px; font-weight: 500; }
+.bl .sc-tr.editing { background: var(--pressed); }
+.bl .sc-tr .nm { overflow: hidden; font-size: 13px; font-weight: 500; white-space: nowrap; text-overflow: ellipsis; }
+.bl .sc-tr .u { overflow: hidden; color: var(--text-3); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.bl .sc-tr .acts { display: flex; justify-content: flex-end; gap: 2px; }
+.bl .sc-tr .acts button { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 12px; background: none; color: var(--text-3); }
+.bl .sc-tr .acts button:hover { background: var(--pressed); color: var(--text); }
+.bl .sc-none { padding: 14px; color: var(--text-3); font-size: 12px; }
+.bl.on-sc .search, .bl.on-sc .action { display: none; }
+.bl.on-sc .bl-body { padding-bottom: 28px; }
 .bl .action { position: sticky; bottom: 0; display: flex; flex-direction: column; gap: 10px; margin-top: 22px; padding: 16px 0 24px;
   border-top: 1px solid var(--line); background: var(--bl-bg, var(--surface)); }
 .bl .action .row { display: flex; align-items: center; gap: 12px; }
@@ -134,10 +148,11 @@
 /* Adult and gambling sites aren't in the list, and it doesn't mention them: they're always
    blocked (mast_feeds.h); opening one shows a plain "Blocked" page. */
 @media (max-width: 640px) {
-  .bl .tiles { grid-template-columns: repeat(2, 1fr); }
-  .bl .sites { grid-template-columns: 1fr; }
-  .bl .ytc { grid-template-columns: 1fr; }
-  .bl .sc-fields { grid-template-columns: 1fr; }
+  .bl .rows { grid-template-columns: 1fr; }
+  .bl .ytc { grid-template-columns: 1fr 1fr; }
+  .bl .sc-line { flex-wrap: wrap; }
+  .bl .sc-tr { grid-template-columns: 80px minmax(0, 1fr) 56px; }
+  .bl .sc-tr .u { display: none; }
   .bl .action .row { flex-direction: column; align-items: stretch; }
   .bl .seg { grid-template-columns: repeat(3, 1fr); }
 }
@@ -202,6 +217,7 @@ const mastIcon = (() => {
     lock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
     minus: '<path d="M5 12h14"/>',
     pencil: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
+    trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>',
     check: '<path d="M20 6 9 17l-5-5"/>',
     'chevron-right': '<path d="m9 18 6-6-6-6"/>',
     'chevron-left': '<path d="m15 18-6-6 6-6"/>',
@@ -211,46 +227,67 @@ const mastIcon = (() => {
     settings: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
   };
   return (name, size = 16) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || P.circle}</svg>`;
+    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || ''}</svg>`;
 })();
 
 // The distraction set and the blocks in force, read from the state (no DOM):
 // the blocklist panel and the new tab's dock both count from here.
 const MastSet = (() => {
-  const YT = 'youtube.com', MUSIC = 'music:youtube.com';
-  const isYouTube = (s) => !s.custom && s.domains.includes(YT);
+  const YT = 'youtube.com', MUSIC = 'music:youtube.com', SHORTS = 'shorts:youtube.com';
+  const D = 864e5;
+  const isYouTube = (s) => !s.added && s.domains.includes(YT);
   const key = (c, s) => c.id + '/' + s.name;
   // The block that ends first; forever ends last.
   const soonest = (a, b) => (a.until === null ? b : b.until === null ? a : b.until < a.until ? b : a);
   const later = (a, b) => (a.until === b.until ? 0 : a.until === null ? 1 : b.until === null ? -1 : a.until - b.until);
-  // The curated categories, then the user's own sites as one more.
-  function categories(state) {
-    return [...state.categories, {id: 'yours', name: 'Your sites', custom: true,
-      services: state.custom.map((d) => ({name: d, domains: [d], custom: true}))}];
+  const outlasts = (a, b) => a === null || (b !== null && a >= b);
+  // When a block picked now would end (MastBlocks UntilFor).
+  function untilFor(id) {
+    const now = Date.now(), m = new Date();
+    m.setHours(24, 0, 0, 0);
+    return {'1h': now + 36e5, '4h': now + 4 * 36e5, today: m.getTime(), week: now + 7 * D, month: now + 30 * D, forever: null}[id];
   }
+  // Mast's categories, with the sites the user added to them, then the user's
+  // own categories (design C33). A site the user added is {added: true}.
+  function categories(state) {
+    const adds = state.additions || {};
+    const site = (d) => ({name: d, domains: [d], added: true});
+    return [
+      ...state.categories.map((c) => (adds[c.id] ? {...c, services: [...c.services, ...adds[c.id].map(site)]} : c)),
+      ...(state.userCategories || []).map((c) => ({id: c.id, name: c.name, own: true, services: c.sites.map(site)})),
+    ];
+  }
+  // YouTube's mode while it's in the set: 'site', 'music' or 'shorts'.
   function read(state) {
     const d = state.distractions || {};
-    return {cats: new Set(d.categories || []), skipped: new Set(d.skipped || []), music: !!d.youtubeMusic};
+    return {cats: new Set(d.categories || []), skipped: new Set(d.skipped || []), youtube: d.youtube || 'site'};
   }
-  // The user's own sites are in unless left out; a curated site is in when its
-  // category is and it isn't left out (MastBlocks::Distractions).
-  const has = (sel, c, s) => (c.custom || sel.cats.has(c.id)) && !sel.skipped.has(key(c, s));
-  const entries = (sel, s) => (isYouTube(s) && sel.music ? [MUSIC] : s.domains);
-  const isOpen = (state, e) => !state.blocks[e] && !(e === MUSIC && state.blocks[YT]);
+  // A site is in when its category is and it isn't left out
+  // (MastBlocks::Distractions).
+  const has = (sel, c, s) => sel.cats.has(c.id) && !sel.skipped.has(key(c, s));
+  const entries = (sel, s) => (!isYouTube(s) || sel.youtube === 'site' ? s.domains : [sel.youtube === 'music' ? MUSIC : SHORTS]);
+  // Music only and Shorts add nothing while all of YouTube is blocked.
+  const covered = (state, e) => (e === MUSIC || e === SHORTS) && !!state.blocks[YT];
+  const isOpen = (state, e) => !state.blocks[e] && !covered(state, e);
+  // Would blocking it until `until` change it: open, or running for less.
+  const changes = (state, e, until) => !covered(state, e) && (!state.blocks[e] || !outlasts(state.blocks[e].until, until));
   // A site's block: every domain blocked (the one ending first), some of them
-  // ({partial}), or YouTube's Music only ({music}).
+  // ({partial}), or YouTube's Music only ({music}) or Shorts ({shorts}).
   function blockOf(state, s) {
     const bs = s.domains.map((d) => state.blocks[d]).filter(Boolean);
     if (bs.length && bs.length === s.domains.length) return bs.reduce(soonest);
     if (isYouTube(s) && state.blocks[MUSIC]) return {...state.blocks[MUSIC], music: true};
+    if (isYouTube(s) && state.blocks[SHORTS]) return {...state.blocks[SHORTS], shorts: true};
     return bs.length ? {partial: true, until: bs[0].until} : null;
   }
-  // What Block would do now (design C28d, C29): its label, and the words for
-  // the toast and the forever question. Only what's still open gets blocked.
-  function summary(state) {
+  // What Block would do now for `dur` (design C28d, C29): block what's open,
+  // and lengthen what's running for less. Its label, and the words for the
+  // toast and the forever question.
+  function summary(state, dur) {
     const sel = read(state);
-    let total = 0, picked = 0, whole = true, running = false;
-    const open = [];
+    const until = dur ? untilFor(dur) : undefined;
+    let total = 0, picked = 0, whole = true, running = false, timed = false;
+    const open = [], longer = [];
     for (const c of categories(state)) {
       if (!c.services.length) continue;
       total++;
@@ -258,24 +295,26 @@ const MastSet = (() => {
       if (ins.length < c.services.length) whole = false;
       if (!ins.length) continue;
       picked++;
-      // Running as the dock's rows count it (a whole site, or Music only).
+      // Running as the dock's rows count it (a whole site, or YouTube's mode).
       if (ins.some((s) => { const b = blockOf(state, s); return b && !b.partial; })) running = true;
-      if (ins.flatMap((s) => entries(sel, s)).some((e) => isOpen(state, e))) open.push(c.name);
+      const es = ins.flatMap((s) => entries(sel, s));
+      if (es.some((e) => state.blocks[e] && state.blocks[e].until !== null)) timed = true;
+      if (es.some((e) => isOpen(state, e))) open.push(c.name);
+      else if (until !== undefined && es.some((e) => changes(state, e, until))) longer.push(c.name);
     }
-    const n = open.length;
+    const names = [...open, ...longer], n = names.length;
     const all = whole && picked === total && !running;
     return {
-      total, picked, open: n,
+      total, picked, open: open.length, n, timed,
       // Always just "Block": nothing to count or work out.
       label: n ? 'Block' : '',
-      what: n === 1 ? open[0] : all ? 'everything' : `${n} categories`,
-      asked: n === 1 ? open[0] : all ? 'Everything you picked' : `These ${n} categories`,
+      what: n === 1 ? names[0] : all ? 'everything' : `${n} categories`,
+      asked: n === 1 ? names[0] : all ? 'Everything you picked' : `These ${n} categories`,
     };
   }
   // The blocks in force, a row each, soonest to end first (design C29): a whole
   // category by its name, a single site by its, a few sites as "Social media ·
-  // 3 sites", YouTube's Music only on its own. `entries` are what extending the
-  // row blocks again.
+  // 3 sites", YouTube's Music only or Shorts on its own.
   function running(state) {
     const rows = [];
     for (const c of categories(state)) {
@@ -283,6 +322,7 @@ const MastSet = (() => {
       for (const s of c.services) {
         const b = blockOf(state, s);
         if (b && b.music) rows.push({name: 'YouTube', music: true, until: b.until, entries: [MUSIC]});
+        else if (b && b.shorts) rows.push({name: 'YouTube Shorts', until: b.until, entries: [SHORTS]});
         else if (b && !b.partial) whole.push([s, b]);
       }
       if (!whole.length) continue;
@@ -305,33 +345,42 @@ const MastBlocklist = (() => {
   const S = MastSet;
   let root = null, metaEl = null, bodyEl = null, actionEl = null, searchEl = null, toastHost = null;
   let state = null;
-  let view = '';    // a category whose sites are open, by id; '' for the tiles
+  let view = '';    // a category whose sites are open, by id; '' for the categories
   let query = '';   // the search box
   let dur = null;
   let toastTimer = 0;
   let pending = '';   // what the last Block press was for, e.g. "News" or "10 categories"
   let asked = false;  // a block/undo from this list is waiting for its result
   let tab = 'bl';     // 'bl' (Blocklist) or 'sc' (Shortcuts)
+  // Typed text kept across re-renders, by the input's data-k: a site being
+  // added, a new category's name, a category being renamed.
+  const kept = {add: '', newcat: '', rename: ''};
+  let naming = false;    // the New category row is a name field
+  let renaming = false;  // the open category's name is a field
+  let sureDelete = false;  // Delete category was pressed once
+  let note = null;       // {text, bad} under the add field
   // The Shortcuts tab's form, kept across re-renders.
-  const sc = {name: '', url: '', key: '', listening: false, msg: '', bad: false, err: false, editing: ''};
-  const SC_EMPTY = {name: '', url: '', key: '', listening: false, msg: '', bad: false, err: false, editing: ''};
+  const SC_EMPTY = {name: '', url: '', key: '', listening: false, msg: '', bad: false, err: false, ok: false, editing: ''};
+  const sc = {...SC_EMPTY};
   const SC_TAKEN = {D: 'focuses the address bar', E: 'opens the menu', F: 'opens the menu'};
+  const SC_HELP = 'Click the keys box and press a letter. Mast keeps Alt + D, E, F and 1–9; the other letters are yours.';
 
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
   const hm = (t) => new Date(t).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
   const day = (t) => new Date(t).toLocaleDateString([], {month: 'short', day: 'numeric'});
   const midnight = () => { const d = new Date(); d.setHours(24, 0, 0, 0); return d.getTime(); };
   function untilText(u) {
-    if (u === null) return 'Blocked forever';
+    if (u === null) return 'Forever';
     if (u === midnight()) return 'Until midnight';
     if (new Date(u).toDateString() === new Date().toDateString()) return 'Until ' + hm(u);
     if (u - Date.now() < 2 * D) return 'Until tomorrow ' + hm(u);
     return 'Until ' + day(u);
   }
-  // "Blocked until 6 pm", "Music only until midnight".
-  const blockText = (b) => b.music ? 'Music only ' + (b.until === null ? 'forever' : untilText(b.until).toLowerCase())
-    : b.until === null ? 'Blocked forever' : 'Blocked ' + untilText(b.until).toLowerCase();
+  const lower = (u) => (u === null ? 'forever' : untilText(u).toLowerCase());
+  // "Blocked until 6 pm", "Music only until midnight", "Shorts blocked forever".
+  const blockText = (b) => (b.music ? 'Music only ' : b.shorts ? 'Shorts blocked ' : 'Blocked ') + lower(b.until);
   const favicon = (d) => 'chrome://favicon2/?size=32&scaleFactor=2x&showFallbackMonogram=&pageUrl=' + encodeURIComponent('https://' + d);
+  const lock = (text) => `<span class="lock">${mastIcon('lock', 11)}<span>${esc(text)}</span></span>`;
   // "https://www.espn.com/nba" -> "espn.com"; '' unless it looks like a domain.
   function cleanDomain(v) {
     const d = v.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
@@ -344,26 +393,32 @@ const MastBlocklist = (() => {
     }
     return [null, null];
   }
+  const category = (id) => S.categories(state).find((c) => c.id === id);
 
   // The set is saved as it changes; the page shows the change at once.
   function save(sel) {
-    const d = {categories: [...sel.cats], skipped: [...sel.skipped], youtubeMusic: sel.music};
+    const d = {categories: [...sel.cats], skipped: [...sel.skipped], youtube: sel.youtube};
     state.distractions = d;
-    chrome.send('setDistractions', [d.categories, d.skipped, d.youtubeMusic]);
+    chrome.send('setDistractions', [d.categories, d.skipped, d.youtube]);
   }
   function setCategory(c, on) {
     const sel = S.read(state);
     c.services.forEach((s) => sel.skipped.delete(S.key(c, s)));
-    if (c.custom) { if (!on) c.services.forEach((s) => sel.skipped.add(S.key(c, s))); }
-    else if (on) sel.cats.add(c.id);
+    if (on) sel.cats.add(c.id);
     else sel.cats.delete(c.id);
     save(sel);
   }
-  // `music` (YouTube only): true for Music only, false for the whole site.
-  function setSite(c, s, on, music) {
+  function setAll(on) {
     const sel = S.read(state);
-    if (music !== undefined) sel.music = music;
-    if (on && !c.custom && !sel.cats.has(c.id)) {
+    sel.skipped.clear();
+    sel.cats = new Set(on ? S.categories(state).map((c) => c.id) : []);
+    save(sel);
+  }
+  // `youtube` (YouTube only): its mode, 'site', 'music' or 'shorts'.
+  function setSite(c, s, on, youtube) {
+    const sel = S.read(state);
+    if (youtube !== undefined) sel.youtube = youtube;
+    if (on && !sel.cats.has(c.id)) {
       // The category joins with only this site in it.
       sel.cats.add(c.id);
       c.services.forEach((o) => sel.skipped.add(S.key(c, o)));
@@ -371,98 +426,121 @@ const MastBlocklist = (() => {
     if (on) sel.skipped.delete(S.key(c, s));
     else sel.skipped.add(S.key(c, s));
     // A category with nothing left in it leaves the set.
-    if (!c.custom && c.services.every((o) => sel.skipped.has(S.key(c, o)))) {
+    if (c.services.every((o) => sel.skipped.has(S.key(c, o)))) {
       sel.cats.delete(c.id);
       c.services.forEach((o) => sel.skipped.delete(S.key(c, o)));
     }
     save(sel);
   }
-  function addSite(domain) {
-    if (!domain) return;
-    chrome.send('addSite', [domain]);  // a new site of your own starts out picked
-    query = '';
-    searchEl.value = '';
-    view = 'yours';
-  }
+  const checkbox = (on, part) =>
+    `<span class="cb ${on ? 'on' : part ? 'part' : ''}">${on ? mastIcon('check', 11) : part ? mastIcon('minus', 11) : ''}</span>`;
 
   function ytRow() {
     const [c, s] = youtube();
     if (!c) return '';
     const sel = S.read(state);
-    const mode = !S.has(sel, c, s) ? 'open' : sel.music ? 'music' : 'site';
+    const mode = !S.has(sel, c, s) ? 'open' : sel.youtube;
     const b = S.blockOf(state, s);
-    const live = b && !b.partial;
-    // Names that say what happens to YouTube (design C32); no descriptions.
-    const choices = [['open', 'Allow all'], ['music', 'Allow music only'], ['site', 'Block all']];
+    // Names that say what happens to YouTube (design C32), least to most strict.
+    const choices = [['open', 'Allow all'], ['shorts', 'Block Shorts'], ['music', 'Allow music only'], ['site', 'Block all']];
     return `<div class="yt">
-      <div class="top"><b>YouTube</b>${live ? `<span class="st">${esc(blockText(b))}</span>` : ''}</div>
+      <div class="top">YouTube</div>
       <div class="ytc" role="radiogroup" aria-label="YouTube">${choices.map(([id, label]) =>
         `<button role="radio" aria-checked="${mode === id}" data-yt="${id}" class="${mode === id ? 'on' : ''}"><i class="dot"></i>${label}</button>`).join('')}</div>
+      ${b && !b.partial ? `<div class="st">${mastIcon('lock', 11)}${esc(blockText(b))}</div>` : ''}
     </div>`;
   }
 
-  function tile(c, sel) {
+  // A category's row (C33a): its checkbox picks all of it; › opens its sites.
+  function catRow(c, sel) {
     const n = c.services.length;
     const ins = c.services.filter((s) => S.has(sel, c, s)).length;
     const on = n > 0 && ins === n, part = ins > 0 && ins < n;
-    const blocks = c.services.map((s) => S.blockOf(state, s)).filter((b) => b && !b.partial && !b.music);
-    const status = !blocks.length ? '' : blocks.length === n ? untilText(blocks.reduce(S.soonest).until) : `${blocks.length} of ${n} blocked`;
-    let sample = !n ? 'Add your own sites' : c.services.slice(0, 2).map((s) => s.name).join(', ') + (n > 2 ? ` +${n - 2}` : '');
-    const mark = n ? checkbox(on, part) : '';
-    // With no sites yet, "Your sites" opens to add one.
+    const blocks = c.services.map((s) => S.blockOf(state, s)).filter((b) => b && !b.partial && !b.music && !b.shorts);
+    let sm;
+    if (blocks.length === n && n) sm = `<span class="sm blk">${mastIcon('lock', 11)}<span>${esc(untilText(blocks.reduce(S.soonest).until))}</span></span>`;
+    else if (blocks.length) sm = `<span class="sm blk">${mastIcon('lock', 11)}<span>${blocks.length} of ${n}</span></span>`;
+    else {
+      const text = !n ? 'No sites yet' : part ? `${ins} of ${n}` : c.services.slice(0, 2).map((s) => s.name).join(', ') + (n > 2 ? ` +${n - 2}` : '');
+      sm = `<span class="sm"><span>${esc(text)}</span></span>`;
+    }
+    // With no sites yet, the row opens the category to add some.
     const act = n ? `data-cat="${esc(c.id)}" aria-pressed="${on ? 'true' : part ? 'mixed' : 'false'}"` : `data-view="${esc(c.id)}"`;
-    if (part && !status) sample = `${ins} of ${n} sites`;
-    return `<div class="tile">
-      ${mark ? `<span class="top">${mark}</span>` : ''}
-      <button class="tg" ${act}>
-        <span class="nm">${esc(c.name)}</span>
-        ${status ? `<span class="sm blk">${mastIcon('lock', 11)}${esc(status)}</span>` : `<span class="sm">${esc(sample)}</span>`}
-      </button>
-      <button class="more" data-view="${esc(c.id)}" aria-label="Choose sites in ${esc(c.name)}">${mastIcon('chevron-right', 14)}</button>
+    return `<div class="cat">
+      <button class="tg" ${act}>${checkbox(on, part)}<span class="nm">${esc(c.name)}</span>${sm}</button>
+      <button class="more" data-view="${esc(c.id)}" aria-label="Open ${esc(c.name)}">${mastIcon('chevron-right', 14)}</button>
     </div>`;
   }
 
-  const checkbox = (on, part) =>
-    `<span class="cb ${on ? 'on' : part ? 'part' : ''}">${on ? mastIcon('check', 12) : part ? mastIcon('minus', 12) : ''}</span>`;
+  function listView(sel) {
+    const cats = S.categories(state);
+    const full = cats.filter((c) => c.services.length && c.services.every((s) => S.has(sel, c, s))).length;
+    const any = cats.filter((c) => c.services.some((s) => S.has(sel, c, s))).length;
+    const counted = cats.filter((c) => c.services.length).length;
+    const allOn = counted > 0 && full === counted;
+    const newcat = naming
+      ? `<label class="newcat on">${mastIcon('plus', 15)}<input data-k="newcat" placeholder="Name it, then press Enter" maxlength="60" spellcheck="false" autocomplete="off"></label>`
+      : `<button class="newcat" data-act="newcat">${mastIcon('plus', 15)}New category</button>`;
+    return `${ytRow()}
+      <div class="box">
+        <div class="box-h"><b>Categories</b><span class="n">${any} of ${counted}</span>
+          <button class="pill" data-act="${allOn ? 'none' : 'all'}">${checkbox(allOn, any && !allOn)}${allOn ? 'Deselect all' : 'Select all'}</button></div>
+        <div class="rows">${cats.map((c) => catRow(c, sel)).join('')}${newcat}</div>
+      </div>`;
+  }
 
-  // One site, to pick or leave out. `sub` replaces its domains (search shows
-  // the category instead).
+  // One site, to pick or leave out; the user's own can be removed while
+  // they aren't blocked. `sub` replaces its domains (search shows the
+  // category instead).
   function site(c, s, sel, sub) {
     const on = S.has(sel, c, s);
     const b = S.blockOf(state, s);
     const live = b && !b.partial;
-    const removable = s.custom && !b;
-    const d = sub || (s.feed ? 'Tens of thousands more, from a maintained list' : s.custom ? '' : s.domains.join(', '));
-    const st = !live ? '' : b.music ? 'Music only' : b.until === null ? 'Forever' : untilText(b.until);
+    const removable = s.added && !b;
+    const d = sub || (s.feed ? 'Tens of thousands more, from a maintained list' : s.added ? '' : s.domains.join(', '));
+    const st = !live ? '' : b.music ? 'Music only' : b.shorts ? 'Shorts' : untilText(b.until);
     return `<div class="site ${removable ? 'rmv' : ''}">
-      <button class="tg" data-svc="${esc(S.key(c, s))}" aria-pressed="${on}">
+      <button class="tg" data-svc="${esc(S.key(c, s))}" aria-pressed="${on}">${checkbox(on)}
         ${s.feed ? '' : `<img src="${esc(favicon(s.domains[0]))}" alt="">`}<span class="s">${esc(s.name)}</span><span class="d">${esc(d)}</span>
-        ${st ? `<span class="lk">${mastIcon('lock', 11)}${esc(st)}</span>` : ''}${checkbox(on)}
-      </button>${removable ? `<button class="rm" data-rm="${esc(s.name)}" aria-label="Remove ${esc(s.name)}">${mastIcon('x', 12)}</button>` : ''}
+        ${st ? lock(st) : ''}
+      </button>${removable ? `<button class="rm" data-rm="${esc(S.key(c, s))}" aria-label="Remove ${esc(s.name)}">${mastIcon('x', 13)}</button>` : ''}
     </div>`;
   }
+  const box = (title, sub, sites) => `<div class="box"><div class="box-h"><b>${esc(title)}</b><span class="n">${esc(sub)}</span></div>
+    <div class="rows">${sites}</div></div>`;
 
-  function tilesView(sel) {
-    return `${ytRow()}
-      <div class="lbl"><b>Categories</b><span>Tap a tile to block all of it, or › to choose sites</span></div>
-      <div class="tiles">${S.categories(state).map((c) => tile(c, sel)).join('')}</div>`;
-  }
-
-  function sitesView(sel) {
-    const c = S.categories(state).find((x) => x.id === view);
-    if (!c) { view = ''; return tilesView(sel); }
+  // A category's page (C33b, C33c): add a site, then its sites. Mast's own
+  // sites can only be left out; the user's can be removed, and so can a
+  // category of theirs.
+  function categoryView(sel) {
+    const c = category(view);
+    if (!c) { view = ''; return listView(sel); }
     const n = c.services.length;
     const ins = c.services.filter((s) => S.has(sel, c, s)).length;
-    // YouTube's three choices stand in for its cell.
+    const blocked = c.services.filter((s) => { const b = S.blockOf(state, s); return b && !b.partial; }).length;
+    const sub = blocked ? `${blocked} of ${n} blocked` : `${n} ${n === 1 ? 'site' : 'sites'}`;
+    const title = renaming && c.own
+      ? `<input class="ren-in" data-k="rename" maxlength="60" spellcheck="false" autocomplete="off" aria-label="Category name">`
+      : `<h2>${esc(c.name)}</h2>${c.own ? `<button class="ren" data-act="rename" aria-label="Rename ${esc(c.name)}">${mastIcon('pencil', 13)}</button>` : ''}`;
+    const all = n ? `<button class="act" data-cat="${esc(c.id)}">${ins === n ? 'Deselect all' : 'Select all'}</button>` : '';
+    const del = !c.own ? '' : `<button class="act ${sureDelete ? 'sure' : ''}" data-act="delcat" ${blocked ? 'disabled title="Its sites are blocked: it can go once they open again."' : ''}>
+      ${mastIcon('trash', 13)}${sureDelete ? 'Delete for good?' : 'Delete category'}</button>`;
+    // YouTube's four choices stand in for its row.
     const yt = c.services.some(S.isYouTube) ? ytRow() : '';
-    const list = c.services.filter((s) => !(yt && S.isYouTube(s)));
+    const mine = c.services.filter((s) => s.added);
+    const mast = c.services.filter((s) => !s.added && !(yt && S.isYouTube(s)));
+    let lists;
+    if (c.own) lists = mine.length ? box('Sites', 'Yours: remove any of them', mine.map((s) => site(c, s, sel)).join('')) : '<div class="empty">No sites yet. Add one above.</div>';
+    else lists = (mine.length ? box('Added by you', 'Remove these any time', mine.map((s) => site(c, s, sel)).join('')) : '')
+      + (mast.length ? box('Included', 'Part of Mast. Untick one to leave it out.', mast.map((s) => site(c, s, sel)).join('')) : '');
     return `<div class="sv">
-        <button class="back" data-view="">${mastIcon('chevron-left', 16)}Categories</button>
-        <h2>${esc(c.name)}</h2><span class="n">${n} ${n === 1 ? 'site' : 'sites'}</span>
-        ${n ? `<button class="all" data-cat="${esc(c.id)}">${ins === n ? 'Clear' : 'Select all'}</button>` : ''}
+        <button class="back" data-view="" aria-label="Back to categories">${mastIcon('chevron-left', 16)}</button>
+        ${title}<span class="n">${esc(sub)}</span>${c.own ? del : all}
       </div>${yt}
-      ${list.length ? `<div class="sites">${list.map((s) => site(c, s, sel)).join('')}</div>` : ''}
-      ${c.custom ? `<label class="addrow">${mastIcon('plus', 14)}<input data-add placeholder="Add a site, e.g. espn.com" spellcheck="false" autocomplete="off"></label>` : ''}`;
+      <label class="addsite">${mastIcon('plus', 15)}<input data-k="add" placeholder="Add a site to ${esc(c.name)}, like example.com" spellcheck="false" autocomplete="off">
+        <button data-act="addsite">Add</button></label>
+      ${note ? `<div class="note ${note.bad ? 'bad' : ''}">${esc(note.text)}</div>` : ''}
+      ${lists}`;
   }
 
   function resultsView(sel) {
@@ -475,55 +553,55 @@ const MastBlocklist = (() => {
       if (s.name.toLowerCase().includes(q) || s.domains.some((d) => d.includes(dom || q))) hits.push([c, s]);
     }
     const title = !hits.length ? 'No sites match' : hits.length === 1 ? '1 site' : `${hits.length} sites`;
-    return `<div class="lbl"><b>${title}</b>${hits.length ? '<span>Tap a site to pick it</span>' : ''}</div>
-      ${hits.length ? `<div class="sites">${hits.slice(0, 40).map(([c, s]) => site(c, s, sel, c.name)).join('')}</div>` : ''}
-      ${dom && !known ? `<button class="addhit" data-addsite="${esc(dom)}">${mastIcon('plus', 14)}<span>Add <b>${esc(dom)}</b> to your sites</span></button>` : ''}`;
+    const hint = dom && !known ? `${dom} isn’t in any category yet: open one to add it.` : hits.length ? 'Tap a site to pick it' : '';
+    return hits.length ? box(title, hint, hits.slice(0, 40).map(([c, s]) => site(c, s, sel, c.name)).join(''))
+      : `<div class="box"><div class="box-h"><b>${title}</b><span class="n">${esc(hint)}</span></div></div>`;
   }
 
   function actionView() {
-    const sum = S.summary(state);
+    const sum = S.summary(state, dur);
     return `<div class="row">
         <div class="seg">${DUR.map(([id, label]) => `<button data-dur="${id}" class="${id === dur ? 'on' : ''}">${label}</button>`).join('')}</div>
-        <button class="primary" data-act="block" ${sum.open ? '' : 'disabled'}>${esc(sum.label || 'Block')}</button>
+        <button class="primary" data-act="block" ${sum.n ? '' : 'disabled'}>Block</button>
       </div>`;
   }
 
   const shortUrl = (u) => u.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
   const keysHtml = (k) => `<span class="keys"><kbd>Alt</kbd><kbd>${esc(k)}</kbd></span>`;
+  // Shortcuts (C34): the form on top, the table under it.
   function shortcutsView() {
     const list = state.shortcuts || [];
-    const rows = list.map((s) => `<div class="sc-row ${sc.editing === s.key ? 'editing' : ''}">${keysHtml(s.key)}<div class="t"><b>${esc(s.name)}</b>
-      <span>${esc(shortUrl(s.url))}</span></div>
-      <div class="acts"><button class="rm" data-scedit="${esc(s.key)}" aria-label="Edit ${esc(s.name)}">${mastIcon('pencil', 13)}</button>
-      <button class="rm" data-scrm="${esc(s.key)}" aria-label="Remove ${esc(s.name)}">${mastIcon('x', 12)}</button></div></div>`).join('');
-    const keyBox = sc.key ? keysHtml(sc.key) : `<span>${sc.listening ? 'Press Alt + a letter…' : 'Click, then press Alt + a letter'}</span>`;
-    return `<p class="sc-intro">Press Alt and a letter anywhere in Mast to open a page in a new tab.</p>
-      ${rows ? `<div class="sc-list">${rows}</div>` : ''}
-      <div class="sc-add">
-        <h3>${sc.editing ? 'Edit shortcut' : 'Add a shortcut'}</h3>
-        <div class="sc-fields">
-          <label class="sc-f">Name<input data-scname placeholder="NVIDIA stock" spellcheck="false" autocomplete="off"></label>
-          <label class="sc-f">Opens<input data-scurl placeholder="A link, or a search like google.com/search?q=nvidia+stock" spellcheck="false" autocomplete="off"></label>
-        </div>
-        <div class="sc-rec">
-          <button class="sc-key ${sc.listening ? 'listening' : ''} ${sc.bad ? 'bad' : ''}" data-act="sckey">${keyBox}</button>
+    const rows = list.map((s) => `<div class="sc-tr ${sc.editing === s.key ? 'editing' : ''}">${keysHtml(s.key)}
+      <span class="nm">${esc(s.name)}</span><span class="u">${esc(shortUrl(s.url))}</span>
+      <span class="acts"><button data-scedit="${esc(s.key)}" aria-label="Edit ${esc(s.name)}">${mastIcon('pencil', 13)}</button>
+      <button data-scrm="${esc(s.key)}" aria-label="Remove ${esc(s.name)}">${mastIcon('x', 13)}</button></span></div>`).join('');
+    const keyBox = sc.key ? keysHtml(sc.key) : sc.listening ? 'Press a letter…' : 'Alt + key';
+    const msg = sc.msg || SC_HELP;
+    return `<div class="sc-form">
+        <div class="sc-line">
+          <button class="sc-key ${sc.listening ? 'listening' : ''} ${sc.bad ? 'bad' : ''}" data-act="sckey" aria-label="Keys">${keyBox}</button>
+          <input data-scname placeholder="Name" spellcheck="false" autocomplete="off" aria-label="Name">
+          <input class="url" data-scurl placeholder="Address or search" spellcheck="false" autocomplete="off" aria-label="Opens">
           ${sc.editing ? '<button class="sc-cancel" data-act="sccancel">Cancel</button>' : ''}
           <button class="primary" data-act="scadd" ${sc.key && !sc.bad && sc.url.trim() ? '' : 'disabled'}>${sc.editing ? 'Save' : 'Add'}</button>
         </div>
-        <div class="sc-msg ${sc.bad || sc.err ? 'bad' : ''}">${esc(sc.msg)}</div>
+        <div class="sc-msg ${sc.bad || sc.err ? 'bad' : sc.ok ? 'ok' : ''}">${esc(msg)}</div>
       </div>
-      <p class="sc-taken">Mast already uses <kbd>Alt</kbd>+<kbd>D</kbd> (address bar), <kbd>Alt</kbd>+<kbd>E</kbd> and <kbd>Alt</kbd>+<kbd>F</kbd> (menu),
-        and <kbd>Alt</kbd>+<kbd>1</kbd>–<kbd>9</kbd> (tabs). The other letters are yours.</p>`;
+      <div class="sc-table">
+        <div class="sc-tr th"><span>Keys</span><span>Name</span><span>Opens</span><span></span></div>
+        ${rows || '<div class="sc-none">No shortcuts yet. Add one above.</div>'}
+      </div>`;
   }
   // A recorded key: free, or why not.
   function pickKey(k) {
     const taken = (state.shortcuts || []).find((s) => s.key === k && s.key !== sc.editing);
     sc.key = k;
     sc.bad = true;
+    sc.ok = false;
     if (/\d/.test(k)) sc.msg = `Alt + ${k} switches to tab ${k}. Pick a letter.`;
     else if (SC_TAKEN[k]) sc.msg = `Alt + ${k} ${SC_TAKEN[k]}. Pick another letter.`;
     else if (taken) sc.msg = `Alt + ${k} already opens ${taken.name}.`;
-    else { sc.bad = false; sc.listening = false; sc.msg = `Alt + ${k} is free.`; }
+    else { sc.bad = false; sc.listening = false; sc.ok = true; sc.msg = `Alt + ${k} is free.`; }
   }
 
   function render() {
@@ -549,22 +627,34 @@ const MastBlocklist = (() => {
     let blocked = 0;
     for (const c of S.categories(state)) for (const s of c.services) {
       const b = S.blockOf(state, s);
-      if (b && !b.partial && !b.music) blocked++;
+      if (b && !b.partial && !b.music && !b.shorts) blocked++;
     }
     metaEl.innerHTML = `<b>${blocked}</b> blocked · <b>${state.stopped}</b> stopped today`;
-    // Keep a half-typed site across re-renders.
-    const input = bodyEl.querySelector('[data-add]');
-    const focused = input && document.activeElement === input;
-    const typed = input ? input.value : '';
-    bodyEl.innerHTML = query.trim() ? resultsView(sel) : view ? sitesView(sel) : tilesView(sel);
-    const next = bodyEl.querySelector('[data-add]');
-    if (next) { next.value = typed; if (focused) next.focus(); }
+    // Keep what's typed (and the caret) across re-renders.
+    const f = document.activeElement;
+    const k = f && bodyEl.contains(f) ? f.dataset.k : '';
+    const caret = k ? f.selectionStart : 0;
+    bodyEl.innerHTML = query.trim() ? resultsView(sel) : view ? categoryView(sel) : listView(sel);
+    for (const el of bodyEl.querySelectorAll('[data-k]')) el.value = kept[el.dataset.k];
+    const again = k && bodyEl.querySelector(`[data-k="${k}"]`);
+    if (again) { again.focus(); again.setSelectionRange(caret, caret); }
     actionEl.innerHTML = actionView();
+  }
+  function focusField(k) {
+    const el = bodyEl.querySelector(`[data-k="${k}"]`);
+    if (el) { el.focus(); el.select(); }
   }
   function toTop() {
     const box = root.closest('dialog');
     if (box) box.scrollTop = 0;
     else root.scrollIntoView({block: 'start'});
+  }
+  function open(id) {
+    view = id;
+    renaming = sureDelete = false;
+    note = null;
+    kept.add = '';
+    toTop();
   }
 
   function toast(text, undo) {
@@ -580,34 +670,69 @@ const MastBlocklist = (() => {
     if (!undo) setTimeout(() => { clearInterval(toastTimer); toastHost.innerHTML = ''; }, 2600);
   }
 
+  function addSite() {
+    const text = kept.add.trim();
+    if (!text || !view) return;
+    if (!cleanDomain(text)) { note = {text: 'That doesn’t look like a web address.', bad: true}; return render(); }
+    chrome.send('addSite', [view, text]);
+  }
+  function createCategory() {
+    const name = kept.newcat.trim();
+    if (!name) { naming = false; return render(); }
+    chrome.send('createCategory', [name]);
+  }
+  function renameCategory() {
+    const name = kept.rename.trim();
+    const c = category(view);
+    renaming = false;
+    if (c && name && name !== c.name) chrome.send('renameCategory', [c.id, name]);
+    render();
+  }
+
   function onClick(e) {
     // The host page has its own buttons and handlers; this list's clicks are its own.
     e.stopPropagation();
     const t = e.target.closest('button');
     if (!t || !state) return;
     const cats = S.categories(state);
+    const act = t.dataset.act;
     if (t.dataset.tab) {
       tab = t.dataset.tab;
       sc.listening = false;
       toTop();
-    } else if (t.dataset.act === 'sckey') {
-      sc.listening = true;
-      sc.key = '';
-      sc.err = false;
-      sc.bad = false;
-      sc.msg = '';
-    } else if (t.dataset.act === 'scadd') {
+    } else if (act === 'sckey') {
+      Object.assign(sc, {listening: true, key: '', err: false, bad: false, ok: false, msg: ''});
+    } else if (act === 'scadd') {
       if (!sc.key || sc.bad || !sc.url.trim()) return;
       return chrome.send('addShortcut', [sc.key, sc.name, sc.url, sc.editing]);
-    } else if (t.dataset.act === 'sccancel') {
+    } else if (act === 'sccancel') {
       Object.assign(sc, SC_EMPTY);
     } else if (t.dataset.scedit) {
       const s = (state.shortcuts || []).find((x) => x.key === t.dataset.scedit);
       if (!s) return;
       Object.assign(sc, SC_EMPTY, {editing: s.key, key: s.key, name: s.name, url: shortUrl(s.url)});
+      toTop();
     } else if (t.dataset.scrm) {
       if (sc.editing === t.dataset.scrm) Object.assign(sc, SC_EMPTY);
       return chrome.send('removeShortcut', [t.dataset.scrm]);
+    } else if (act === 'all' || act === 'none') {
+      setAll(act === 'all');
+    } else if (act === 'newcat') {
+      naming = true;
+      kept.newcat = '';
+      render();
+      return focusField('newcat');
+    } else if (act === 'rename') {
+      renaming = true;
+      kept.rename = (category(view) || {}).name || '';
+      render();
+      return focusField('rename');
+    } else if (act === 'delcat') {
+      if (!sureDelete) { sureDelete = true; return render(); }
+      sureDelete = false;
+      return chrome.send('deleteCategory', [view]);
+    } else if (act === 'addsite') {
+      return addSite();
     } else if (t.dataset.cat) {
       const c = cats.find((x) => x.id === t.dataset.cat);
       if (!c) return;
@@ -623,23 +748,21 @@ const MastBlocklist = (() => {
       const [c, s] = youtube();
       if (!c) return;
       const mode = t.dataset.yt;
-      setSite(c, s, mode !== 'open', mode === 'open' ? undefined : mode === 'music');
+      setSite(c, s, mode !== 'open', mode === 'open' ? undefined : mode);
     } else if ('view' in t.dataset) {
-      view = t.dataset.view;
-      toTop();
+      open(t.dataset.view);
     } else if (t.dataset.dur) {
       dur = t.dataset.dur;
     } else if (t.dataset.rm) {
-      return chrome.send('removeSite', [t.dataset.rm]);
-    } else if (t.dataset.addsite) {
-      addSite(t.dataset.addsite);
-    } else if (t.dataset.act === 'block') {
-      const sum = S.summary(state);
-      if (!sum.open) return;
+      const i = t.dataset.rm.indexOf('/');
+      return chrome.send('removeSite', [t.dataset.rm.slice(0, i), t.dataset.rm.slice(i + 1)]);
+    } else if (act === 'block') {
+      const sum = S.summary(state, dur);
+      if (!sum.n) return;
       const go = () => { pending = sum.what; asked = true; chrome.send('blockDistractions', [dur]); };
       // Forever asks first (design C27b); timed blocks have their undo.
       return dur === 'forever' ? mastConfirmForever(sum.asked, go) : go();
-    } else if (t.dataset.act === 'undo') {
+    } else if (act === 'undo') {
       clearInterval(toastTimer);
       toastHost.innerHTML = '';
       asked = true;
@@ -648,28 +771,34 @@ const MastBlocklist = (() => {
     render();
   }
   function onInput(e) {
-    if (e.target.matches('[data-scname]')) { sc.name = e.target.value; return; }
-    if (e.target.matches('[data-scurl]')) {
+    const t = e.target;
+    if (t.dataset.k) {
+      kept[t.dataset.k] = t.value;
+      if (t.dataset.k === 'add' && note) { note = null; render(); }
+      return;
+    }
+    if (t.matches('[data-scname]')) { sc.name = t.value; return; }
+    if (t.matches('[data-scurl]')) {
       sc.err = false;
-      const ready = !!sc.url.trim() === !!e.target.value.trim();
-      sc.url = e.target.value;
+      const ready = !!sc.url.trim() === !!t.value.trim();
+      sc.url = t.value;
       if (!ready) render();  // Add turns on or off
       return;
     }
-    if (!e.target.matches('[data-q]')) return;
-    query = e.target.value;
+    if (!t.matches('[data-q]')) return;
+    query = t.value;
     render();
   }
   function onKey(e) {
     e.stopPropagation();
+    const t = e.target;
     // Recording a shortcut: Alt + a letter (Escape stops).
     if (tab === 'sc' && sc.listening) {
-      if (e.key === 'Escape') { e.preventDefault(); sc.listening = false; sc.msg = ''; sc.bad = false; return render(); }
+      if (e.key === 'Escape') { e.preventDefault(); Object.assign(sc, {listening: false, msg: '', bad: false}); return render(); }
       if (['Alt', 'Shift', 'Control', 'Meta', 'AltGraph'].includes(e.key)) return;
       e.preventDefault();
       if (!e.altKey || e.ctrlKey || e.metaKey) {
-        sc.bad = true;
-        sc.msg = 'Hold Alt and press a letter.';
+        Object.assign(sc, {bad: true, ok: false, msg: 'Hold Alt and press a letter.'});
         return render();
       }
       const k = e.code.startsWith('Key') ? e.code.slice(3) : e.code.startsWith('Digit') ? e.code.slice(5) : '';
@@ -677,20 +806,31 @@ const MastBlocklist = (() => {
       pickKey(k);
       return render();
     }
-    if (e.target.matches('[data-q]')) {
-      if (e.key === 'Escape' && e.target.value) {
-        e.preventDefault();  // clears the search; a second Escape closes the panel
-        e.target.value = query = '';
-        render();
-      } else if (e.key === 'Enter') {
-        const dom = cleanDomain(e.target.value);
-        const known = dom && S.categories(state).some((c) => c.services.some((s) => s.domains.includes(dom)));
-        if (dom && !known) { addSite(dom); render(); }
-      }
-    } else if (e.key === 'Enter' && e.target.matches('[data-add]')) {
-      const dom = cleanDomain(e.target.value);
-      if (dom) { e.target.value = ''; addSite(dom); }
+    if (tab === 'sc' && e.key === 'Enter' && (t.matches('[data-scname]') || t.matches('[data-scurl]'))) {
+      e.preventDefault();
+      if (sc.key && !sc.bad && sc.url.trim()) chrome.send('addShortcut', [sc.key, sc.name, sc.url, sc.editing]);
+      return;
     }
+    const k = t.dataset.k;
+    if (k && (e.key === 'Enter' || e.key === 'Escape')) {
+      e.preventDefault();  // Escape leaves the field, not the panel
+      const enter = e.key === 'Enter';
+      if (k === 'add') { if (enter) addSite(); else { kept.add = ''; note = null; render(); } }
+      else if (k === 'newcat') { if (enter) createCategory(); else { naming = false; render(); } }
+      else if (k === 'rename') { if (enter) renameCategory(); else { renaming = false; render(); } }
+      return;
+    }
+    if (t.matches('[data-q]') && e.key === 'Escape' && t.value) {
+      e.preventDefault();  // clears the search; a second Escape closes the panel
+      t.value = query = '';
+      render();
+    }
+  }
+  // Leaving a name field: an empty new category is dropped, a rename is saved.
+  function onBlur(e) {
+    const k = e.target.dataset && e.target.dataset.k;
+    if (k === 'newcat' && naming && !kept.newcat.trim()) { naming = false; setTimeout(render); }
+    if (k === 'rename' && renaming) setTimeout(renameCategory);
   }
 
   return {
@@ -701,8 +841,8 @@ const MastBlocklist = (() => {
       root.innerHTML = `<div class="bl-app">
           <header><nav class="tabs"><button data-tab="bl" class="on">Blocklist</button><button data-tab="sc">Shortcuts</button></nav>
             <span class="meta"></span></header>
-          <label class="search">${mastIcon('search', 16)}<input data-q placeholder="Search sites, or add one like example.com"
-            spellcheck="false" autocomplete="off" aria-label="Search sites"></label>
+          <label class="search">${mastIcon('search', 16)}<input data-q placeholder="Search all sites"
+            spellcheck="false" autocomplete="off" aria-label="Search all sites"></label>
           <div class="bl-body"></div>
           <div class="action"></div>
         </div><div class="bl-toast-host"></div>`;
@@ -714,13 +854,16 @@ const MastBlocklist = (() => {
       root.addEventListener('click', onClick);
       root.addEventListener('input', onInput);
       root.addEventListener('keydown', onKey);
+      root.addEventListener('focusout', onBlur);
       render();
     },
-    // Back to the tiles, search cleared (the new tab opens the panel this way).
+    // Back to the categories, search cleared (the new tab opens the panel this way).
     reset() {
       tab = 'bl';
       view = '';
       query = '';
+      naming = renaming = sureDelete = false;
+      note = null;
       if (searchEl) searchEl.value = '';
       render();
     },
@@ -733,12 +876,29 @@ const MastBlocklist = (() => {
       if (r.shortcut) {
         handled = true;
         if (r.shortcut === 'added') {
-          Object.assign(sc, SC_EMPTY, {msg: `${sc.editing ? 'Saved' : 'Added'}. Press Alt + ${r.key} anywhere in Mast.`});
+          const saved = sc.editing ? 'Saved' : 'Added';
+          Object.assign(sc, SC_EMPTY, {ok: true, msg: `${saved}. Press Alt + ${r.key} anywhere in Mast.`});
         } else if (r.shortcut === 'badUrl') {
-          Object.assign(sc, {err: true, msg: 'That doesn’t look like a web address.'});
+          Object.assign(sc, {err: true, ok: false, msg: 'That doesn’t look like a web address.'});
         } else {
           pickKey(sc.key);  // taken meanwhile, e.g. in another tab
         }
+      }
+      if (r.site) {
+        handled = true;
+        if (r.site === 'added') { kept.add = ''; note = {text: `Added ${r.domain}.`, bad: false}; }
+        else if (r.site === 'listed') note = {text: `Already in ${r.where}.`, bad: true};
+        else note = {text: 'That doesn’t look like a web address.', bad: true};
+      }
+      if ('created' in r) {
+        handled = true;
+        naming = false;
+        kept.newcat = '';
+        if (r.created) open(r.created);
+      }
+      if ('deleted' in r) {
+        handled = true;
+        if (r.deleted) open('');
       }
       if (asked && (r.undone || 'changed' in r)) {
         asked = false;
@@ -746,10 +906,11 @@ const MastBlocklist = (() => {
         if (root) {
           if (r.undone) toast('Undone.');
           else if (!r.changed) toast('Already blocked at least that long.');
-          else toast(`Blocked ${pending} ${r.until === null ? 'forever' : untilText(r.until).toLowerCase()}.`, true);
+          else toast(`Blocked ${pending} ${lower(r.until)}.`, true);
         }
       }
       render();
+      if ('created' in r && r.created && root) focusField('add');
       return handled;
     },
   };

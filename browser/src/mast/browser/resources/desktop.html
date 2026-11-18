@@ -286,22 +286,24 @@ let timed = null;
 // The dock: how long, Block and the blocklist's settings button, with one
 // status line above while something timed is running. Block blocks the
 // distraction set (picked in the blocklist; every category to begin with) and
-// only ever says "Block". With nothing left open, the status line and the
-// settings button stay.
+// only ever says "Block": what's open gets blocked, what's running for less
+// than the picked length gets longer. With everything blocked forever, the
+// status line and the settings button stay.
 function distractionWidget() {
-  const sum = MastSet.summary(state);
+  const sum = MastSet.summary(state, dur);
   const running = MastSet.running(state);
   const rows = running.filter((r) => r.until !== null);
   timed = rows.length ? Math.min(...rows.map((r) => r.until)) : null;
   const gear = `<button class="gear" id="editList" aria-label="Edit blocklist" data-tip="Edit blocklist">${mastIcon('settings', 18)}</button>`;
   const status = statusView();
-  if (!sum.open && running.length) {
+  // Everything in the set blocked forever: nothing left to block or lengthen.
+  if (!sum.open && !sum.timed && running.length) {
     return `<div class="widget dist" aria-label="Distractions">${status}<div class="acts">${gear}</div></div>`;
   }
   return `<div class="widget dist" aria-label="Distractions">
     ${status}${status ? '<i class="sep"></i>' : ''}
     <div class="seg">${DUR.map(([id, label]) => `<button data-dur="${id}" class="${id === dur ? 'on' : ''}" aria-label="${id}">${label}</button>`).join('')}</div>
-    <div class="acts"><i class="bal"></i><button class="primary" id="blockAll" ${sum.open ? '' : 'disabled'}>Block</button>${gear}</div>
+    <div class="acts"><i class="bal"></i><button class="primary" id="blockAll" ${sum.n ? '' : 'disabled'}>Block</button>${gear}</div>
   </div>`;
 }
 
@@ -549,8 +551,8 @@ document.addEventListener('click', (e) => {
   if (t.id === 'addCancel') return document.getElementById('addDialog').close();
   if (t.dataset.dur) { dur = t.dataset.dur; return renderWidgets(); }
   if (t.id === 'blockAll') {
-    const sum = MastSet.summary(state);
-    if (!sum.open) return;
+    const sum = MastSet.summary(state, dur);
+    if (!sum.n) return;
     const go = () => { deskAsked = sum.what; chrome.send('blockDistractions', [dur]); };
     // Forever asks first (design C27b, mastConfirmForever in blocklist.html).
     return dur === 'forever' ? mastConfirmForever(sum.asked, go) : go();

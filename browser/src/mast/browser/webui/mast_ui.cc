@@ -222,6 +222,9 @@ class MastHandler : public content::WebUIMessageHandler,
     On("undo", &MastHandler::HandleUndo);
     On("addSite", &MastHandler::HandleAddSite);
     On("removeSite", &MastHandler::HandleRemoveSite);
+    On("createCategory", &MastHandler::HandleCreateCategory);
+    On("renameCategory", &MastHandler::HandleRenameCategory);
+    On("deleteCategory", &MastHandler::HandleDeleteCategory);
     On("addShortcut", &MastHandler::HandleAddShortcut);
     On("removeShortcut", &MastHandler::HandleRemoveShortcut);
     On("blockDistractions", &MastHandler::HandleBlockDistractions);
@@ -355,10 +358,10 @@ class MastHandler : public content::WebUIMessageHandler,
     Block(domains, StringArg(args, 1));
   }
 
-  // ["blockDistractions", durationId]: what the distraction set still has
-  // open (blocks already running are left as they are).
+  // ["blockDistractions", durationId]: the distraction set, for that long:
+  // what's open gets blocked, what's running for less gets longer.
   void HandleBlockDistractions(const base::ListValue& args) {
-    Block(MastBlocks::Get().OpenDistractionDomains(), StringArg(args, 0));
+    Block(MastBlocks::Get().DistractionEntries(), StringArg(args, 0));
   }
 
   void Block(const std::vector<std::string>& domains,
@@ -376,8 +379,9 @@ class MastHandler : public content::WebUIMessageHandler,
     SendState(std::move(result));
   }
 
-  // ["setDistractions", [categoryIds], [skipped site keys], youtubeMusic]:
-  // the whole set at once (the blocklist panel's tiles, design C28d).
+  // ["setDistractions", [categoryIds], [skipped site keys], youtube mode]:
+  // the whole set at once (the blocklist panel, design C28d). The mode is
+  // "site", "music" or "shorts" (YouTubeModeId).
   void HandleSetDistractions(const base::ListValue& args) {
     auto strings = [&](size_t i) {
       std::vector<std::string> out;
@@ -393,7 +397,7 @@ class MastHandler : public content::WebUIMessageHandler,
     MastBlocks::Distractions d;
     d.categories = strings(0);
     d.skipped = strings(1);
-    d.youtube_music = args.size() > 2 && args[2].is_bool() && args[2].GetBool();
+    d.youtube = YouTubeModeFromId(StringArg(args, 2)).value_or(YouTubeMode::kSite);
     MastBlocks::Get().SetDistractions(d);
     SendState();
   }
@@ -583,14 +587,39 @@ class MastHandler : public content::WebUIMessageHandler,
     SendState(base::DictValue().Set("undone", true));
   }
 
+  // ["addSite", categoryId, input]: a site of the user's own, in a built-in
+  // category or one of theirs (design C33). Answers {site: "added" | "invalid"
+  // | "listed", domain or where}.
   void HandleAddSite(const base::ListValue& args) {
-    MastBlocks::Get().AddSite(StringArg(args));
+    const MastBlocks::AddResult r =
+        MastBlocks::Get().AddSite(StringArg(args, 0), StringArg(args, 1));
+    SendState(r.error.empty()
+                  ? base::DictValue().Set("site", "added").Set("domain", r.domain)
+                  : base::DictValue().Set("site", r.error).Set("where", r.where));
+  }
+
+  // ["removeSite", categoryId, domain]: only a site the user added.
+  void HandleRemoveSite(const base::ListValue& args) {
+    MastBlocks::Get().RemoveSite(StringArg(args, 0), StringArg(args, 1));
     SendState();
   }
 
-  void HandleRemoveSite(const base::ListValue& args) {
-    MastBlocks::Get().RemoveSite(StringArg(args));
+  // ["createCategory", name]: answers {created: id} (empty if the name was).
+  void HandleCreateCategory(const base::ListValue& args) {
+    SendState(base::DictValue().Set(
+        "created", MastBlocks::Get().CreateCategory(StringArg(args))));
+  }
+
+  // ["renameCategory", id, name]: only the user's own.
+  void HandleRenameCategory(const base::ListValue& args) {
+    MastBlocks::Get().RenameCategory(StringArg(args, 0), StringArg(args, 1));
     SendState();
+  }
+
+  // ["deleteCategory", id]: only the user's own, while none of it is blocked.
+  void HandleDeleteCategory(const base::ListValue& args) {
+    SendState(base::DictValue().Set(
+        "deleted", MastBlocks::Get().DeleteCategory(StringArg(args))));
   }
 
   // ["addShortcut", key, name, url, replaces]: Alt + key opens url in a new
@@ -680,13 +709,31 @@ class MastHandler : public content::WebUIMessageHandler,
     for (const auto& [domain, block] : blocks.Active()) {
       active.Set(domain, BlockValue(block));
     }
-    base::ListValue custom;
-    for (const std::string& site : blocks.CustomSites()) {
-      custom.Append(site);
+    // Sites the user added to built-in categories, and their own categories
+    // (design C33).
+    base::DictValue additions;
+    for (const auto& [id, sites] : blocks.Additions()) {
+      base::ListValue list;
+      for (const std::string& site : sites) {
+        list.Append(site);
+      }
+      additions.Set(id, std::move(list));
+    }
+    base::ListValue own;
+    for (const UserCategory& c : blocks.UserCategories()) {
+      base::ListValue sites;
+      for (const std::string& site : c.sites) {
+        sites.Append(site);
+      }
+      own.Append(base::DictValue()
+                     .Set("id", c.id)
+                     .Set("name", c.name)
+                     .Set("sites", std::move(sites)));
     }
     base::DictValue state;
     state.Set("categories", CategoriesValue().Clone());
-    state.Set("custom", std::move(custom));
+    state.Set("additions", std::move(additions));
+    state.Set("userCategories", std::move(own));
     state.Set("blocks", std::move(active));
     state.Set("lastDuration", blocks.last_duration());
     state.Set("canUndo", blocks.CanUndo());
@@ -704,7 +751,7 @@ class MastHandler : public content::WebUIMessageHandler,
     state.Set("distractions", base::DictValue()
                                   .Set("categories", std::move(set_categories))
                                   .Set("skipped", std::move(set_skipped))
-                                  .Set("youtubeMusic", set.youtube_music));
+                                  .Set("youtube", YouTubeModeId(set.youtube)));
     state.Set("desktop", DesktopValue());
     // A model still loading reports no sites yet; the observer repaints.
     state.Set("desktopReady", bookmarks_ && bookmarks_->loaded());

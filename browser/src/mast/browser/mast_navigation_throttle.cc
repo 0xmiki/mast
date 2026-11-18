@@ -88,21 +88,33 @@ MastNavigationThrottle::Decide() {
   MastBlocks& blocks = MastBlocks::Get();
   const std::optional<BlockMatch> match = blocks.ForUrl(url);
   if (!match) {
-    // YouTube, music only: Shorts, and videos the page found aren't music
-    // (youtube_music.js reloads them with this marker), get the blocked page.
+    // YouTube, Music only or Shorts: Shorts get the blocked page, and with
+    // Music only so do videos the page found aren't music (youtube_music.js
+    // reloads them with this marker).
     const std::optional<Block> music = blocks.YouTubeMusicOnly();
-    if (music && IsYouTubeHost(url.host()) &&
-        (url.path().starts_with("/shorts") ||
-         url.query().find("mast_music_only=1") != std::string_view::npos)) {
-      if (navigation_handle()->IsInPrimaryMainFrame()) {
-        blocks.RecordBlocked();
-      }
-      return ThrottleCheckResult(
-          CANCEL, net::ERR_BLOCKED_BY_CLIENT,
-          BlockPageHtml(host, BlockMatch{kYouTubeMusicKey, *music}, backdrop(),
-                        "Music only"));
+    const std::optional<Block> shorts = blocks.YouTubeShortsOnly();
+    if ((!music && !shorts) || !IsYouTubeHost(url.host())) {
+      return PROCEED;
     }
-    return PROCEED;
+    const bool is_short = url.path().starts_with("/shorts");
+    const bool not_music =
+        music && url.query().find("mast_music_only=1") != std::string_view::npos;
+    if (!is_short && !not_music) {
+      return PROCEED;
+    }
+    if (navigation_handle()->IsInPrimaryMainFrame()) {
+      blocks.RecordBlocked();
+    }
+    // The page names the block that lasts longest (Music only hides Shorts
+    // too).
+    const bool by_music =
+        music && (not_music || !shorts || Outlasts(music->until, shorts->until));
+    return ThrottleCheckResult(
+        CANCEL, net::ERR_BLOCKED_BY_CLIENT,
+        by_music ? BlockPageHtml(host, BlockMatch{kYouTubeMusicKey, *music},
+                                 backdrop(), "Music only")
+                 : BlockPageHtml(host, BlockMatch{kYouTubeShortsKey, *shorts},
+                                 backdrop(), "Shorts blocked"));
   }
   if (navigation_handle()->IsInPrimaryMainFrame()) {
     blocks.RecordBlocked();

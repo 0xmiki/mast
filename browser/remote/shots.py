@@ -243,6 +243,26 @@ def pick_all(on):
             break
         time.sleep(0.3)
 pick_all(False)
+# Block Shorts first (design C32): YouTube stays, its Shorts go.
+p.js("document.querySelector('[data-yt=shorts]').click()")
+time.sleep(0.3)
+p.js("document.querySelector('[data-dur=\"1h\"]').click()")
+time.sleep(0.3)
+shot("46-yt-shorts-choice")
+p.js("document.querySelector('[data-act=block]').click()")
+time.sleep(1)
+# The builder is in the EU: answer YouTube's cookie question first, as a person would.
+p.go("https://www.youtube.com/", 6)
+p.js("[...document.querySelectorAll('button')].find((b) => /Reject all|Hylkää kaikki/.test(b.textContent))?.click()")
+time.sleep(3)
+p.go("https://www.youtube.com/", 6)
+shot("47-yt-shorts-home", settle=2)
+p.go("https://www.youtube.com/results?search_query=lofi+hip+hop", 6)
+shot("48-yt-shorts-search", settle=2)
+p.go("https://www.youtube.com/shorts/aqz-KE-bpKQ", 4)
+shot("49-yt-shorts-blocked")
+# Then Music only on top of it.
+p.go("chrome://mast")
 p.js("document.querySelector('[data-yt=music]').click()")
 time.sleep(0.3)
 p.js("document.querySelector('[data-dur=\"1h\"]').click()")
@@ -250,10 +270,6 @@ time.sleep(0.3)
 shot("40-yt-choice")
 p.js("document.querySelector('[data-act=block]').click()")
 time.sleep(1)
-# The builder is in the EU: answer YouTube's cookie question first, as a person would.
-p.go("https://www.youtube.com/", 6)
-p.js("[...document.querySelectorAll('button')].find((b) => /Reject all|Hylkää kaikki/.test(b.textContent))?.click()")
-time.sleep(3)
 p.go("https://www.youtube.com/results?search_query=lofi+hip+hop", 6)
 shot("41-yt-music-search", settle=2)
 p.go("https://www.youtube.com/shorts/aqz-KE-bpKQ", 4)
@@ -301,6 +317,21 @@ keys("Escape")
 p.go("chrome://newtab")
 p.js("document.getElementById('editList').click()")
 shot("17-blocklist-panel")
+# A category of your own (design C33): name it, add a site; then a built-in one.
+def field(k, text):
+    p.js(f"""(() => {{ const i = document.querySelector('.bl [data-k={k}]'); i.focus(); i.value = {json.dumps(text)};
+      i.dispatchEvent(new Event('input', {{bubbles: true}}));
+      i.dispatchEvent(new KeyboardEvent('keydown', {{key: 'Enter', bubbles: true}})); }})()""")
+    time.sleep(0.5)
+p.js("document.querySelector('.bl [data-act=newcat]').click()")
+field("newcat", "Late night")
+field("add", "lobste.rs")
+shot("17c-own-category")
+p.js("document.querySelector('.bl [data-view=\"\"]').click()")
+p.js("document.querySelector('.bl [data-view=news]').click()")
+field("add", "semafor.com")
+shot("17d-category-news")
+p.js("document.querySelector('.bl [data-view=\"\"]').click()")
 # Its Shortcuts tab (design C32): add Alt + N for a search, then try Alt + F (taken).
 p.js("document.querySelector('.bl [data-tab=sc]').click()")
 p.js("""(() => { const u = document.querySelector('.bl [data-scurl]'); u.value = 'google.com/search?q=nvidia+stock';

@@ -8,12 +8,14 @@
 
 namespace mast {
 
-// YouTube, music only (design C24; the block entry kYouTubeMusicKey). While
-// it's in force, every YouTube page in this tab runs resources/youtube_music.js
-// in Mast's own isolated world (where an extension's content script would run,
-// but built in): it hides everything but music and sends other videos and
-// Shorts to the blocked page, which the navigation throttle shows. Attached to
-// every tab by the throttle.
+// YouTube, Music only (design C24, the block entry kYouTubeMusicKey) and
+// Shorts (C32, kYouTubeShortsKey). While either is in force, every YouTube
+// page in this tab runs resources/youtube_music.js in Mast's own isolated
+// world (where an extension's content script would run, but built in). Shorts:
+// it hides Shorts and sends them to the blocked page. Music only: that, and it
+// hides everything but music and sends other videos to the blocked page too.
+// The navigation throttle shows the page. Attached to every tab by the
+// throttle.
 class MastYouTube : public content::WebContentsObserver,
                     public content::WebContentsUserData<MastYouTube> {
  public:
@@ -29,7 +31,8 @@ class MastYouTube : public content::WebContentsObserver,
   friend class content::WebContentsUserData<MastYouTube>;
   explicit MastYouTube(content::WebContents* contents);
 
-  // Runs the script in the page if Music only is on and it's a YouTube page.
+  // Runs the script in the page if Music only or Shorts is on and it's a
+  // YouTube page.
   // The script runs once per page (it checks), so calling twice is harmless.
   void MaybeInject(content::RenderFrameHost* frame);
 

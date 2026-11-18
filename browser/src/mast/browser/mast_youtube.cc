@@ -20,7 +20,8 @@ namespace mast {
 
 namespace {
 
-// resources/youtube_music.js, embedded by remote/embed-pages.py.
+// resources/youtube_music.js (Music only and Shorts), embedded by
+// remote/embed-pages.py.
 constexpr char kYouTubeMusicJs[] =
 #include "mast/browser/resources/youtube_music_js.inc"
     ;
@@ -58,15 +59,24 @@ void MastYouTube::MaybeInject(content::RenderFrameHost* frame) {
     return;
   }
   const std::optional<Block> music = MastBlocks::Get().YouTubeMusicOnly();
-  if (!music) {
+  const std::optional<Block> shorts = MastBlocks::Get().YouTubeShortsOnly();
+  if (!music && !shorts) {
     return;
   }
+  // Each mode's end: "0" when it isn't on, "null" for forever.
+  const auto until = [](const std::optional<Block>& block) -> std::string {
+    if (!block) {
+      return "0";
+    }
+    return block->until ? base::NumberToString(
+                              block->until->InMillisecondsSinceUnixEpoch())
+                        : "null";
+  };
   std::string script(kYouTubeMusicJs);
-  base::ReplaceSubstringsAfterOffset(
-      &script, 0, "{{UNTIL}}",
-      music->until
-          ? base::NumberToString(music->until->InMillisecondsSinceUnixEpoch())
-          : std::string("null"));
+  base::ReplaceSubstringsAfterOffset(&script, 0, "{{MUSIC_UNTIL}}",
+                                     until(music));
+  base::ReplaceSubstringsAfterOffset(&script, 0, "{{SHORTS_UNTIL}}",
+                                     until(shorts));
   frame->ExecuteJavaScriptInIsolatedWorld(base::UTF8ToUTF16(script),
                                           base::NullCallback(),
                                           ISOLATED_WORLD_ID_CHROME_INTERNAL);
