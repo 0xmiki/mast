@@ -15,3 +15,15 @@ Docs:
 
 The browser binary and the Chromium source are not in this repo. They live on the builder
 and are rebuilt from `browser/` (pinned to Chromium `browser/chromium_version.txt`).
+
+## Licence
+
+Mast is free software under the [GNU General Public License v3.0](LICENSE).
+
+It builds on [Chromium](https://www.chromium.org/) and
+[ungoogled-chromium](https://github.com/ungoogled-software/ungoogled-chromium), both under
+BSD-style licences. The patches in `browser/patches/` and the files in `browser/src/overrides/`
+change their code, which stays under their notices (Chromium's `LICENSE` and
+ungoogled-chromium's). The built-in pictures are NASA's, in the public domain
+([credits](browser/wallpapers/CREDITS.md)); the wordmark is drawn from Host Grotesk (SIL Open
+Font License).
