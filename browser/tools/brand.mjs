@@ -12,7 +12,7 @@
 //             appears in the logo.
 //   Icon      White sails on a flat black tile (corner radius 11%). No gradient, no outline.
 //   Glyph     The bare sails in the current text colour: toolbar, chips, Mast's own pages.
-//   Outline   The same sails as an inside stroke: an empty new tab only.
+//   Outline   The same sails as an inside stroke (design/brand only; tabs use the glyph).
 //   Wordmark  "Mast", drawn from Host Grotesk SemiBold (OFL) and kept as outlines; the t is
 //             raised to cap height and cut at the angle of the mainsail's head.
 //   Lockup    Sails + wordmark on one baseline. Cap height = the jib's height, so the mainsail
@@ -244,12 +244,13 @@ for (const [dir, scale] of [['default_100_percent', 1], ['default_200_percent', 
 	png(join(res, 'product_logo.png'), lockupSvg(171 * scale, 32 * scale, INK, 2 * scale));
 	png(join(res, 'product_logo_white.png'), lockupSvg(171 * scale, 32 * scale, PAPER, 2 * scale));
 
-	// An empty new tab: the outline. Chromium tints it to the tab's text colour.
-	png(join(theme, dir, 'common/favicon_ntp.png'), outlineSvg(16 * scale, '#9a9a9a'));
+	// A new tab and Mast's own pages: the filled sails in the tabs' text colour (Onyx's
+	// #ededed); the one-row window recolours them to each tab's own title colour.
+	png(join(theme, dir, 'common/favicon_ntp.png'), markSvg(16 * scale, '#ededed'));
 }
 png(join(theme, 'chromium/product_logo_22_mono.png'), markSvg(22, INK));
 
-// Mast's own pages (blocked, chrome://mast, welcome) use the same outline as their tab icon,
+// Mast's own pages (blocked, chrome://mast, welcome) use the same icon as a new tab,
 // inlined as kIcon in mast_pages.cc, so a tab never switches between two icons.
 {
 	const pages = join(ROOT, 'browser/src/mast/browser/mast_pages.cc');

@@ -1,10 +1,12 @@
 diff -ruN a/chrome/browser/ui/browser_window/internal/BUILD.gn b/chrome/browser/ui/browser_window/internal/BUILD.gn
 --- a/chrome/browser/ui/browser_window/internal/BUILD.gn
 +++ b/chrome/browser/ui/browser_window/internal/BUILD.gn
-@@ -13,6 +13,13 @@
+@@ -13,6 +13,15 @@
      "profile_browser_collection.cc",
    ]
    deps = [
++    "//services/network/public/cpp",
++    "//third_party/widevine/cdm:buildflags",
 +    "//ui/gfx/geometry",
 +    "//ui/gfx/animation",
 +    "//components/viz/common",
@@ -15,7 +17,7 @@ diff -ruN a/chrome/browser/ui/browser_window/internal/BUILD.gn b/chrome/browser/
      "//base",
      "//chrome/browser:browser_process",
      "//chrome/browser:global_features",
-@@ -66,6 +73,12 @@
+@@ -66,6 +75,16 @@
        "create_browser_window_non_android.cc",
        "desktop_browser_window_capabilities.cc",
        "embedder_browser_window_features.cc",
@@ -25,6 +27,10 @@ diff -ruN a/chrome/browser/ui/browser_window/internal/BUILD.gn b/chrome/browser/
 +      "//mast/browser/ui/mast_tab_bar.h",
 +      "//mast/browser/ui/mast_shortcuts.cc",
 +      "//mast/browser/ui/mast_shortcuts.h",
++      "//mast/browser/ui/mast_widevine.cc",
++      "//mast/browser/ui/mast_widevine.h",
++      "//mast/browser/ui/mast_update_check.cc",
++      "//mast/browser/ui/mast_update_check.h",
        "global_browser_collection_platform_delegate_non_android.cc",
      ]
      public_deps = [ "//chrome/browser/ui:browser_live_tab_context" ]
