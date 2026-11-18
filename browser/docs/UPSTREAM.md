@@ -13,9 +13,9 @@ and re-run. `./mast check-rebase <version>` checks all of this against another r
 | `mast-branding.patch` | 5 edits |
 | `mast-ungoogled.patch` | 2 edits |
 | `mast-webstore.patch` | 11 edits |
-| Chromium headers included by `src/mast` | 172 |
+| Chromium headers included by `src/mast` | 175 |
 | Upstream methods overridden | 42 |
-| Upstream GN deps | 28 |
+| Upstream GN deps | 30 |
 | ungoogled patches dropped / added | 1 / 1 |
 
 ## 1. Edits to upstream files
@@ -184,9 +184,9 @@ between releases and flags changes to the names below.
 | `base/scoped_observation.h` | mast/browser/ui/mast_shortcuts.h, mast/browser/webui/mast_ui.cc |
 | `base/strings/escape.h` | mast/browser/mast_pages.cc |
 | `base/strings/strcat.h` | mast/browser/mast_blocks.cc |
-| `base/strings/string_number_conversions.h` | mast/browser/import/mast_import.cc, mast/browser/mast_pages.cc, mast/browser/mast_youtube.cc, mast/browser/ui/mast_block_bubble.cc, mast/browser/webui/mast_ui.cc |
+| `base/strings/string_number_conversions.h` | mast/browser/import/mast_import.cc, mast/browser/mast_blocks.cc, mast/browser/mast_pages.cc, mast/browser/mast_youtube.cc, mast/browser/ui/mast_block_bubble.cc, mast/browser/webui/mast_ui.cc |
 | `base/strings/string_split.h` | mast/browser/mast_feeds.cc |
-| `base/strings/string_util.h` | mast/browser/mast_blocklist.cc, mast/browser/mast_feeds.cc, mast/browser/mast_pages.cc, mast/browser/mast_youtube.cc, mast/browser/webui/mast_ui.cc |
+| `base/strings/string_util.h` | mast/browser/mast_blocklist.cc, mast/browser/mast_blocks.cc, mast/browser/mast_feeds.cc, mast/browser/mast_pages.cc, mast/browser/mast_youtube.cc, mast/browser/webui/mast_ui.cc |
 | `base/strings/stringprintf.h` | mast/browser/mast_blocks.cc, mast/browser/mast_pages.cc, mast/browser/webui/mast_ui.cc |
 | `base/strings/utf_string_conversions.h` | mast/browser/import/mast_import.cc, mast/browser/mast_youtube.cc, mast/browser/ui/mast_block_bubble.cc, mast/browser/webui/mast_ui.cc |
 | `base/task/bind_post_task.h` | mast/browser/ui/mast_tab_bar.cc |
@@ -206,6 +206,7 @@ between releases and flags changes to the names below.
 | `chrome/browser/importer/profile_writer.h` | mast/browser/import/mast_import.cc |
 | `chrome/browser/prefs/session_startup_pref.h` | mast/browser/mast_prefs.cc |
 | `chrome/browser/profiles/profile.h` | mast/browser/import/mast_import.cc, mast/browser/mast_wallpapers.cc, mast/browser/ui/mast_one_row_toolbar.cc, mast/browser/ui/mast_shortcuts.cc, mast/browser/ui/mast_tab_bar.cc, mast/browser/ui/mast_wallpaper.cc, mast/browser/webui/mast_ui.cc |
+| `chrome/browser/search_engines/template_url_service_factory.h` | mast/browser/webui/mast_ui.cc |
 | `chrome/browser/shell_integration.h` | mast/browser/webui/mast_ui.cc |
 | `chrome/browser/themes/theme_properties.h` | mast/browser/mast_page_backdrop.cc, mast/browser/ui/mast_wallpaper.cc, mast/browser/webui/mast_ui.cc |
 | `chrome/browser/ui/browser_window.h` | mast/browser/ui/mast_tab_bar.cc |
@@ -243,6 +244,8 @@ between releases and flags changes to the names below.
 | `components/prefs/pref_registry_simple.h` | mast/browser/mast_blocks.cc |
 | `components/prefs/pref_service.h` | mast/browser/mast_blocks.cc, mast/browser/mast_page_backdrop.cc, mast/browser/mast_theme.h, mast/browser/mast_wallpapers.cc, mast/browser/ui/mast_one_row_toolbar.cc, mast/browser/ui/mast_shortcuts.cc, mast/browser/ui/mast_tab_bar.cc, mast/browser/ui/mast_wallpaper.cc, mast/browser/webui/mast_ui.cc |
 | `components/prefs/scoped_user_pref_update.h` | mast/browser/mast_blocks.cc |
+| `components/search_engines/template_url.h` | mast/browser/webui/mast_ui.cc |
+| `components/search_engines/template_url_service.h` | mast/browser/webui/mast_ui.cc |
 | `components/tabs/public/tab_interface.h` | mast/browser/ui/mast_block_bubble.cc |
 | `components/url_formatter/url_fixer.h` | mast/browser/webui/mast_ui.cc |
 | `components/user_data_importer/common/importer_data_types.h` | mast/browser/import/mast_import.cc |
@@ -338,6 +341,7 @@ between releases and flags changes to the names below.
 | `//base` | mast/browser/BUILD.gn, mast/browser/desktop/BUILD.gn, mast/browser/import/BUILD.gn, mast/browser/webui/BUILD.gn, mast/common/BUILD.gn |
 | `//chrome/browser/bookmarks` | mast/browser/import/BUILD.gn, mast/browser/webui/BUILD.gn |
 | `//chrome/browser/profiles:profile` | mast/browser/BUILD.gn, mast/browser/import/BUILD.gn, mast/browser/webui/BUILD.gn |
+| `//chrome/browser/search_engines` | mast/browser/webui/BUILD.gn |
 | `//chrome/browser/ui/webui:favicon_source` | mast/browser/webui/BUILD.gn |
 | `//chrome/browser:browser_process` | mast/browser/BUILD.gn |
 | `//chrome/common:constants` | mast/browser/BUILD.gn |
@@ -349,6 +353,7 @@ between releases and flags changes to the names below.
 | `//components/power_bookmarks/core` | mast/browser/desktop/BUILD.gn |
 | `//components/pref_registry` | mast/browser/BUILD.gn |
 | `//components/prefs` | mast/browser/BUILD.gn, mast/browser/webui/BUILD.gn |
+| `//components/search_engines` | mast/browser/webui/BUILD.gn |
 | `//components/url_formatter` | mast/browser/webui/BUILD.gn |
 | `//components/user_data_importer/common` | mast/browser/import/BUILD.gn |
 | `//components/user_prefs` | mast/browser/BUILD.gn |
