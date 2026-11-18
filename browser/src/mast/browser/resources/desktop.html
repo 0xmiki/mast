@@ -68,13 +68,6 @@ body { background: var(--surface); }
 .run .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--signal); flex: none; }
 .run .nm { color: var(--text); font-size: 16px; font-weight: 600; white-space: nowrap; }
 .run .left { color: var(--text-2); font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.run .ext { display: none; align-items: center; gap: 18px; padding: 2px 0; }
-.run .ext span { color: var(--text-2); font-size: 12px; font-weight: 500; }
-.run .ext button { height: 24px; padding: 0; border: 0; background: none; color: var(--text); font-size: 14px; font-weight: 500; }
-.run .ext button:hover { text-decoration: underline; text-underline-offset: 4px; }
-/* Hover or Tab onto it: it offers longer blocks only. */
-.run.can:hover, .run.can:focus-within { background: rgb(255 255 255/.08); }
-.run.can:hover .ext, .run.can:focus-within .ext { display: flex; }
 .dist .sep { width: 120px; height: 1px; background: var(--line); }
 dialog { width: 340px; padding: 18px; border: 0; border-radius: 10px; background: var(--field); color: var(--text); box-shadow: var(--shadow); }
 dialog::backdrop { background: rgb(0 0 0/.35); }
@@ -261,11 +254,6 @@ function untilText(u) {
   if (u - Date.now() < 2 * D) return 'until tomorrow ' + hm(u);
   return 'until ' + day(u);
 }
-function untilFor(id) {
-  const now = Date.now();
-  return {'1h': now + 36e5, '4h': now + 4 * 36e5, today: midnight(), week: now + 7 * D, month: now + 30 * D, forever: null}[id];
-}
-const outlasts = (a, b) => a === null || (b !== null && a > b);
 const ind = (b) => `<i class="ind ${b ? (b.until === null ? 'forever' : 'timed') : ''}"></i>`;
 const plus = '<svg width="26" height="26" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12M4 10h12"/></svg>';
 const cross = '<svg width="8" height="8" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.6"><path d="M2 2l6 6M8 2l-6 6"/></svg>';
@@ -292,9 +280,7 @@ function renderWidgets() {
   w.innerHTML = distractionWidget();
 }
 
-// The timed blocks taken as one, kept for the extend buttons: when the first
-// of them ends, and every entry they cover (extending blocks them all again,
-// never shorter than they already are).
+// When the first of the timed blocks ends (null: none running).
 let timed = null;
 
 // The dock: how long, Block and the blocklist's settings button, with one
@@ -306,7 +292,7 @@ function distractionWidget() {
   const sum = MastSet.summary(state);
   const running = MastSet.running(state);
   const rows = running.filter((r) => r.until !== null);
-  timed = rows.length ? {until: Math.min(...rows.map((r) => r.until)), entries: rows.flatMap((r) => r.entries)} : null;
+  timed = rows.length ? Math.min(...rows.map((r) => r.until)) : null;
   const gear = `<button class="gear" id="editList" aria-label="Edit blocklist" data-tip="Edit blocklist">${mastIcon('settings', 18)}</button>`;
   const status = statusView();
   if (!sum.open && running.length) {
@@ -319,15 +305,13 @@ function distractionWidget() {
   </div>`;
 }
 
-// "Blocked until 6:40 PM" and the countdown to it; hovering offers longer.
+// "Blocked until 6:40 PM" and the countdown to it. Nothing to press: a
+// longer block is the dock's Block, or the blocklist.
 function statusView() {
-  if (!timed) return '';
-  const longer = DUR.filter(([id]) => outlasts(untilFor(id), timed.until + 6e4));
-  const ext = !longer.length ? '' : `<div class="ext"><span>Extend</span>${longer.map(([id, label]) =>
-    `<button data-extend="${id}" aria-label="Extend: ${id}">${label}</button>`).join('')}</div>`;
-  return `<div class="run ${longer.length ? 'can' : ''}" role="status" ${longer.length ? 'tabindex="0"' : ''}>
-    <div class="line"><i class="dot"></i><span class="nm">Blocked ${untilText(timed.until)}</span></div>
-    <span class="left" data-until="${timed.until}">${leftText(timed.until)}</span>${ext}</div>`;
+  if (timed === null) return '';
+  return `<div class="run" role="status">
+    <div class="line"><i class="dot"></i><span class="nm">Blocked ${untilText(timed)}</span></div>
+    <span class="left" data-until="${timed}">${leftText(timed)}</span></div>`;
 }
 
 // "5:47:12 left" under a day, "6 days, 23 h left" beyond.
@@ -495,7 +479,7 @@ document.getElementById('czFile').addEventListener('change', (e) => {
 });
 
 // A block/undo from the dock is waiting: what Block was pressed for ("News",
-// "10 categories", "everything"), 'extend' for a row, true for undo.
+// "10 categories", "everything"), true for undo.
 let deskAsked = false;
 window.mastState = (s) => {
   const first = !state;
@@ -518,7 +502,6 @@ window.mastState = (s) => {
     deskAsked = false;
     if (r.undone) toast('Undone.');
     else if (!r.changed) toast('Already blocked at least that long.');
-    else if (asked === 'extend') toast(`Extended ${untilText(r.until)}.`, true);
     else toast(`Blocked ${asked === true ? 'distractions' : asked} ${untilText(r.until)}.`, true);
   }
   if (document.getElementById('addDialog').open && !r.invalidSite) document.getElementById('addDialog').close();
@@ -571,13 +554,6 @@ document.addEventListener('click', (e) => {
     const go = () => { deskAsked = sum.what; chrome.send('blockDistractions', [dur]); };
     // Forever asks first (design C27b, mastConfirmForever in blocklist.html).
     return dur === 'forever' ? mastConfirmForever(sum.asked, go) : go();
-  }
-  // A longer block for everything timed (design C29c), never shorter.
-  if (t.dataset.extend) {
-    if (!timed) return;
-    const id = t.dataset.extend, entries = timed.entries;
-    const go = () => { deskAsked = 'extend'; chrome.send('block', [entries, id]); };
-    return id === 'forever' ? mastConfirmForever('What’s blocked now', go) : go();
   }
   if (t.id === 'undo') {
     clearInterval(toastTimer);
