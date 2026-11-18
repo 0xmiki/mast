@@ -242,22 +242,6 @@
             {
               "type": "frame",
               "width": 1,
-              "height": 14,
-              "fill": "transparent",
-              "id": "in5cj",
-              "children": []
-            },
-            {
-              "type": "text",
-              "text": "Let's get you set up. It takes a minute.",
-              "fontSize": 16,
-              "color": "$text-2",
-              "lineHeight": 1.55,
-              "id": "wyxln"
-            },
-            {
-              "type": "frame",
-              "width": 1,
               "height": 32,
               "fill": "transparent",
               "id": "xxhrv",
@@ -412,22 +396,6 @@
               "fontWeight": 500,
               "letterSpacing": -0.8,
               "id": "tmy30"
-            },
-            {
-              "type": "frame",
-              "width": 1,
-              "height": 14,
-              "fill": "transparent",
-              "id": "fsmxy",
-              "children": []
-            },
-            {
-              "type": "text",
-              "text": "Bookmarks, history and extensions. Nothing leaves your computer.",
-              "fontSize": 16,
-              "color": "$text-2",
-              "lineHeight": 1.55,
-              "id": "jewec"
             },
             {
               "type": "frame",
@@ -938,15 +906,6 @@
                       ]
                     }
                   ]
-                },
-                {
-                  "type": "text",
-                  "text": "Sites in your bookmarks bar go on your new tab page. Extensions are reinstalled from the Web Store.\nPasswords stay where they are: export them from your old browser if you want them here.",
-                  "fontSize": 12,
-                  "color": "$text-3",
-                  "width": "fill",
-                  "lineHeight": 1.5,
-                  "id": "byplq"
                 }
               ]
             },
@@ -1031,7 +990,7 @@
     },
     {
       "type": "frame",
-      "name": "3 · Search engine (new) · A: the full list",
+      "name": "3 · Search engine (new)",
       "x": 3120,
       "y": 0,
       "width": 1440,
@@ -1091,22 +1050,6 @@
               "fontWeight": 500,
               "letterSpacing": -0.8,
               "id": "j7y0u"
-            },
-            {
-              "type": "frame",
-              "width": 1,
-              "height": 14,
-              "fill": "transparent",
-              "id": "v8xjy",
-              "children": []
-            },
-            {
-              "type": "text",
-              "text": "Google is set. Pick another if you prefer; Settings can change it any time.",
-              "fontSize": 16,
-              "color": "$text-2",
-              "lineHeight": 1.55,
-              "id": "b3x25"
             },
             {
               "type": "frame",
@@ -1184,13 +1127,6 @@
                           "color": "$text",
                           "fontWeight": 600,
                           "id": "hdn1i"
-                        },
-                        {
-                          "type": "text",
-                          "text": "google.com",
-                          "fontSize": 12,
-                          "color": "$text-3",
-                          "id": "phs84"
                         }
                       ]
                     },
@@ -1263,13 +1199,6 @@
                           "color": "$text",
                           "fontWeight": 600,
                           "id": "nript"
-                        },
-                        {
-                          "type": "text",
-                          "text": "duckduckgo.com",
-                          "fontSize": 12,
-                          "color": "$text-3",
-                          "id": "o1xjy"
                         }
                       ]
                     },
@@ -1342,13 +1271,6 @@
                           "color": "$text",
                           "fontWeight": 600,
                           "id": "d9h1r"
-                        },
-                        {
-                          "type": "text",
-                          "text": "bing.com",
-                          "fontSize": 12,
-                          "color": "$text-3",
-                          "id": "rpcep"
                         }
                       ]
                     },
@@ -1421,13 +1343,6 @@
                           "color": "$text",
                           "fontWeight": 600,
                           "id": "yvz5z"
-                        },
-                        {
-                          "type": "text",
-                          "text": "search.brave.com",
-                          "fontSize": 12,
-                          "color": "$text-3",
-                          "id": "r1aox"
                         }
                       ]
                     },
@@ -1447,7 +1362,7 @@
                 },
                 {
                   "type": "frame",
-                  "name": "Ecosia",
+                  "name": "Baidu",
                   "width": "fill",
                   "height": 56,
                   "padding": [
@@ -1468,7 +1383,7 @@
                       "width": 32,
                       "height": 32,
                       "radius": 16,
-                      "fill": "#36acb8",
+                      "fill": "#2932e1",
                       "layout": "row",
                       "justify": "center",
                       "align": "center",
@@ -1476,7 +1391,7 @@
                       "children": [
                         {
                           "type": "text",
-                          "text": "E",
+                          "text": "B",
                           "fontSize": 15,
                           "color": "#fff",
                           "fontWeight": 700,
@@ -1495,18 +1410,11 @@
                       "children": [
                         {
                           "type": "text",
-                          "text": "Ecosia",
+                          "text": "Baidu",
                           "fontSize": 14,
                           "color": "$text",
                           "fontWeight": 600,
                           "id": "b07io"
-                        },
-                        {
-                          "type": "text",
-                          "text": "ecosia.org",
-                          "fontSize": 12,
-                          "color": "$text-3",
-                          "id": "i4c79"
                         }
                       ]
                     },
@@ -1526,7 +1434,7 @@
                 },
                 {
                   "type": "frame",
-                  "name": "Startpage",
+                  "name": "Yandex",
                   "width": "fill",
                   "height": 56,
                   "padding": [
@@ -1547,7 +1455,7 @@
                       "width": 32,
                       "height": 32,
                       "radius": 16,
-                      "fill": "#6573ff",
+                      "fill": "#fc3f1d",
                       "layout": "row",
                       "justify": "center",
                       "align": "center",
@@ -1555,7 +1463,7 @@
                       "children": [
                         {
                           "type": "text",
-                          "text": "S",
+                          "text": "Y",
                           "fontSize": 15,
                           "color": "#fff",
                           "fontWeight": 700,
@@ -1574,18 +1482,11 @@
                       "children": [
                         {
                           "type": "text",
-                          "text": "Startpage",
+                          "text": "Yandex",
                           "fontSize": 14,
                           "color": "$text",
                           "fontWeight": 600,
                           "id": "bl824"
-                        },
-                        {
-                          "type": "text",
-                          "text": "startpage.com",
-                          "fontSize": 12,
-                          "color": "$text-3",
-                          "id": "id9hw"
                         }
                       ]
                     },
@@ -1702,335 +1603,8 @@
     },
     {
       "type": "frame",
-      "name": "3 · Search engine (new) · B: Google, the rest on request",
-      "x": 4680,
-      "y": 0,
-      "width": 1440,
-      "height": 900,
-      "clip": true,
-      "fill": [
-        {
-          "type": "linear",
-          "angle": 180,
-          "stops": [
-            {
-              "color": "rgba(0,0,0,0.45)",
-              "position": 0
-            },
-            {
-              "color": "rgba(0,0,0,0.15)",
-              "position": 0.4
-            },
-            {
-              "color": "rgba(0,0,0,0.55)",
-              "position": 1
-            }
-          ]
-        },
-        {
-          "type": "image",
-          "src": "assets/sunrise.jpg",
-          "fit": "cover"
-        }
-      ],
-      "layout": "none",
-      "id": "m5omy",
-      "children": [
-        {
-          "type": "instance",
-          "ref": "hdr",
-          "x": 0,
-          "y": 0,
-          "id": "djzls"
-        },
-        {
-          "type": "frame",
-          "name": "Step",
-          "x": 240,
-          "y": 180,
-          "width": 960,
-          "layout": "column",
-          "align": "center",
-          "fill": "transparent",
-          "id": "hsiem",
-          "children": [
-            {
-              "type": "text",
-              "text": "Your search engine",
-              "fontSize": 34,
-              "color": "$text",
-              "fontWeight": 500,
-              "letterSpacing": -0.8,
-              "id": "ng8r9"
-            },
-            {
-              "type": "frame",
-              "width": 1,
-              "height": 14,
-              "fill": "transparent",
-              "id": "x26m1",
-              "children": []
-            },
-            {
-              "type": "text",
-              "text": "Google is set. Pick another if you prefer; Settings can change it any time.",
-              "fontSize": 16,
-              "color": "$text-2",
-              "lineHeight": 1.55,
-              "id": "qdq0q"
-            },
-            {
-              "type": "frame",
-              "width": 1,
-              "height": 32,
-              "fill": "transparent",
-              "id": "ndzih",
-              "children": []
-            },
-            {
-              "type": "frame",
-              "name": "List",
-              "width": 560,
-              "padding": 6,
-              "radius": 14,
-              "fill": "$card",
-              "stroke": {
-                "color": "$card-line"
-              },
-              "layout": "column",
-              "id": "yvnnz",
-              "children": [
-                {
-                  "type": "frame",
-                  "name": "Google",
-                  "width": "fill",
-                  "height": 64,
-                  "padding": [
-                    0,
-                    16,
-                    0,
-                    14
-                  ],
-                  "radius": 10,
-                  "gap": 14,
-                  "layout": "row",
-                  "align": "center",
-                  "fill": "rgba(255,255,255,0.08)",
-                  "id": "gg146",
-                  "children": [
-                    {
-                      "type": "frame",
-                      "width": 32,
-                      "height": 32,
-                      "radius": 16,
-                      "fill": "#4285f4",
-                      "layout": "row",
-                      "justify": "center",
-                      "align": "center",
-                      "id": "rlt0f",
-                      "children": [
-                        {
-                          "type": "text",
-                          "text": "G",
-                          "fontSize": 15,
-                          "color": "#fff",
-                          "fontWeight": 700,
-                          "id": "ar4ex"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "width": "fill",
-                      "layout": "row",
-                      "align": "baseline",
-                      "gap": 8,
-                      "fill": "transparent",
-                      "id": "nx7t0",
-                      "children": [
-                        {
-                          "type": "text",
-                          "text": "Google",
-                          "fontSize": 14,
-                          "color": "$text",
-                          "fontWeight": 600,
-                          "id": "qn066"
-                        },
-                        {
-                          "type": "text",
-                          "text": "google.com",
-                          "fontSize": 12,
-                          "color": "$text-3",
-                          "id": "sok7w"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "ellipse",
-                      "width": 18,
-                      "height": 18,
-                      "fill": "#0a0a0a",
-                      "stroke": {
-                        "color": "$text",
-                        "width": 5.5,
-                        "align": "inside"
-                      },
-                      "id": "gshqq"
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "name": "More",
-                  "width": "fill",
-                  "height": 44,
-                  "padding": [
-                    0,
-                    16,
-                    0,
-                    14
-                  ],
-                  "gap": 10,
-                  "layout": "row",
-                  "align": "center",
-                  "fill": "transparent",
-                  "id": "s81ev",
-                  "children": [
-                    {
-                      "type": "frame",
-                      "width": 32,
-                      "height": 1,
-                      "fill": "transparent",
-                      "id": "m3dwk",
-                      "children": []
-                    },
-                    {
-                      "type": "text",
-                      "text": "Choose another",
-                      "fontSize": 13,
-                      "color": "$text-2",
-                      "fontWeight": 600,
-                      "width": "fill",
-                      "id": "gwwix"
-                    },
-                    {
-                      "type": "text",
-                      "text": "DuckDuckGo, Bing, Brave Search +2",
-                      "fontSize": 12,
-                      "color": "$text-3",
-                      "id": "fbsyg"
-                    },
-                    {
-                      "type": "icon",
-                      "icon": "chevron-down",
-                      "set": "lucide",
-                      "size": 16,
-                      "color": "$text-3",
-                      "id": "jb22p"
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "width": 1,
-              "height": 32,
-              "fill": "transparent",
-              "id": "hgnt6",
-              "children": []
-            },
-            {
-              "type": "frame",
-              "name": "Continue",
-              "height": 40,
-              "padding": [
-                0,
-                22
-              ],
-              "radius": 20,
-              "fill": "$text",
-              "layout": "row",
-              "align": "center",
-              "id": "bq6tm",
-              "children": [
-                {
-                  "type": "text",
-                  "text": "Continue",
-                  "fontSize": 14,
-                  "color": "#0a0a0a",
-                  "fontWeight": 600,
-                  "id": "eh3ck"
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "height": 28,
-              "width": 1,
-              "fill": "transparent",
-              "id": "o67gb",
-              "children": []
-            },
-            {
-              "type": "frame",
-              "name": "Dots",
-              "layout": "row",
-              "gap": 6,
-              "fill": "transparent",
-              "id": "z0r28",
-              "children": [
-                {
-                  "type": "rect",
-                  "width": 6,
-                  "height": 6,
-                  "radius": 3,
-                  "fill": "rgba(255,255,255,0.18)",
-                  "id": "td2wf"
-                },
-                {
-                  "type": "rect",
-                  "width": 6,
-                  "height": 6,
-                  "radius": 3,
-                  "fill": "rgba(255,255,255,0.18)",
-                  "id": "hkzh3"
-                },
-                {
-                  "type": "rect",
-                  "width": 18,
-                  "height": 6,
-                  "radius": 3,
-                  "fill": "$text",
-                  "id": "e96eb"
-                },
-                {
-                  "type": "rect",
-                  "width": 6,
-                  "height": 6,
-                  "radius": 3,
-                  "fill": "rgba(255,255,255,0.18)",
-                  "id": "v2unm"
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "type": "text",
-          "text": "Sunrise over Earth, from the Space Station · NASA",
-          "fontSize": 11,
-          "color": "rgba(255,255,255,0.4)",
-          "x": 24,
-          "y": 862,
-          "id": "grvf9"
-        }
-      ]
-    },
-    {
-      "type": "frame",
       "name": "4 · You're all set",
-      "x": 6240,
+      "x": 4680,
       "y": 0,
       "width": 1440,
       "height": 900,
@@ -2122,22 +1696,6 @@
             {
               "type": "frame",
               "width": 1,
-              "height": 14,
-              "fill": "transparent",
-              "id": "tuv20",
-              "children": []
-            },
-            {
-              "type": "text",
-              "text": "Everything from Google Chrome is here.",
-              "fontSize": 16,
-              "color": "$text-2",
-              "lineHeight": 1.55,
-              "id": "e23fo"
-            },
-            {
-              "type": "frame",
-              "width": 1,
               "height": 32,
               "fill": "transparent",
               "id": "dcygi",
@@ -2194,13 +1752,6 @@
                           "color": "$text",
                           "fontWeight": 600,
                           "id": "mgrui"
-                        },
-                        {
-                          "type": "text",
-                          "text": "18 sites from your bookmarks bar are on your new tab page.",
-                          "fontSize": 13,
-                          "color": "$text-3",
-                          "id": "xtgei"
                         }
                       ]
                     }
@@ -2249,13 +1800,6 @@
                           "color": "$text",
                           "fontWeight": 600,
                           "id": "j3k4s"
-                        },
-                        {
-                          "type": "text",
-                          "text": "Reinstalled from the Web Store.",
-                          "fontSize": 13,
-                          "color": "$text-3",
-                          "id": "p2u8i"
                         }
                       ]
                     }
@@ -2304,13 +1848,6 @@
                           "color": "$text",
                           "fontWeight": 600,
                           "id": "f3ei2"
-                        },
-                        {
-                          "type": "text",
-                          "text": "Your sites come up as you type.",
-                          "fontSize": 13,
-                          "color": "$text-3",
-                          "id": "lno1t"
                         }
                       ]
                     }
@@ -2359,13 +1896,6 @@
                           "color": "$text",
                           "fontWeight": 600,
                           "id": "eul9t"
-                        },
-                        {
-                          "type": "text",
-                          "text": "Searches from the address bar go here.",
-                          "fontSize": 13,
-                          "color": "$text-3",
-                          "id": "mxdlz"
                         }
                       ]
                     }
