@@ -225,6 +225,21 @@ write(join(BRAND, 'icon-light.svg'), iconSvg(256, PAPER, INK));
 write(join(BRAND, 'lockup.svg'), lockupSvg(LOCKUP.w, LOCKUP.h, INK, 0));
 write(join(BRAND, 'lockup-white.svg'), lockupSvg(LOCKUP.w, LOCKUP.h, PAPER, 0));
 
+// The GitHub organisation's avatar: white sails on a full-bleed black square (GitHub rounds
+// the corners itself; corners drawn here would show specks on its light theme). The sails
+// span 70% of the width, centred on their bounding box, so they read at 20 px as well.
+{
+	const box = { x0: JIB.x - JIB.w, x1: MAIN.x + MAIN.w, y0: BASE - MAIN.h, y1: BASE };
+	const k = (240 * 0.7) / (box.x1 - box.x0);
+	const tx = 120 - k * (box.x0 + box.x1) / 2;
+	const ty = 120 - k * (box.y0 + box.y1) / 2;
+	const avatar = svg(512, 512, '0 0 240 240',
+		`<rect width="240" height="240" fill="${INK}"/>` +
+			`<path d="${MARK}" fill="${PAPER}" transform="translate(${n(tx)} ${n(ty)}) scale(${n(k)})"/>`);
+	write(join(BRAND, 'github-avatar.svg'), avatar);
+	png(join(BRAND, 'github-avatar.png'), avatar);
+}
+
 // The app icon, at every size Chromium and the installer ask for.
 const theme = join(OVERRIDES, 'chrome/app/theme');
 for (const s of [16, 24, 48, 64, 128, 256]) png(join(theme, `chromium/product_logo_${s}.png`), iconSvg(s));
