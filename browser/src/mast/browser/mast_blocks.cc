@@ -793,7 +793,7 @@ void MastBlocks::SetDistractions(const Distractions& d) {
   p->ClearPref(kDistractionsYouTubeMusicPref);
 }
 
-std::vector<std::string> MastBlocks::DistractionEntries() const {
+std::vector<std::string> MastBlocks::OpenDistractionDomains() const {
   const Distractions d = GetDistractions();
   const std::set<std::string> wanted(d.categories.begin(), d.categories.end());
   const std::set<std::string> skipped(d.skipped.begin(), d.skipped.end());
@@ -832,9 +832,10 @@ std::vector<std::string> MastBlocks::DistractionEntries() const {
       sites(c.id, c.sites);
     }
   }
-  // Music only and Shorts add nothing while all of YouTube is blocked.
+  // Only what's still open. Music only and Shorts add nothing while all of
+  // YouTube is blocked.
   std::erase_if(entries, [&](const std::string& e) {
-    return IsYouTubeEntry(e) && Of("youtube.com");
+    return Of(e) || (IsYouTubeEntry(e) && Of("youtube.com"));
   });
   return entries;
 }

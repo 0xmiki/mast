@@ -162,10 +162,9 @@ class MastBlocks {
   Distractions GetDistractions() const;
   // Unknown categories and sites are dropped.
   void SetDistractions(const Distractions& distractions);
-  // Every entry the set blocks. Blocking them (BlockSites) blocks what's open
-  // and lengthens what's running for less, never shortening anything; Block
-  // is how a block gets longer (the new tab's Extend is gone).
-  std::vector<std::string> DistractionEntries() const;
+  // The entries Block would block that aren't blocked yet: blocking the set
+  // adds what's still open and never touches a block already running.
+  std::vector<std::string> OpenDistractionDomains() const;
 
  private:
   struct Recent {

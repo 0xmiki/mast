@@ -358,10 +358,10 @@ class MastHandler : public content::WebUIMessageHandler,
     Block(domains, StringArg(args, 1));
   }
 
-  // ["blockDistractions", durationId]: the distraction set, for that long:
-  // what's open gets blocked, what's running for less gets longer.
+  // ["blockDistractions", durationId]: what the distraction set still has
+  // open (blocks already running are left as they are).
   void HandleBlockDistractions(const base::ListValue& args) {
-    Block(MastBlocks::Get().DistractionEntries(), StringArg(args, 0));
+    Block(MastBlocks::Get().OpenDistractionDomains(), StringArg(args, 0));
   }
 
   void Block(const std::vector<std::string>& domains,
