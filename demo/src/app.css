@@ -19,9 +19,9 @@
 	--text: #ececef;
 	--muted: #9a9ca5;
 	--faint: #6b6e78;
-	--ember: #ff6a3d;
-	--ember-2: #ff8f5e;
-	--ember-soft: rgb(255 106 61 / 0.14);
+	--ember: #ff8f63;
+	--ember-2: #ffa683;
+	--ember-soft: rgb(255 143 99 / 0.14);
 	--good: #3dd68c;
 	--good-soft: rgb(61 214 140 / 0.13);
 	--warn: #f5b84a;
@@ -63,7 +63,7 @@ textarea {
 }
 
 ::selection {
-	background: rgb(255 106 61 / 0.35);
+	background: rgb(255 143 99 / 0.35);
 }
 
 :focus-visible {

@@ -140,7 +140,7 @@
 		right: 0;
 		top: 14px;
 		height: 1px;
-		background: linear-gradient(90deg, var(--line-2), rgb(255 106 61 / 0.6));
+		background: linear-gradient(90deg, var(--line-2), rgb(255 143 99 / 0.6));
 	}
 	.tick {
 		position: absolute;

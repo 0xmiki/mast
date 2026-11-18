@@ -36,7 +36,7 @@
 	.cord {
 		position: absolute;
 		inset: 0 auto 0 0;
-		background: linear-gradient(90deg, rgb(255 106 61 / 0.45), var(--ember) 75%, var(--ember-2));
+		background: linear-gradient(90deg, rgb(255 143 99 / 0.45), var(--ember) 75%, var(--ember-2));
 		transition: width 1s linear;
 	}
 	.forever .cord {
@@ -52,7 +52,7 @@
 		background: #ffd9c4;
 		box-shadow:
 			0 0 4px 1px var(--ember-2),
-			0 0 12px 3px rgb(255 106 61 / 0.45);
+			0 0 12px 3px rgb(255 143 99 / 0.45);
 		transition: left 1s linear;
 		animation: smoulder 2.6s ease-in-out infinite;
 	}

@@ -179,7 +179,7 @@
 		padding: 0 11px 0 10px;
 		border-radius: var(--r);
 		background: none;
-		box-shadow: inset 0 0 0 1px rgb(255 106 61 / 0.28);
+		box-shadow: inset 0 0 0 1px rgb(255 143 99 / 0.28);
 		color: var(--ember-2);
 		font-size: 12.5px;
 		font-weight: 600;

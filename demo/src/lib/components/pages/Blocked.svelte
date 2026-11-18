@@ -69,7 +69,7 @@
 		left: 0;
 		top: 54%;
 		height: 3px;
-		background: linear-gradient(90deg, rgb(255 106 61 / 0.5), var(--ember) 70%, var(--ember-2));
+		background: linear-gradient(90deg, rgb(255 143 99 / 0.5), var(--ember) 70%, var(--ember-2));
 		transition: width 1s linear;
 	}
 	.forever .strike {
@@ -86,8 +86,8 @@
 		background: #ffd9c4;
 		box-shadow:
 			0 0 5px 1px var(--ember-2),
-			0 0 18px 4px rgb(255 106 61 / 0.5),
-			0 0 50px 12px rgb(255 106 61 / 0.15);
+			0 0 18px 4px rgb(255 143 99 / 0.5),
+			0 0 50px 12px rgb(255 143 99 / 0.15);
 		animation: smoulder 2.6s ease-in-out infinite;
 	}
 	@keyframes smoulder {

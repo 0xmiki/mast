@@ -179,7 +179,7 @@
 		padding: 14px 18px;
 		border-radius: var(--r-2);
 		background: var(--ember-soft);
-		border: 1px solid rgb(255 106 61 / 0.3);
+		border: 1px solid rgb(255 143 99 / 0.3);
 		color: var(--ember-2);
 	}
 	.banner div {
@@ -269,7 +269,7 @@
 		place-items: center;
 		color: var(--ember);
 		background: var(--ember-soft);
-		box-shadow: inset 0 0 0 1px rgb(255 106 61 / 0.3);
+		box-shadow: inset 0 0 0 1px rgb(255 143 99 / 0.3);
 	}
 	.toggle.locked::after {
 		display: none;

@@ -1,16 +1,9 @@
 <script lang="ts">
+	// The Mast sails as a bare glyph in the current text colour, the way the browser draws them
+	// in its toolbar and chips. The path is the mark from browser/tools/brand.mjs.
 	let { size = 20 }: { size?: number } = $props();
-	const id = 'mast-logo-' + Math.random().toString(36).slice(2, 7);
 </script>
 
-<svg width={size} height={size} viewBox="0 0 32 32" aria-label="Mast">
-	<defs>
-		<linearGradient {id} x1="0" y1="0" x2="1" y2="1">
-			<stop offset="0" stop-color="#ff6a3d" />
-			<stop offset="1" stop-color="#c2300f" />
-		</linearGradient>
-	</defs>
-	<rect width="32" height="32" rx="8" fill="url(#{id})" />
-	<path d="M14 10.5V24.5H6.6Q7.4 16 14 10.5Z" fill="#ffffff" stroke="#ffffff" stroke-width="1.2" stroke-linejoin="round" />
-	<path d="M17 6V24.5H25.4Q24.7 13 17 6Z" fill="#ffffff" stroke="#ffffff" stroke-width="1.2" stroke-linejoin="round" />
+<svg width={size} height={size} viewBox="0 0 240 240" fill="currentColor" aria-label="Mast">
+	<path d="M90 60V210H20.769A197.115 197.115 0 0 1 90 60ZM120 15V210H210A256.25 256.25 0 0 0 120 15Z" />
 </svg>
