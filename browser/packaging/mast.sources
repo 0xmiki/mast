@@ -1,0 +1,7 @@
+# Mast's updates, installed by the mast package (packaging/package.sh). Signed with the key
+# in /usr/share/keyrings/mast.asc; apt refuses anything it can't verify against it.
+# A flat repository served from Mast's latest GitHub release (suite "/").
+Types: deb
+URIs: @BASE@/
+Suites: /
+Signed-By: /usr/share/keyrings/mast.asc

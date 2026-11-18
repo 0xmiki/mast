@@ -1,0 +1,11 @@
+# Mast's updates for dnf, installed by the mast package (packaging/package.sh). Every
+# package is signed with the key in /etc/pki/rpm-gpg/RPM-GPG-KEY-mast, which the package
+# imports into rpm, so updates install without a question (like Google Chrome's source).
+[mast]
+name=Mast
+baseurl=@PAGES@/rpm
+type=rpm-md
+enabled=1
+gpgcheck=1
+repo_gpgcheck=0
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-mast

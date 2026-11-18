@@ -164,7 +164,8 @@ edit(H, "content/browser/media/key_system_support_impl.cc", lambda t: once(once(
 edit(H, "content/browser/BUILD.gn", lambda t: add_dep(t, 'source_set("browser") {', "//mast/common"))
 edit(H, "components/infobars/core/infobar_delegate.h", lambda t: once(t,
     '    CONTEXTUAL_CUE_INFOBAR_DELEGATE_IOS = 140,\n  };\n',
-    '    CONTEXTUAL_CUE_INFOBAR_DELEGATE_IOS = 140,\n    MAST_WIDEVINE_INFOBAR_DELEGATE = 141,  // Mast: mast_widevine.cc\n  };\n'))
+    '    CONTEXTUAL_CUE_INFOBAR_DELEGATE_IOS = 140,\n    MAST_WIDEVINE_INFOBAR_DELEGATE = 141,  // Mast: mast_widevine.cc\n'
+    '    MAST_UPDATE_INFOBAR_DELEGATE = 142,  // Mast: mast_update_check.cc\n  };\n'))
 # Incognito stays available: blocks live in Local State and the navigation throttle runs
 # for every profile, so a private window is blocked exactly like a normal one.
 
@@ -644,12 +645,13 @@ edit(R, "chrome/browser/ui/browser_window/internal/embedder_browser_window_featu
     '#include "chrome/browser/ui/views/frame/browser_view.h"\n#include "mast/browser/ui/mast_one_row_toolbar.h"\n'),
     'void EmbedderBrowserWindowFeatures::InitPostWindowConstruction(\n    BrowserWindowInterface* browser) {\n  // Embedder implementation goes here.\n}',
     'void EmbedderBrowserWindowFeatures::InitPostWindowConstruction(\n    BrowserWindowInterface* browser) {\n  mast::OnBrowserWindowReady(browser);\n}'))
-edit(R, "chrome/browser/ui/browser_window/internal/BUILD.gn", lambda t: add_dep(add_dep(add_dep(add_dep(add_dep(add_dep(add_dep(add_dep(once(t,
+edit(R, "chrome/browser/ui/browser_window/internal/BUILD.gn", lambda t: add_dep(add_dep(add_dep(add_dep(add_dep(add_dep(add_dep(add_dep(add_dep(once(t,
     '      "embedder_browser_window_features.cc",\n',
     '      "embedder_browser_window_features.cc",\n      "//mast/browser/ui/mast_one_row_toolbar.cc",\n      "//mast/browser/ui/mast_one_row_toolbar.h",\n'
     '      "//mast/browser/ui/mast_tab_bar.cc",\n      "//mast/browser/ui/mast_tab_bar.h",\n'
     '      "//mast/browser/ui/mast_shortcuts.cc",\n      "//mast/browser/ui/mast_shortcuts.h",\n'
-    '      "//mast/browser/ui/mast_widevine.cc",\n      "//mast/browser/ui/mast_widevine.h",\n'),
+    '      "//mast/browser/ui/mast_widevine.cc",\n      "//mast/browser/ui/mast_widevine.h",\n'
+    '      "//mast/browser/ui/mast_update_check.cc",\n      "//mast/browser/ui/mast_update_check.h",\n'),
     'source_set("internal") {', "//mast/common"),
     'source_set("internal") {', "//components/prefs"),
     'source_set("internal") {', "//content/public/browser"),
@@ -657,7 +659,8 @@ edit(R, "chrome/browser/ui/browser_window/internal/BUILD.gn", lambda t: add_dep(
     'source_set("internal") {', "//components/viz/common"),
     'source_set("internal") {', "//ui/gfx/animation"),
     'source_set("internal") {', "//ui/gfx/geometry"),
-    'source_set("internal") {', "//third_party/widevine/cdm:buildflags"))  # mast_widevine.cc
+    'source_set("internal") {', "//third_party/widevine/cdm:buildflags"),  # mast_widevine.cc
+    'source_set("internal") {', "//services/network/public/cpp"))  # mast_update_check.cc
 
 # No dividers between tabs in the one-row window: tabs are pills with space between them.
 # (Chromium paints dividers with SkColorSetA(colour, opacity), which overrides the colour's

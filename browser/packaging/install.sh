@@ -2,7 +2,11 @@
 # Install or update Mast on Linux:
 #   curl -fsSL @BASE@/install.sh | sh
 # Uses the .deb (apt) or .rpm (dnf, zypper) when it can, so the system installs missing
-# libraries. Anywhere else it unpacks Mast into ~/.local. Run it again to update.
+# libraries, and adds Mast's package source: updates then come with the system's own.
+# Anywhere else it unpacks Mast into ~/.local; Mast says when there's an update, and running
+# this again installs it.
+# Every download is checked against SHA256SUMS, and SHA256SUMS against Mast's release key
+# (below, inside this script) when GnuPG is installed.
 # Remove Mast:  curl -fsSL @BASE@/install.sh | sh -s -- --uninstall
 set -eu
 
@@ -55,6 +59,18 @@ TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 chmod 755 "$TMP" # apt reads the .deb as its own user
 fetch SHA256SUMS "$TMP/SHA256SUMS"
+fetch SHA256SUMS.asc "$TMP/SHA256SUMS.asc"
+cat > "$TMP/mast-release-key.asc" <<'KEY'
+@KEY@
+KEY
+if has gpg; then
+	mkdir -m 700 "$TMP/gnupg"
+	GNUPGHOME=$TMP/gnupg gpg --batch --quiet --import "$TMP/mast-release-key.asc" 2>/dev/null
+	GNUPGHOME=$TMP/gnupg gpg --batch --quiet --verify "$TMP/SHA256SUMS.asc" "$TMP/SHA256SUMS" 2>/dev/null ||
+		die "the download isn't signed by Mast's release key. Nothing was installed."
+else
+	say "GnuPG isn't installed, so downloads are checked against their checksums only"
+fi
 VERSION=$(sed -n 's/^# version //p' "$TMP/SHA256SUMS")
 get() {
 	say "Downloading $1"
@@ -70,11 +86,13 @@ if has apt-get && has dpkg; then
 elif has dnf; then
 	get mast.x86_64.rpm
 	say "Installing (asks for your password)"
-	root dnf install -y --nogpgcheck "$TMP/mast.x86_64.rpm"
+	root rpm --import "$TMP/mast-release-key.asc"
+	root dnf install -y "$TMP/mast.x86_64.rpm"
 elif has zypper; then
 	get mast.x86_64.rpm
 	say "Installing (asks for your password)"
-	root zypper --non-interactive install --allow-unsigned-rpm "$TMP/mast.x86_64.rpm"
+	root rpm --import "$TMP/mast-release-key.asc"
+	root zypper --non-interactive install "$TMP/mast.x86_64.rpm"
 else
 	get mast-linux-x86_64.tar.xz
 	say "Unpacking into $DIR"

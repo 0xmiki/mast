@@ -54,8 +54,12 @@ inline bool IsShortcutKey(std::string_view key) {
 // (Blocks live in Local State instead; see MastBlocks.)
 void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry);
 
-// Mast's Local State prefs: blocks (MastBlocks, shared by every profile) and
-// the Widevine answer (mast/common/mast_widevine_state.h).
+// Local State, a time: when a tarball install last asked whether a newer Mast
+// is out (mast/browser/ui/mast_update_check.h).
+inline constexpr char kUpdateCheckedPref[] = "mast.update_checked";
+
+// Mast's Local State prefs: blocks (MastBlocks, shared by every profile), the
+// Widevine answer (mast/common/mast_widevine_state.h) and the update check.
 void RegisterLocalStatePrefs(PrefRegistrySimple* registry);
 
 }  // namespace mast

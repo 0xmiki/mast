@@ -5,6 +5,7 @@
 #include <string>
 #include <utility>
 
+#include "base/time/time.h"
 #include "base/values.h"
 #include "chrome/browser/prefs/session_startup_pref.h"
 #include "chrome/common/pref_names.h"
@@ -18,6 +19,7 @@ namespace mast {
 void RegisterLocalStatePrefs(PrefRegistrySimple* registry) {
   MastBlocks::RegisterLocalStatePrefs(registry);
   registry->RegisterIntegerPref(kWidevinePref, kWidevineAsk);
+  registry->RegisterTimePref(kUpdateCheckedPref, base::Time());
 }
 
 void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry) {

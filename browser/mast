@@ -12,7 +12,8 @@
 #   ./mast cost             money spent so far vs MAST_BUDGET
 #   ./mast hold <minutes>   keep an idle builder alive that long (e.g. while writing code)
 #   ./mast run              run the downloaded browser locally
-#   ./mast package          turn the download into tester installers (.deb, .rpm, tarball) -> dist/release/
+#   ./mast package          turn the download into a signed release (.deb, .rpm, tarball, apt/dnf sources) -> dist/release/
+#   ./mast publish          put dist/release online (GitHub release + Pages); apt/dnf users then update
 #   ./mast shots            screenshot fixed UI scenes on the builder (Xvfb) -> shots/<time>/
 #   ./mast check-patches    check every make-patches.py anchor locally (no builder, no cost)
 #   ./mast check-rebase <v> what moving to Chromium <v> breaks, before building (local, no cost)
@@ -462,10 +463,11 @@ case $cmd in
 	up | down | build | unattended | collect | resize | status | cost | hold | destroy | fetch | shots | _guard) need hcloud; need jq; "cmd_$cmd" "$@" ;;
 	run) cmd_run "$@" ;;
 	package) bash "$ROOT/packaging/package.sh" "$@" ;;
+	publish) bash "$ROOT/packaging/publish.sh" "$@" ;;
 	check-patches) cmd_check-patches "$@" ;;
 	check-rebase) cmd_check-rebase "$@" ;;
 	ssh) HOST=$(server_ip); ssh "${SSH_OPTS[@]}" -t "root@$HOST" "$@" ;;
 	logs) HOST=$(server_ip); follow "${1:-build}" ;;
 	job) HOST=$(server_ip); job "${1:?usage: ./mast job bootstrap|build}" ;;
-	*) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//' ;;
+	*) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//' ;;
 esac
