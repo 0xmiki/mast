@@ -23,11 +23,11 @@ which `publish` refuses.
 
 ## Where things are served from
 
-- **The GitHub release** (`MAST_RELEASES_REPO`, public): the packages, the installer,
+- **The GitHub release** (`MAST_RELEASES_REPO`: this repo, public): the packages, the installer,
   `SHA256SUMS(.asc)`, `latest.json`, and the apt source itself: a flat repository
   (`Packages`, `Release`, `InRelease`) read through `releases/latest/download/`. A release
   is uploaded as a draft and made "latest" only once complete, so its files switch together.
-- **GitHub Pages** (`MAST_PAGES_URL`): the dnf/zypper metadata (`rpm/repodata`), which
+- **GitHub Pages** (`MAST_PAGES_URL`, the repo's `gh-pages` branch, which holds only this): the dnf/zypper metadata (`rpm/repodata`), which
   can't be a release file because it lives in a folder. It points at the RPM in its own
   release's folder (`releases/download/<tag>/`), never at "latest", so old metadata never
   names a newer file. Also a copy of the key and the installer.

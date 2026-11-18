@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Put the signed release in dist/release (./mast package) online:
-#   - a GitHub release in MAST_RELEASES_REPO (public; created the first time), uploaded as a
-#     draft and made "latest" only once every file is there, so the apt source and the
+#   - a GitHub release in MAST_RELEASES_REPO (this repo, which must be public), uploaded as
+#     a draft and made "latest" only once every file is there, so the apt source and the
 #     download links switch to it all at once;
-#   - the dnf/zypper source (rpm/repodata), the public key and the installer on that repo's
-#     GitHub Pages site (MAST_PAGES_URL). Its metadata points at this release's own folder,
-#     so older metadata never points at a newer file.
+#   - the dnf/zypper source (rpm/repodata), the public key and the installer on the repo's
+#     GitHub Pages site (MAST_PAGES_URL), from its gh-pages branch, which holds nothing else.
+#     Its metadata points at this release's own folder, so older metadata never points at a
+#     newer file.
 # Needs gh, logged in (gh auth login). Refuses an unsigned release.
 set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
@@ -29,10 +30,8 @@ for f in mast_amd64.deb mast.x86_64.rpm mast-linux-x86_64.tar.xz install.sh SHA2
 done
 gpg --verify "$OUT/SHA256SUMS.asc" "$OUT/SHA256SUMS" 2>/dev/null || die "SHA256SUMS isn't signed by your key"
 
-if ! gh repo view "$REPO" >/dev/null 2>&1; then
-	log "creating the public repo $REPO"
-	gh repo create "$REPO" --public --description "Mast browser: downloads and package sources" >/dev/null
-fi
+[[ $(gh repo view "$REPO" --json visibility -q .visibility 2>/dev/null) == PUBLIC ]] ||
+	die "$REPO must be public: apt, dnf and the installer download from it without logging in"
 gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1 && die "$TAG is already published"
 
 log "uploading $TAG (a draft until every file is there)"
@@ -65,7 +64,11 @@ EOF
 	git init -q -b gh-pages
 	git add -A
 	git -c user.name="Mast Releases" -c user.email=releases@mast-browser.com commit -qm "Mast $FULL"
-	git push -q --force "https://github.com/$REPO.git" gh-pages
+	# The same way this repo's own pushes go (its origin's address, and so its credentials).
+	url=https://github.com/$REPO.git
+	origin=$(git -C "$ROOT" remote get-url origin 2>/dev/null || true)
+	[[ $origin == *"$REPO"* ]] && url=$origin
+	git push -q --force "$url" gh-pages
 )
 if ! gh api "repos/$REPO/pages" >/dev/null 2>&1; then
 	gh api -X POST "repos/$REPO/pages" -f "source[branch]=gh-pages" -f "source[path]=/" >/dev/null

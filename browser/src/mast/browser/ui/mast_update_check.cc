@@ -50,11 +50,10 @@ namespace {
 
 // Where releases are published (packaging/publish.sh, mast.env).
 constexpr char kLatestUrl[] =
-    "https://github.com/0xmiki/mast-releases/releases/latest/download/"
-    "latest.json";
+    "https://github.com/0xmiki/mast/releases/latest/download/latest.json";
 constexpr char16_t kUpdateCommand[] =
-    u"curl -fsSL https://github.com/0xmiki/mast-releases/releases/latest/"
-    u"download/install.sh | sh";
+    u"curl -fsSL https://github.com/0xmiki/mast/releases/latest/download/"
+    u"install.sh | sh";
 constexpr base::TimeDelta kEvery = base::Days(1);
 constexpr base::TimeDelta kFirstDelay = base::Minutes(1);
 
