@@ -2577,14 +2577,6 @@
                       "fontWeight": 600,
                       "color": "$text",
                       "id": "sqvo3"
-                    },
-                    {
-                      "type": "text",
-                      "text": "Blocked until midnight",
-                      "fontSize": 12,
-                      "fontWeight": 500,
-                      "color": "$signal",
-                      "id": "q7mp9"
                     }
                   ]
                 },
@@ -2593,7 +2585,7 @@
                   "name": "Choices",
                   "width": "fill",
                   "layout": "grid",
-                  "columns": 3,
+                  "columns": 4,
                   "columnGap": 8,
                   "fill": "transparent",
                   "id": "tj1ba",
@@ -2635,6 +2627,47 @@
                           "fontWeight": 600,
                           "color": "$text",
                           "id": "c7mio"
+                        }
+                      ],
+                      "width": "fill"
+                    },
+                    {
+                      "type": "frame",
+                      "name": "Block Shorts",
+                      "height": 42,
+                      "radius": 8,
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "layout": "row",
+                      "align": "center",
+                      "gap": 8,
+                      "fill": "$pressed",
+                      "stroke": {
+                        "color": "rgba(237,237,237,0.35)"
+                      },
+                      "id": "zcfol",
+                      "children": [
+                        {
+                          "type": "ellipse",
+                          "width": 16,
+                          "height": 16,
+                          "fill": "$surface",
+                          "stroke": {
+                            "color": "#ededed",
+                            "width": 5,
+                            "align": "inside"
+                          },
+                          "id": "jlv2v"
+                        },
+                        {
+                          "type": "text",
+                          "text": "Block Shorts",
+                          "fontSize": 13,
+                          "fontWeight": 600,
+                          "color": "$text",
+                          "id": "t15mo"
                         }
                       ],
                       "width": "fill"
@@ -2692,9 +2725,9 @@
                       "layout": "row",
                       "align": "center",
                       "gap": 8,
-                      "fill": "$pressed",
+                      "fill": "$surface",
                       "stroke": {
-                        "color": "rgba(237,237,237,0.35)"
+                        "color": "#171717"
                       },
                       "id": "x296h",
                       "children": [
@@ -2702,10 +2735,10 @@
                           "type": "ellipse",
                           "width": 16,
                           "height": 16,
-                          "fill": "$surface",
+                          "fill": "transparent",
                           "stroke": {
-                            "color": "#ededed",
-                            "width": 5,
+                            "color": "rgba(237,237,237,0.3)",
+                            "width": 1.5,
                             "align": "inside"
                           },
                           "id": "y7pdz"
@@ -2720,6 +2753,37 @@
                         }
                       ],
                       "width": "fill"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "yt-status",
+                  "name": "Status",
+                  "layout": "row",
+                  "align": "center",
+                  "gap": 5,
+                  "padding": [
+                    0,
+                    2
+                  ],
+                  "fill": "transparent",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "yt-status-lock",
+                      "icon": "lock",
+                      "set": "lucide",
+                      "size": 11,
+                      "color": "$text-3"
+                    },
+                    {
+                      "type": "text",
+                      "id": "yt-status-text",
+                      "text": "Shorts blocked until midnight",
+                      "fontSize": 12,
+                      "fontWeight": 400,
+                      "color": "$text-2"
                     }
                   ]
                 }
@@ -2836,15 +2900,15 @@
                           "type": "icon",
                           "icon": "lock",
                           "size": 11,
-                          "color": "$signal",
+                          "color": "$text-3",
                           "id": "zpju6"
                         },
                         {
                           "type": "text",
                           "text": "Until midnight",
                           "fontSize": 12,
-                          "fontWeight": 500,
-                          "color": "$signal",
+                          "fontWeight": 400,
+                          "color": "$text-2",
                           "width": "fill",
                           "maxLines": 1,
                           "id": "he6ek"
@@ -2930,15 +2994,15 @@
                           "type": "icon",
                           "icon": "lock",
                           "size": 11,
-                          "color": "$signal",
+                          "color": "$text-3",
                           "id": "avv73"
                         },
                         {
                           "type": "text",
                           "text": "Until midnight",
                           "fontSize": 12,
-                          "fontWeight": 500,
-                          "color": "$signal",
+                          "fontWeight": 400,
+                          "color": "$text-2",
                           "width": "fill",
                           "maxLines": 1,
                           "id": "u1ofs"
@@ -3024,15 +3088,15 @@
                           "type": "icon",
                           "icon": "lock",
                           "size": 11,
-                          "color": "$signal",
+                          "color": "$text-3",
                           "id": "skems"
                         },
                         {
                           "type": "text",
                           "text": "Until midnight",
                           "fontSize": 12,
-                          "fontWeight": 500,
-                          "color": "$signal",
+                          "fontWeight": 400,
+                          "color": "$text-2",
                           "width": "fill",
                           "maxLines": 1,
                           "id": "gm16s"
@@ -3205,15 +3269,15 @@
                           "type": "icon",
                           "icon": "lock",
                           "size": 11,
-                          "color": "$signal",
+                          "color": "$text-3",
                           "id": "nfzry"
                         },
                         {
                           "type": "text",
                           "text": "Until midnight",
                           "fontSize": 12,
-                          "fontWeight": 500,
-                          "color": "$signal",
+                          "fontWeight": 400,
+                          "color": "$text-2",
                           "width": "fill",
                           "maxLines": 1,
                           "id": "d07hj"
@@ -3299,15 +3363,15 @@
                           "type": "icon",
                           "icon": "lock",
                           "size": 11,
-                          "color": "$signal",
+                          "color": "$text-3",
                           "id": "efoo0"
                         },
                         {
                           "type": "text",
                           "text": "Until midnight",
                           "fontSize": 12,
-                          "fontWeight": 500,
-                          "color": "$signal",
+                          "fontWeight": 400,
+                          "color": "$text-2",
                           "width": "fill",
                           "maxLines": 1,
                           "id": "ysmv6"
@@ -3559,15 +3623,15 @@
                           "type": "icon",
                           "icon": "lock",
                           "size": 11,
-                          "color": "$signal",
+                          "color": "$text-3",
                           "id": "bghi1"
                         },
                         {
                           "type": "text",
                           "text": "Until midnight",
                           "fontSize": 12,
-                          "fontWeight": 500,
-                          "color": "$signal",
+                          "fontWeight": 400,
+                          "color": "$text-2",
                           "width": "fill",
                           "maxLines": 1,
                           "id": "phje9"
@@ -3653,15 +3717,15 @@
                           "type": "icon",
                           "icon": "lock",
                           "size": 11,
-                          "color": "$signal",
+                          "color": "$text-3",
                           "id": "qqasx"
                         },
                         {
                           "type": "text",
                           "text": "Until midnight",
                           "fontSize": 12,
-                          "fontWeight": 500,
-                          "color": "$signal",
+                          "fontWeight": 400,
+                          "color": "$text-2",
                           "width": "fill",
                           "maxLines": 1,
                           "id": "qqe8t"
@@ -3747,15 +3811,15 @@
                           "type": "icon",
                           "icon": "lock",
                           "size": 11,
-                          "color": "$signal",
+                          "color": "$text-3",
                           "id": "nyoxw"
                         },
                         {
                           "type": "text",
                           "text": "Blocked forever",
                           "fontSize": 12,
-                          "fontWeight": 500,
-                          "color": "$signal",
+                          "fontWeight": 400,
+                          "color": "$text-2",
                           "width": "fill",
                           "maxLines": 1,
                           "id": "qkhcb"
@@ -3841,15 +3905,15 @@
                           "type": "icon",
                           "icon": "lock",
                           "size": 11,
-                          "color": "$signal",
+                          "color": "$text-3",
                           "id": "mmkeo"
                         },
                         {
                           "type": "text",
                           "text": "Until midnight",
                           "fontSize": 12,
-                          "fontWeight": 500,
-                          "color": "$signal",
+                          "fontWeight": 400,
+                          "color": "$text-2",
                           "width": "fill",
                           "maxLines": 1,
                           "id": "aet7j"
@@ -4140,7 +4204,7 @@
     {
       "type": "frame",
       "name": "Label · Simple fix",
-      "x": 3200,
+      "x": 4680,
       "y": 0,
       "width": 640,
       "layout": "column",
@@ -4170,7 +4234,7 @@
     {
       "type": "text",
       "text": "Today",
-      "x": 3200,
+      "x": 4680,
       "y": 110,
       "fontSize": 14,
       "fontWeight": 500,
@@ -4180,7 +4244,7 @@
     {
       "type": "frame",
       "name": "Today",
-      "x": 3200,
+      "x": 4680,
       "y": 136,
       "width": 640,
       "height": 56,
@@ -4514,7 +4578,7 @@
     {
       "type": "text",
       "text": "After the build",
-      "x": 3200,
+      "x": 4680,
       "y": 220,
       "fontSize": 14,
       "fontWeight": 500,
@@ -4524,7 +4588,7 @@
     {
       "type": "frame",
       "name": "After the build",
-      "x": 3200,
+      "x": 4680,
       "y": 246,
       "width": 640,
       "height": 56,
@@ -4858,7 +4922,7 @@
     {
       "type": "text",
       "text": "After, nothing downloading or playing",
-      "x": 3200,
+      "x": 4680,
       "y": 330,
       "fontSize": 14,
       "fontWeight": 500,
@@ -4868,7 +4932,7 @@
     {
       "type": "frame",
       "name": "After, nothing downloading or playing",
-      "x": 3200,
+      "x": 4680,
       "y": 356,
       "width": 640,
       "height": 56,
@@ -5136,6 +5200,1009 @@
                   "size": 14,
                   "color": "#8a8a8a",
                   "id": "pvgo5"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "yt-modes",
+      "name": "YouTube — the four modes",
+      "x": 1560,
+      "y": 1000,
+      "width": 1440,
+      "layout": "column",
+      "gap": 28,
+      "padding": [
+        48,
+        376
+      ],
+      "fill": "$surface",
+      "children": [
+        {
+          "type": "text",
+          "text": "YouTube: the four modes",
+          "fontSize": 20,
+          "fontWeight": 600,
+          "color": "$text",
+          "id": "qlqba"
+        },
+        {
+          "type": "text",
+          "width": "fill",
+          "lineHeight": 1.5,
+          "fontSize": 13,
+          "color": "$text-2",
+          "text": "Least to most strict. The status line only appears while a mode is on a timer, under the choices, in grey.",
+          "id": "q7yr3"
+        },
+        {
+          "type": "frame",
+          "name": "YouTube",
+          "width": "fill",
+          "radius": 10,
+          "fill": "$field",
+          "padding": 14,
+          "gap": 12,
+          "layout": "column",
+          "id": "sgart",
+          "children": [
+            {
+              "type": "frame",
+              "layout": "row",
+              "align": "baseline",
+              "gap": 10,
+              "padding": [
+                0,
+                2
+              ],
+              "fill": "transparent",
+              "id": "gaaof",
+              "children": [
+                {
+                  "type": "text",
+                  "text": "YouTube",
+                  "fontSize": 14,
+                  "fontWeight": 600,
+                  "color": "$text",
+                  "id": "sl7r5"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "name": "Choices",
+              "width": "fill",
+              "layout": "grid",
+              "columns": 4,
+              "columnGap": 8,
+              "fill": "transparent",
+              "id": "fna0j",
+              "children": [
+                {
+                  "type": "frame",
+                  "name": "Allow all",
+                  "height": 42,
+                  "radius": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "layout": "row",
+                  "align": "center",
+                  "gap": 8,
+                  "fill": "$pressed",
+                  "stroke": {
+                    "color": "rgba(237,237,237,0.35)"
+                  },
+                  "id": "zzeeu",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "width": 16,
+                      "height": 16,
+                      "fill": "$surface",
+                      "stroke": {
+                        "color": "#ededed",
+                        "width": 5,
+                        "align": "inside"
+                      },
+                      "id": "ppgcs"
+                    },
+                    {
+                      "type": "text",
+                      "text": "Allow all",
+                      "fontSize": 13,
+                      "fontWeight": 600,
+                      "color": "$text",
+                      "id": "tsvsu"
+                    }
+                  ],
+                  "width": "fill"
+                },
+                {
+                  "type": "frame",
+                  "name": "Block Shorts",
+                  "height": 42,
+                  "radius": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "layout": "row",
+                  "align": "center",
+                  "gap": 8,
+                  "fill": "$surface",
+                  "stroke": {
+                    "color": "#171717"
+                  },
+                  "id": "hexig",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "width": 16,
+                      "height": 16,
+                      "fill": "transparent",
+                      "stroke": {
+                        "color": "rgba(237,237,237,0.3)",
+                        "width": 1.5,
+                        "align": "inside"
+                      },
+                      "id": "p67jc"
+                    },
+                    {
+                      "type": "text",
+                      "text": "Block Shorts",
+                      "fontSize": 13,
+                      "fontWeight": 600,
+                      "color": "$text",
+                      "id": "i5aw9"
+                    }
+                  ],
+                  "width": "fill"
+                },
+                {
+                  "type": "frame",
+                  "name": "Allow music only",
+                  "height": 42,
+                  "radius": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "layout": "row",
+                  "align": "center",
+                  "gap": 8,
+                  "fill": "$surface",
+                  "stroke": {
+                    "color": "#171717"
+                  },
+                  "id": "tedf9",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "width": 16,
+                      "height": 16,
+                      "fill": "transparent",
+                      "stroke": {
+                        "color": "rgba(237,237,237,0.3)",
+                        "width": 1.5,
+                        "align": "inside"
+                      },
+                      "id": "i8nz2"
+                    },
+                    {
+                      "type": "text",
+                      "text": "Allow music only",
+                      "fontSize": 13,
+                      "fontWeight": 600,
+                      "color": "$text",
+                      "id": "o8dfj"
+                    }
+                  ],
+                  "width": "fill"
+                },
+                {
+                  "type": "frame",
+                  "name": "Block all",
+                  "height": 42,
+                  "radius": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "layout": "row",
+                  "align": "center",
+                  "gap": 8,
+                  "fill": "$surface",
+                  "stroke": {
+                    "color": "#171717"
+                  },
+                  "id": "ui2ox",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "width": 16,
+                      "height": 16,
+                      "fill": "transparent",
+                      "stroke": {
+                        "color": "rgba(237,237,237,0.3)",
+                        "width": 1.5,
+                        "align": "inside"
+                      },
+                      "id": "za3sr"
+                    },
+                    {
+                      "type": "text",
+                      "text": "Block all",
+                      "fontSize": 13,
+                      "fontWeight": 600,
+                      "color": "$text",
+                      "id": "bas3e"
+                    }
+                  ],
+                  "width": "fill"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "dut3o",
+              "name": "Status",
+              "layout": "row",
+              "align": "center",
+              "gap": 5,
+              "padding": [
+                0,
+                2
+              ],
+              "fill": "transparent",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "x3xu4",
+                  "icon": "lock",
+                  "set": "lucide",
+                  "size": 11,
+                  "color": "$text-3"
+                },
+                {
+                  "type": "text",
+                  "id": "i64uk",
+                  "text": "Shorts blocked until midnight",
+                  "fontSize": 12,
+                  "fontWeight": 400,
+                  "color": "$text-2"
+                }
+              ],
+              "visible": false
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "name": "YouTube",
+          "width": "fill",
+          "radius": 10,
+          "fill": "$field",
+          "padding": 14,
+          "gap": 12,
+          "layout": "column",
+          "id": "e1813",
+          "children": [
+            {
+              "type": "frame",
+              "layout": "row",
+              "align": "baseline",
+              "gap": 10,
+              "padding": [
+                0,
+                2
+              ],
+              "fill": "transparent",
+              "id": "x3zah",
+              "children": [
+                {
+                  "type": "text",
+                  "text": "YouTube",
+                  "fontSize": 14,
+                  "fontWeight": 600,
+                  "color": "$text",
+                  "id": "kdzuc"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "name": "Choices",
+              "width": "fill",
+              "layout": "grid",
+              "columns": 4,
+              "columnGap": 8,
+              "fill": "transparent",
+              "id": "d0c73",
+              "children": [
+                {
+                  "type": "frame",
+                  "name": "Allow all",
+                  "height": 42,
+                  "radius": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "layout": "row",
+                  "align": "center",
+                  "gap": 8,
+                  "fill": "$surface",
+                  "stroke": {
+                    "color": "#171717"
+                  },
+                  "id": "l0mc1",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "width": 16,
+                      "height": 16,
+                      "fill": "transparent",
+                      "stroke": {
+                        "color": "rgba(237,237,237,0.3)",
+                        "width": 1.5,
+                        "align": "inside"
+                      },
+                      "id": "swkuf"
+                    },
+                    {
+                      "type": "text",
+                      "text": "Allow all",
+                      "fontSize": 13,
+                      "fontWeight": 600,
+                      "color": "$text",
+                      "id": "ifym9"
+                    }
+                  ],
+                  "width": "fill"
+                },
+                {
+                  "type": "frame",
+                  "name": "Block Shorts",
+                  "height": 42,
+                  "radius": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "layout": "row",
+                  "align": "center",
+                  "gap": 8,
+                  "fill": "$pressed",
+                  "stroke": {
+                    "color": "rgba(237,237,237,0.35)"
+                  },
+                  "id": "pmumu",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "width": 16,
+                      "height": 16,
+                      "fill": "$surface",
+                      "stroke": {
+                        "color": "#ededed",
+                        "width": 5,
+                        "align": "inside"
+                      },
+                      "id": "s5675"
+                    },
+                    {
+                      "type": "text",
+                      "text": "Block Shorts",
+                      "fontSize": 13,
+                      "fontWeight": 600,
+                      "color": "$text",
+                      "id": "hx9h6"
+                    }
+                  ],
+                  "width": "fill"
+                },
+                {
+                  "type": "frame",
+                  "name": "Allow music only",
+                  "height": 42,
+                  "radius": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "layout": "row",
+                  "align": "center",
+                  "gap": 8,
+                  "fill": "$surface",
+                  "stroke": {
+                    "color": "#171717"
+                  },
+                  "id": "vn8xa",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "width": 16,
+                      "height": 16,
+                      "fill": "transparent",
+                      "stroke": {
+                        "color": "rgba(237,237,237,0.3)",
+                        "width": 1.5,
+                        "align": "inside"
+                      },
+                      "id": "a1nc4"
+                    },
+                    {
+                      "type": "text",
+                      "text": "Allow music only",
+                      "fontSize": 13,
+                      "fontWeight": 600,
+                      "color": "$text",
+                      "id": "pzc31"
+                    }
+                  ],
+                  "width": "fill"
+                },
+                {
+                  "type": "frame",
+                  "name": "Block all",
+                  "height": 42,
+                  "radius": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "layout": "row",
+                  "align": "center",
+                  "gap": 8,
+                  "fill": "$surface",
+                  "stroke": {
+                    "color": "#171717"
+                  },
+                  "id": "x7hvm",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "width": 16,
+                      "height": 16,
+                      "fill": "transparent",
+                      "stroke": {
+                        "color": "rgba(237,237,237,0.3)",
+                        "width": 1.5,
+                        "align": "inside"
+                      },
+                      "id": "tpv0a"
+                    },
+                    {
+                      "type": "text",
+                      "text": "Block all",
+                      "fontSize": 13,
+                      "fontWeight": 600,
+                      "color": "$text",
+                      "id": "ush22"
+                    }
+                  ],
+                  "width": "fill"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "gjmyn",
+              "name": "Status",
+              "layout": "row",
+              "align": "center",
+              "gap": 5,
+              "padding": [
+                0,
+                2
+              ],
+              "fill": "transparent",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "iuv3g",
+                  "icon": "lock",
+                  "set": "lucide",
+                  "size": 11,
+                  "color": "$text-3"
+                },
+                {
+                  "type": "text",
+                  "id": "cehm0",
+                  "text": "Shorts blocked until midnight",
+                  "fontSize": 12,
+                  "fontWeight": 400,
+                  "color": "$text-2"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "name": "YouTube",
+          "width": "fill",
+          "radius": 10,
+          "fill": "$field",
+          "padding": 14,
+          "gap": 12,
+          "layout": "column",
+          "id": "z86uo",
+          "children": [
+            {
+              "type": "frame",
+              "layout": "row",
+              "align": "baseline",
+              "gap": 10,
+              "padding": [
+                0,
+                2
+              ],
+              "fill": "transparent",
+              "id": "phb58",
+              "children": [
+                {
+                  "type": "text",
+                  "text": "YouTube",
+                  "fontSize": 14,
+                  "fontWeight": 600,
+                  "color": "$text",
+                  "id": "x2b0j"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "name": "Choices",
+              "width": "fill",
+              "layout": "grid",
+              "columns": 4,
+              "columnGap": 8,
+              "fill": "transparent",
+              "id": "ovdd0",
+              "children": [
+                {
+                  "type": "frame",
+                  "name": "Allow all",
+                  "height": 42,
+                  "radius": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "layout": "row",
+                  "align": "center",
+                  "gap": 8,
+                  "fill": "$surface",
+                  "stroke": {
+                    "color": "#171717"
+                  },
+                  "id": "gthhu",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "width": 16,
+                      "height": 16,
+                      "fill": "transparent",
+                      "stroke": {
+                        "color": "rgba(237,237,237,0.3)",
+                        "width": 1.5,
+                        "align": "inside"
+                      },
+                      "id": "h8x5q"
+                    },
+                    {
+                      "type": "text",
+                      "text": "Allow all",
+                      "fontSize": 13,
+                      "fontWeight": 600,
+                      "color": "$text",
+                      "id": "yxcgm"
+                    }
+                  ],
+                  "width": "fill"
+                },
+                {
+                  "type": "frame",
+                  "name": "Block Shorts",
+                  "height": 42,
+                  "radius": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "layout": "row",
+                  "align": "center",
+                  "gap": 8,
+                  "fill": "$surface",
+                  "stroke": {
+                    "color": "#171717"
+                  },
+                  "id": "fwfn5",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "width": 16,
+                      "height": 16,
+                      "fill": "transparent",
+                      "stroke": {
+                        "color": "rgba(237,237,237,0.3)",
+                        "width": 1.5,
+                        "align": "inside"
+                      },
+                      "id": "gyfhf"
+                    },
+                    {
+                      "type": "text",
+                      "text": "Block Shorts",
+                      "fontSize": 13,
+                      "fontWeight": 600,
+                      "color": "$text",
+                      "id": "z5m9i"
+                    }
+                  ],
+                  "width": "fill"
+                },
+                {
+                  "type": "frame",
+                  "name": "Allow music only",
+                  "height": 42,
+                  "radius": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "layout": "row",
+                  "align": "center",
+                  "gap": 8,
+                  "fill": "$pressed",
+                  "stroke": {
+                    "color": "rgba(237,237,237,0.35)"
+                  },
+                  "id": "q7vxc",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "width": 16,
+                      "height": 16,
+                      "fill": "$surface",
+                      "stroke": {
+                        "color": "#ededed",
+                        "width": 5,
+                        "align": "inside"
+                      },
+                      "id": "d6kap"
+                    },
+                    {
+                      "type": "text",
+                      "text": "Allow music only",
+                      "fontSize": 13,
+                      "fontWeight": 600,
+                      "color": "$text",
+                      "id": "s7poz"
+                    }
+                  ],
+                  "width": "fill"
+                },
+                {
+                  "type": "frame",
+                  "name": "Block all",
+                  "height": 42,
+                  "radius": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "layout": "row",
+                  "align": "center",
+                  "gap": 8,
+                  "fill": "$surface",
+                  "stroke": {
+                    "color": "#171717"
+                  },
+                  "id": "h07ga",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "width": 16,
+                      "height": 16,
+                      "fill": "transparent",
+                      "stroke": {
+                        "color": "rgba(237,237,237,0.3)",
+                        "width": 1.5,
+                        "align": "inside"
+                      },
+                      "id": "jbmad"
+                    },
+                    {
+                      "type": "text",
+                      "text": "Block all",
+                      "fontSize": 13,
+                      "fontWeight": 600,
+                      "color": "$text",
+                      "id": "o14yo"
+                    }
+                  ],
+                  "width": "fill"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "je1vu",
+              "name": "Status",
+              "layout": "row",
+              "align": "center",
+              "gap": 5,
+              "padding": [
+                0,
+                2
+              ],
+              "fill": "transparent",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "h7pki",
+                  "icon": "lock",
+                  "set": "lucide",
+                  "size": 11,
+                  "color": "$text-3"
+                },
+                {
+                  "type": "text",
+                  "id": "imgu9",
+                  "text": "Music only until midnight",
+                  "fontSize": 12,
+                  "fontWeight": 400,
+                  "color": "$text-2"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "name": "YouTube",
+          "width": "fill",
+          "radius": 10,
+          "fill": "$field",
+          "padding": 14,
+          "gap": 12,
+          "layout": "column",
+          "id": "tmv9r",
+          "children": [
+            {
+              "type": "frame",
+              "layout": "row",
+              "align": "baseline",
+              "gap": 10,
+              "padding": [
+                0,
+                2
+              ],
+              "fill": "transparent",
+              "id": "eqsor",
+              "children": [
+                {
+                  "type": "text",
+                  "text": "YouTube",
+                  "fontSize": 14,
+                  "fontWeight": 600,
+                  "color": "$text",
+                  "id": "z4fjm"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "name": "Choices",
+              "width": "fill",
+              "layout": "grid",
+              "columns": 4,
+              "columnGap": 8,
+              "fill": "transparent",
+              "id": "z9ul2",
+              "children": [
+                {
+                  "type": "frame",
+                  "name": "Allow all",
+                  "height": 42,
+                  "radius": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "layout": "row",
+                  "align": "center",
+                  "gap": 8,
+                  "fill": "$surface",
+                  "stroke": {
+                    "color": "#171717"
+                  },
+                  "id": "u127q",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "width": 16,
+                      "height": 16,
+                      "fill": "transparent",
+                      "stroke": {
+                        "color": "rgba(237,237,237,0.3)",
+                        "width": 1.5,
+                        "align": "inside"
+                      },
+                      "id": "bfixz"
+                    },
+                    {
+                      "type": "text",
+                      "text": "Allow all",
+                      "fontSize": 13,
+                      "fontWeight": 600,
+                      "color": "$text",
+                      "id": "uowuc"
+                    }
+                  ],
+                  "width": "fill"
+                },
+                {
+                  "type": "frame",
+                  "name": "Block Shorts",
+                  "height": 42,
+                  "radius": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "layout": "row",
+                  "align": "center",
+                  "gap": 8,
+                  "fill": "$surface",
+                  "stroke": {
+                    "color": "#171717"
+                  },
+                  "id": "mbr95",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "width": 16,
+                      "height": 16,
+                      "fill": "transparent",
+                      "stroke": {
+                        "color": "rgba(237,237,237,0.3)",
+                        "width": 1.5,
+                        "align": "inside"
+                      },
+                      "id": "p7tlw"
+                    },
+                    {
+                      "type": "text",
+                      "text": "Block Shorts",
+                      "fontSize": 13,
+                      "fontWeight": 600,
+                      "color": "$text",
+                      "id": "jrtv4"
+                    }
+                  ],
+                  "width": "fill"
+                },
+                {
+                  "type": "frame",
+                  "name": "Allow music only",
+                  "height": 42,
+                  "radius": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "layout": "row",
+                  "align": "center",
+                  "gap": 8,
+                  "fill": "$surface",
+                  "stroke": {
+                    "color": "#171717"
+                  },
+                  "id": "etqrx",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "width": 16,
+                      "height": 16,
+                      "fill": "transparent",
+                      "stroke": {
+                        "color": "rgba(237,237,237,0.3)",
+                        "width": 1.5,
+                        "align": "inside"
+                      },
+                      "id": "tzptq"
+                    },
+                    {
+                      "type": "text",
+                      "text": "Allow music only",
+                      "fontSize": 13,
+                      "fontWeight": 600,
+                      "color": "$text",
+                      "id": "vejxk"
+                    }
+                  ],
+                  "width": "fill"
+                },
+                {
+                  "type": "frame",
+                  "name": "Block all",
+                  "height": 42,
+                  "radius": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "layout": "row",
+                  "align": "center",
+                  "gap": 8,
+                  "fill": "$pressed",
+                  "stroke": {
+                    "color": "rgba(237,237,237,0.35)"
+                  },
+                  "id": "otpig",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "width": 16,
+                      "height": 16,
+                      "fill": "$surface",
+                      "stroke": {
+                        "color": "#ededed",
+                        "width": 5,
+                        "align": "inside"
+                      },
+                      "id": "wk4g6"
+                    },
+                    {
+                      "type": "text",
+                      "text": "Block all",
+                      "fontSize": 13,
+                      "fontWeight": 600,
+                      "color": "$text",
+                      "id": "ot9fg"
+                    }
+                  ],
+                  "width": "fill"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "n2d81",
+              "name": "Status",
+              "layout": "row",
+              "align": "center",
+              "gap": 5,
+              "padding": [
+                0,
+                2
+              ],
+              "fill": "transparent",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "ut4mm",
+                  "icon": "lock",
+                  "set": "lucide",
+                  "size": 11,
+                  "color": "$text-3"
+                },
+                {
+                  "type": "text",
+                  "id": "r5vkl",
+                  "text": "Blocked forever",
+                  "fontSize": 12,
+                  "fontWeight": 400,
+                  "color": "$text-2"
                 }
               ]
             }
