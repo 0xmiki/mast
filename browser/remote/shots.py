@@ -333,7 +333,7 @@ def field(k, text):
     time.sleep(0.5)
 p.js("document.querySelector('.bl [data-act=newcat]').click()")
 field("newcat", "Late night")
-field("add", "lobste.rs")
+field("add", "kottke.org")
 shot("17c-own-category")
 p.js("document.querySelector('.bl [data-view=\"\"]').click()")
 p.js("document.querySelector('.bl [data-view=news]').click()")
