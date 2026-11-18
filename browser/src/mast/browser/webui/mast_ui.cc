@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <iterator>
 #include <memory>
 #include <optional>
 #include <string>
@@ -27,6 +28,7 @@
 #include "base/values.h"
 #include "chrome/browser/bookmarks/bookmark_model_factory.h"
 #include "chrome/browser/profiles/profile.h"
+#include "chrome/browser/search_engines/template_url_service_factory.h"
 #include "chrome/browser/themes/theme_properties.h"
 #include "chrome/browser/ui/webui/favicon_source.h"
 #include "components/bookmarks/browser/base_bookmark_model_observer.h"
@@ -56,6 +58,8 @@
 #include "mast/common/mast_tab_bar_state.h"
 #include "mast/ui/color/mast_palette.h"
 #include "components/prefs/pref_service.h"
+#include "components/search_engines/template_url.h"
+#include "components/search_engines/template_url_service.h"
 #include "components/url_formatter/url_fixer.h"
 #include "services/network/public/mojom/content_security_policy.mojom.h"
 #include "url/gurl.h"
@@ -123,6 +127,11 @@ const base::ListValue& CategoriesValue() {
   }());
   return *kValue;
 }
+
+// The welcome page's search engines (design: Onboarding, step 3), by their
+// prepopulated ids (third_party/search_engines_data): Google, DuckDuckGo,
+// Bing, Brave, Baidu, Yandex. The page lists them in this order.
+constexpr int kWelcomeEngines[] = {1, 92, 3, 109, 21, 15};
 
 // "espn.com/nba" -> https://espn.com/nba. Only web pages go on the desktop.
 GURL DesktopUrl(const std::string& input) {
@@ -218,6 +227,8 @@ class MastHandler : public content::WebUIMessageHandler,
     On("welcomeSources", &MastHandler::HandleWelcomeSources);
     On("welcomeImport", &MastHandler::HandleWelcomeImport);
     On("welcomeDefault", &MastHandler::HandleWelcomeDefault);
+    On("welcomeEngine", &MastHandler::HandleWelcomeEngine);
+    On("welcomeSetEngine", &MastHandler::HandleWelcomeSetEngine);
     On("block", &MastHandler::HandleBlock);
     On("undo", &MastHandler::HandleUndo);
     On("addSite", &MastHandler::HandleAddSite);
@@ -330,6 +341,39 @@ class MastHandler : public content::WebUIMessageHandler,
     base::MakeRefCounted<shell_integration::DefaultBrowserWorker>()
         ->StartSetAsDefault(base::BindOnce(&MastHandler::OnDefault,
                                            weak_factory_.GetWeakPtr()));
+  }
+
+  // ["welcomeEngine"]: the search engine in use, as its prepopulated id (0
+  // for one the user made). Replies through mastWelcome({engine}).
+  void HandleWelcomeEngine(const base::ListValue& args) {
+    AllowJavascript();
+    SendEngine();
+  }
+
+  // ["welcomeSetEngine", id]: one of the welcome page's engines
+  // (kWelcomeEngines) becomes the default, added from Chromium's built-in list
+  // if the profile doesn't have it yet (a profile starts with its region's).
+  void HandleWelcomeSetEngine(const base::ListValue& args) {
+    AllowJavascript();
+    const int id = args.size() > 0 && args[0].is_int() ? args[0].GetInt() : 0;
+    TemplateURLService* service =
+        TemplateURLServiceFactory::GetForProfile(profile_);
+    if (service && std::ranges::find(kWelcomeEngines, id) !=
+                       std::end(kWelcomeEngines)) {
+      service->SetUserSelectedDefaultSearchProviderByPrepopulateId(id);
+    }
+    SendEngine();
+  }
+
+  void SendEngine() {
+    const TemplateURLService* service =
+        TemplateURLServiceFactory::GetForProfile(profile_);
+    const TemplateURL* engine =
+        service ? service->GetDefaultSearchProvider() : nullptr;
+    CallJavascriptFunction(
+        "mastWelcome",
+        base::Value(base::DictValue().Set(
+            "engine", engine ? engine->prepopulate_id() : 0)));
   }
 
   void CheckDefault() {

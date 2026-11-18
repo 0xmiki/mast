@@ -5,8 +5,10 @@
 <title>Welcome to Mast</title>
 {{ICON}}
 <style>{{STYLE}}
-/* The welcome page (design C25), opened once on a new install: what Mast is,
-   bring everything over from another browser in one click, done. */
+/* The welcome page (design C25; Canvas "Onboarding"), opened once on a new
+   install: welcome, bring everything over from another browser in one click,
+   pick a search engine (Google to begin with), done. Titles only: no lines
+   of explanation under them. */
 body { display: flex; justify-content: center; min-height: 100vh; margin: 0; padding: 18vh 24px 40px; box-sizing: border-box; text-align: center; }
 /* On the picture (design C26): Customize's, which a new profile starts with
    (Sunrise). A wash keeps text readable; no logo, no tagline. */
@@ -21,7 +23,6 @@ main { display: flex; flex-direction: column; align-items: center; width: 100%; 
 @media (prefers-reduced-motion: reduce) { .step { animation: none; } }
 h1 { margin: 0; color: var(--text); font-size: 40px; font-weight: 500; letter-spacing: -.025em; line-height: 1.1; }
 h2 { margin: 0; color: var(--text); font-size: 34px; font-weight: 500; letter-spacing: -.024em; }
-.lead { margin: 14px 0 0; color: var(--text-2); font-size: 16px; line-height: 1.55; }
 button { font: inherit; cursor: pointer; }
 .primary, .secondary { height: 40px; padding: 0 22px; border-radius: 20px; font-size: 14px; font-weight: 600; }
 /* White, not ember: in Mast, ember always means blocked. */
@@ -40,7 +41,7 @@ button { font: inherit; cursor: pointer; }
 .list { width: 560px; max-width: 100%; margin-top: 32px; padding: 6px; border: 1px solid rgb(255 255 255/.08); border-radius: 14px; background: rgb(10 10 10/.65); text-align: left; box-sizing: border-box; }
 .row { display: flex; align-items: center; gap: 14px; height: 64px; padding: 0 14px; border-radius: 10px; }
 .row:first-child { background: rgb(255 255 255/.06); }
-.row .ic { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 50%; color: #fff; font-size: 15px; font-weight: 700; }
+.ic { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 50%; color: #fff; font-size: 15px; font-weight: 700; }
 .row .tx { flex: 1; min-width: 0; }
 .row .nm, .row .meta { display: block; }
 .row .nm { color: var(--text); font-size: 14px; font-weight: 600; }
@@ -55,8 +56,17 @@ button { font: inherit; cursor: pointer; }
 .chip i { display: grid; place-items: center; width: 14px; height: 14px; border-radius: 4px; box-shadow: inset 0 0 0 1.5px var(--text-3); }
 .chip.on { color: var(--text); }
 .chip.on i { background: var(--text); box-shadow: none; color: var(--bg); }
-.what p { margin: 10px 0 0; color: var(--text-3); font-size: 12px; line-height: 1.5; }
-/* Step 3. */
+.list .none { padding: 18px 14px; color: var(--text-2); font-size: 14px; }
+/* Step 3: the search engine, a list like step 2's; the picked one is lit. */
+.engines { margin-top: 32px; }
+.engine { display: flex; align-items: center; gap: 14px; width: 100%; height: 56px; padding: 0 16px 0 14px; border: 0; border-radius: 10px; background: none; text-align: left; }
+.engine:hover { background: rgb(255 255 255/.04); }
+.engine.on { background: rgb(255 255 255/.08); }
+.engine .ic { width: 32px; height: 32px; font-size: 14px; }
+.engine .nm { flex: 1; color: var(--text); font-size: 14px; font-weight: 600; }
+.engine .radio { width: 18px; height: 18px; flex: none; border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgb(242 242 242/.35); }
+.engine.on .radio { background: var(--bg); box-shadow: inset 0 0 0 5.5px var(--text); }
+/* Step 4. */
 .done { display: grid; place-items: center; width: 52px; height: 52px; margin-bottom: 22px; border-radius: 50%; background: rgb(255 255 255/.12); color: var(--text); }
 .sum { display: flex; flex-direction: column; gap: 12px; width: 460px; max-width: 100%; margin-top: 32px; text-align: left; }
 .sum div { display: flex; gap: 12px; }
@@ -71,26 +81,28 @@ button { font: inherit; cursor: pointer; }
 <main>
   <section class="step on" id="s0">
     <h1>Welcome to Mast</h1>
-    <p class="lead">Let's get you set up. It takes a minute.</p>
     <button class="primary go" data-go="1">Get started</button>
   </section>
 
   <section class="step" id="s1">
     <h2>Bring your stuff over</h2>
-    <p class="lead" id="importLead">Looking for your browsers…</p>
-    <div class="list" id="list"></div>
+    <div class="list" id="list" style="visibility: hidden"></div>
     <div class="what" id="what">
       <h4>What comes over</h4>
       <div class="chips" id="chips"></div>
-      <p>Sites in your bookmarks bar go on your new tab page. Extensions are reinstalled from the Web Store.<br>Passwords stay where they are: export them from your old browser if you want them here.</p>
     </div>
     <button class="quiet" data-go="2" id="skip">Skip for now</button>
   </section>
 
   <section class="step" id="s2">
+    <h2>Your search engine</h2>
+    <div class="list engines" id="engines" role="radiogroup" aria-label="Search engine"></div>
+    <button class="primary go" data-go="3">Continue</button>
+  </section>
+
+  <section class="step" id="s3">
     <div class="done"><svg width="26" height="26" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3.5 8.5l3 3 6-7"/></svg></div>
     <h2>You're all set</h2>
-    <p class="lead" id="doneLead">Mast is ready.</p>
     <div class="sum" id="sum"></div>
     <div class="actions">
       <button class="secondary" id="default">Make Mast your default browser</button>
@@ -98,7 +110,7 @@ button { font: inherit; cursor: pointer; }
     </div>
   </section>
 
-  <div class="dots" id="dots"><i class="on"></i><i></i><i></i></div>
+  <div class="dots" id="dots"><i class="on"></i><i></i><i></i><i></i></div>
 </main>
 <p class="credit">{{CREDIT}}</p>
 <script>
@@ -115,13 +127,25 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&': '&amp;', '<': '&lt
 const tick = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 5.2l2 2 4-4.4"/></svg>';
 const COLORS = {chrome: '#2f6fe4', brave: '#e2541f', edge: '#0f8fd8', vivaldi: '#d6333a', opera: '#c8102e', arc: '#5b4bdb', chromium: '#4a7fd6', firefox: '#ff8a1f'};
 const what = {bookmarks: true, history: true, extensions: true};
-let sources = null, busy = '', step = 0;
+let sources = null, busy = '', step = 0, imported = null;
+// The search engines on offer, by Chromium's prepopulated id
+// (kWelcomeEngines in mast_ui.cc), and the one in use: Google on a new profile.
+const ENGINES = [[1, 'Google', '#4285f4'], [92, 'DuckDuckGo', '#de5833'], [3, 'Bing', '#0c8484'],
+  [109, 'Brave Search', '#fb542b'], [21, 'Baidu', '#2932e1'], [15, 'Yandex', '#fc3f1d']];
+let engine = 1;
 
 function go(n) {
   step = n;
   document.querySelectorAll('.step').forEach((s, i) => s.classList.toggle('on', i === n));
   document.querySelectorAll('#dots i').forEach((d, i) => d.classList.toggle('on', i === n));
   if (n === 1 && !sources) chrome.send('welcomeSources');
+  if (n === 2) { renderEngines(); chrome.send('welcomeEngine'); }
+  if (n === 3) renderDone();
+}
+function renderEngines() {
+  $('engines').innerHTML = ENGINES.map(([id, name, color]) =>
+    `<button class="engine ${id === engine ? 'on' : ''}" role="radio" aria-checked="${id === engine}" data-engine="${id}">
+      <span class="ic" style="background:${color}">${esc(name[0])}</span><span class="nm">${esc(name)}</span><i class="radio"></i></button>`).join('');
 }
 const count = (n, one, many) => `${n.toLocaleString()} ${n === 1 ? one : many}`;
 function meta(s) {
@@ -134,13 +158,10 @@ function meta(s) {
 }
 function renderList() {
   if (!sources) return;
-  $('importLead').innerHTML = sources.length
-    ? 'Bookmarks, history and extensions. Nothing leaves your computer.'
-    : 'No other browsers were found on this computer.';
   $('what').style.display = sources.length ? '' : 'none';
   $('skip').textContent = sources.length ? 'Skip for now' : 'Continue';
-  $('list').style.display = sources.length ? '' : 'none';
-  $('list').innerHTML = sources.map((s, i) => {
+  $('list').style.visibility = '';
+  $('list').innerHTML = !sources.length ? '<div class="none">No other browsers on this computer</div>' : sources.map((s, i) => {
     const key = s.id.split('/')[0].replace(/-.*/, '');
     return `<div class="row"><span class="ic" style="background:${COLORS[key] || '#555'}">${esc(s.browser[0] || '?')}</span>
       <span class="tx"><span class="nm">${esc(s.browser)}${s.profile ? `<small>${esc(s.profile)}</small>` : ''}</span><span class="meta">${esc(meta(s))}</span></span>
@@ -149,26 +170,27 @@ function renderList() {
   $('chips').innerHTML = [['bookmarks', 'Bookmarks'], ['history', 'History'], ['extensions', 'Extensions']].map(([k, label]) =>
     `<button class="chip ${what[k] ? 'on' : ''}" data-what="${k}" aria-pressed="${what[k]}"><i>${what[k] ? tick : ''}</i>${label}</button>`).join('');
 }
-function renderDone(r) {
-  const items = [];
+// What came over, one line each, and the search engine.
+function renderDone() {
+  const r = imported, items = [];
   if (r) {
-    $('doneLead').textContent = r.ok ? `Everything from ${r.browser} is here.` : `Some of ${r.browser} couldn't be brought over.`;
-    if (r.bookmarks > 0) items.push([count(r.bookmarks, 'bookmark', 'bookmarks'),
-      r.onNewTab ? `${count(r.onNewTab, 'site', 'sites')} from your bookmarks bar ${r.onNewTab === 1 ? 'is' : 'are'} on your new tab page.` : `In the "From ${r.browser}" folder.`]);
-    if (r.bookmarks < 0) items.push(['Bookmarks', `In your bookmarks.`]);
-    if (r.extensions > 0) items.push([count(r.extensions, 'extension', 'extensions'), 'Reinstalled from the Web Store.']);
-    if (r.history > 0) items.push([count(r.history, 'page of history', 'pages of history'), 'Your sites come up as you type.']);
-    if (r.history < 0) items.push(['History', 'Your sites come up as you type.']);
-  } else {
-    $('doneLead').textContent = 'You can bring your browser over any time from mast://mast/welcome.';
+    if (r.bookmarks > 0) items.push(count(r.bookmarks, 'bookmark', 'bookmarks'));
+    if (r.bookmarks < 0) items.push('Bookmarks');
+    if (r.extensions > 0) items.push(count(r.extensions, 'extension', 'extensions'));
+    if (r.history > 0) items.push(count(r.history, 'page of history', 'pages of history'));
+    if (r.history < 0) items.push('History');
+    if (!r.ok) items.push(`Some of ${r.browser} couldn't come over`);
   }
+  const e = ENGINES.find(([id]) => id === engine);
+  if (e) items.push(`Search: ${e[1]}`);
   $('sum').style.display = items.length ? '' : 'none';
-  $('sum').innerHTML = items.map(([b, s]) => `<div><i>${tick}</i><span><b>${esc(b)}</b><span>${esc(s)}</span></span></div>`).join('');
+  $('sum').innerHTML = items.map((b) => `<div><i>${tick}</i><span><b>${esc(b)}</b></span></div>`).join('');
 }
 
 window.mastWelcome = (m) => {
   if (m.sources) { sources = m.sources; renderList(); }
-  if (m.result) { busy = ''; renderDone(m.result); go(2); }
+  if (m.result) { busy = ''; imported = m.result; go(2); }
+  if ('engine' in m) { engine = m.engine; if (step === 2) renderEngines(); }
   if ('isDefault' in m) {
     const b = $('default');
     b.disabled = m.isDefault;
@@ -179,7 +201,8 @@ window.mastWelcome = (m) => {
 document.addEventListener('click', (e) => {
   const t = e.target.closest('button');
   if (!t) return;
-  if (t.dataset.go) { if (t.dataset.go === '2') renderDone(null); return go(+t.dataset.go); }
+  if (t.dataset.go) return go(+t.dataset.go);
+  if (t.dataset.engine) { engine = +t.dataset.engine; renderEngines(); return chrome.send('welcomeSetEngine', [engine]); }
   if (t.dataset.what) { what[t.dataset.what] = !what[t.dataset.what]; return renderList(); }
   if (t.dataset.import && !busy) { busy = t.dataset.import; renderList(); return chrome.send('welcomeImport', [busy, what]); }
   if (t.id === 'default') return chrome.send('welcomeDefault');

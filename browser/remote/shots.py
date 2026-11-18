@@ -187,6 +187,14 @@ p.js("""mastWelcome({sources: [
   {id: 'firefox/0', browser: 'Firefox', profile: 'default-release', bookmarks: -1, extensions: 0, history: true, firefox: true}]})""")
 shot("47b-welcome-import-list", settle=0.8)
 p.js("mastWelcome({result: {browser: 'Google Chrome', bookmarks: 1204, onNewTab: 18, history: 20000, extensions: 14, ok: true}})")
+# The search engine step (Onboarding, step 3): Google to begin with; DuckDuckGo picked
+# for the shot, then Google again for the scenes after.
+shot("47c-welcome-search", settle=0.8)
+p.js("document.querySelector('[data-engine=\"92\"]').click()")
+shot("47d-welcome-search-picked", settle=0.8)
+p.js("document.querySelector('[data-engine=\"1\"]').click()")
+time.sleep(0.5)
+p.js("document.querySelector('[data-go=\"3\"]').click()")
 shot("48-welcome-done", settle=0.8)
 p.go("chrome://newtab")
 # What a new tab's icon shows while it opens (a Chromium logo was seen for a moment):
