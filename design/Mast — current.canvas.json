@@ -13844,7 +13844,7 @@
       "children": [
         {
           "type": "text",
-          "text": "Panel header: three ways to switch Blocklist / Shortcuts",
+          "text": "Panel header: Blocklist / Shortcuts (decided: keep today's titles)",
           "fontSize": 20,
           "fontWeight": 600,
           "color": "$text",
@@ -13876,9 +13876,9 @@
                 },
                 {
                   "type": "text",
-                  "text": "two 20 px titles; reads as two headings, not a switch",
+                  "text": "Chosen: keeps the hierarchy (title over search). Only change: no focus box after a click (:focus-visible).",
                   "fontSize": 12,
-                  "color": "$text-2",
+                  "color": "$text",
                   "id": "fjqdp"
                 }
               ]
