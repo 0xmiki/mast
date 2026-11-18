@@ -450,6 +450,8 @@ time.sleep(1)
 # checks Widevine as it loads) asks; Download fetches it from Google, then the tab offers a
 # restart. Not restarted here: the session ends with these scenes.
 p.go("https://shaka-player-demo.appspot.com/demo/", 8)
+keys("ctrl+1")  # the scene's page is the first tab; the tab-group scene left another one active
+time.sleep(1)
 shot("54-widevine-ask", settle=1)
 native_dump("54-widevine-ask", click=("MdTextButton", "Download"))
 time.sleep(25)
