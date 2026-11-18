@@ -63,7 +63,7 @@
 .bl .cat .more, .bl .site .rm { position: absolute; top: 7px; right: 6px; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0;
   border-radius: 13px; background: none; color: var(--text-3); }
 .bl .cat .more:hover, .bl .site .rm:hover { background: var(--pressed); color: var(--text); }
-.bl .newcat { display: flex; align-items: center; gap: 10px; width: 100%; height: 40px; padding: 0 12px; border: 1px dashed color-mix(in srgb, var(--text) 16%, transparent);
+.bl .newcat { display: flex; align-items: center; gap: 10px; width: 100%; height: 40px; margin-top: 6px; padding: 0 12px; border: 1px dashed color-mix(in srgb, var(--text) 16%, transparent);
   border-radius: 6px; background: none; color: var(--text-2); font-size: 13px; font-weight: 500; text-align: left; }
 .bl button.newcat:hover { color: var(--text); }
 .bl .newcat.on { border-style: solid; border-color: var(--text-3); cursor: text; }
@@ -111,9 +111,10 @@
   box-shadow: inset 0 0 0 1px var(--line); color: var(--text); font-size: 13px; }
 .bl .sc-line input.url { flex: 1.5; }
 .bl .sc-line input:focus { box-shadow: inset 0 0 0 1px var(--text-3); }
-.bl .sc-key { display: flex; flex: none; align-items: center; gap: 4px; width: 104px; height: 36px; overflow: hidden; padding: 0 8px 0 10px; border: 0; border-radius: 7px;
+.bl .sc-key { display: flex; flex: none; align-items: center; justify-content: center; gap: 4px; width: 128px; height: 36px; overflow: hidden; padding: 0 10px; border: 0; border-radius: 7px;
   background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); color: var(--text-3); font-size: 13px; text-align: left; white-space: nowrap; }
-.bl .sc-key.listening { box-shadow: inset 0 0 0 1px var(--text-2); color: var(--text-2); }
+.bl .sc-key.listening { box-shadow: inset 0 0 0 1px var(--text-2); color: var(--text-2); outline: none; }
+.bl .sc-key:focus:not(:focus-visible) { outline: none; }
 .bl .sc-key.bad { box-shadow: inset 0 0 0 1px var(--signal); }
 .bl .sc-cancel { flex: none; height: 36px; padding: 0 14px; border: 0; border-radius: 18px; background: none; box-shadow: inset 0 0 0 1px var(--line); color: var(--text-2); font-weight: 500; }
 .bl .sc-cancel:hover { color: var(--text); }
@@ -561,7 +562,7 @@ const MastBlocklist = (() => {
       <span class="nm">${esc(s.name)}</span><span class="u">${esc(shortUrl(s.url))}</span>
       <span class="acts"><button data-scedit="${esc(s.key)}" aria-label="Edit ${esc(s.name)}">${mastIcon('pencil', 13)}</button>
       <button data-scrm="${esc(s.key)}" aria-label="Remove ${esc(s.name)}">${mastIcon('x', 13)}</button></span></div>`).join('');
-    const keyBox = sc.key ? keysHtml(sc.key) : sc.listening ? 'Press a letter…' : 'Alt + key';
+    const keyBox = sc.key ? keysHtml(sc.key) : sc.listening ? 'Press a letter' : 'Alt + key';
     const msg = sc.msg || SC_HELP;
     return `<div class="sc-form">
         <div class="sc-line">

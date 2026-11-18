@@ -71,6 +71,9 @@ body { background: var(--surface); }
 .dist .sep { width: 120px; height: 1px; background: var(--line); }
 dialog { width: 340px; padding: 18px; border: 0; border-radius: 10px; background: var(--field); color: var(--text); box-shadow: var(--shadow); }
 dialog::backdrop { background: rgb(0 0 0/.35); }
+/* The blocklist panel and Customize leave the page as it is: a dim stopped at the tab row,
+   which the page can't reach. */
+dialog.bl-panel::backdrop, dialog.cz::backdrop { background: transparent; }
 dialog h3 { margin: 0 0 12px; font-size: 14px; font-weight: 600; }
 #addDialog input { width: 100%; height: 34px; margin-bottom: 8px; padding: 0 10px; border: 0; border-radius: var(--r); outline: 0;
   background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
@@ -197,8 +200,6 @@ dialog.cz { width: 400px; padding: 18px 20px 20px; }
 .sw button:hover, .sw button.on { color: var(--text); }
 .sw i { width: 40px; height: 40px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(255 255 255/.12); }
 .sw button.on i { box-shadow: inset 0 0 0 1px rgb(255 255 255/.12), 0 0 0 2px var(--field), 0 0 0 4px var(--text); }
-.cz .note { display: flex; align-items: center; gap: 8px; margin: 16px 0 0; color: var(--text-3); font-size: 12px; }
-.cz .note .ind { box-shadow: none; background: var(--signal); }
 </style>
 </head>
 <body>
@@ -231,7 +232,6 @@ dialog.cz { width: 400px; padding: 18px 20px 20px; }
   <div id="czBar"></div>
   <h4>Colors</h4>
   <div class="sw" id="czSw"></div>
-  <p class="note"><i class="ind"></i>Ember stays the same: it always means blocked.</p>
   <input type="file" id="czFile" accept="image/*" hidden>
 </dialog>
 {{BLOCKLIST}}
