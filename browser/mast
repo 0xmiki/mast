@@ -421,9 +421,11 @@ cmd_run() {
 
 # Validate make-patches.py anchors against base files rebuilt locally (tools/base-file.mjs),
 # so a wrong anchor costs nothing instead of a builder session.
+# Python through uv (make-patches.py needs only the standard library); nix shell would fetch
+# the nixpkgs index first, and hung when channels.nixos.org timed out.
 make_patches() {
-	MAST_LOCAL_BASE="$ROOT" nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#python3 -c \
-		python3 "$ROOT/remote/make-patches.py"
+	need uv
+	MAST_LOCAL_BASE="$ROOT" uv run --no-project --quiet python "$ROOT/remote/make-patches.py"
 }
 
 cmd_check-patches() {
