@@ -41,17 +41,19 @@ which `publish` refuses.
 - If it's ever stolen: publish the revocation certificate, make a new key, and ship a
   release (signed with the old key, while it still works) that installs the new one.
 
-## Tested on (2026-11-19, release v157.0.8103.78-202611182050, fresh Hetzner servers)
+## Tested on fresh Hetzner servers (2026-11-19)
 
-| Distro | Install (README command) | Update source | Signed download from the source |
-|---|---|---|---|
-| Fedora 44 | ✓ | dnf sees Mast | ✓ `dnf reinstall` (ed25519 accepted) |
-| Rocky Linux 9 | ✓ | dnf sees Mast | ✓ (rpm 4.16 accepts ed25519 too) |
-| openSUSE Leap 16 | ✓ | zypper refreshes it | ✓ |
-| Ubuntu 24.04, 26.04, Debian 13 | ✗ in that release: `libasound2` and six more were renamed "t64"; fixed since (either name) and checked by installing a corrected .deb | apt reads the signed InRelease | ✓ |
+| Distro | README install | Update arrives (first release → second) |
+|---|---|---|
+| Fedora 44 | ✓ | ✓ `dnf upgrade`, signature checked |
+| Rocky Linux 9 | ✓ | ✓ `dnf upgrade` (rpm 4.16 accepts ed25519) |
+| Debian 13 | ✓ since the t64 fix | ✓ `apt upgrade` from the signed source |
+| Ubuntu 24.04, 26.04 | ✓ since the t64 fix and `apt-get update` first | apt reads the signed source (same as Debian) |
+| openSUSE Leap 16 | ✓ | ✗ zypper won't fetch a package from another host than its metadata (GitHub Pages vs releases), so the .rpm no longer adds a zypper source; Mast's own daily check tells openSUSE users (from the build after 157.0.8103.78-202611190455) |
 
-Every one: `mast --version` runs and no library is missing. Not checked: a real desktop
-session (the servers have none), and an update arriving (needs a second release).
+Two bugs these found, both fixed: the .deb needed Debian's "t64" library names, and on a
+system that never downloaded its package lists (fresh or minimal) apt knew no packages
+at all, so install.sh runs `apt-get update` first.
 
 ## Known limits
 

@@ -6,7 +6,7 @@
 #   install.sh                the one-line installer, which picks one of the above
 #   SHA256SUMS(.asc)          checksums install.sh verifies, plus the version; signed
 #   Packages(.gz), Release, InRelease, Release.gpg   the apt source (signed)
-#   rpm/repodata/             the dnf/zypper source, for GitHub Pages (signed)
+#   rpm/repodata/             the dnf source, for GitHub Pages (signed)
 #   latest.json               what tarball installs check for updates
 # File names stay the same across versions, so a "latest" download link always works.
 # Installing the .deb or .rpm also adds Mast's package source, so updates come with the
@@ -97,7 +97,6 @@ fi
 # The package sources the .deb and .rpm install (the same lines install.sh would write).
 sed "s|@BASE@|${MAST_DOWNLOAD_URL%/}|g" "$P/mast.sources" > "$STAGE/share/mast.sources"
 sed "s|@PAGES@|${MAST_PAGES_URL%/}|g" "$P/mast.repo" > "$STAGE/share/mast.repo"
-sed "s|@PAGES@|${MAST_PAGES_URL%/}|g" "$P/mast-zypp.repo" > "$STAGE/share/mast-zypp.repo"
 
 # rpm: depend on the exact libraries the browser links (distro-neutral, works on Fedora
 # and openSUSE alike). GTK is loaded at runtime, so it's added by hand.
@@ -167,10 +166,6 @@ contents:
     packager: rpm
   - src: $STAGE/share/mast.repo
     dst: /etc/yum.repos.d/mast.repo
-    type: config|noreplace
-    packager: rpm
-  - src: $STAGE/share/mast-zypp.repo
-    dst: /etc/zypp/repos.d/mast.repo
     type: config|noreplace
     packager: rpm
 EOF

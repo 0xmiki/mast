@@ -82,6 +82,9 @@ get() {
 if has apt-get && has dpkg; then
 	get mast_amd64.deb
 	say "Installing (asks for your password)"
+	# apt only knows packages from lists it has downloaded: a fresh or minimal system has none,
+	# and then even libcairo2 "isn't installable". dnf and zypper refresh by themselves.
+	root apt-get update -qq || true
 	root apt-get install -y "$TMP/mast_amd64.deb"
 elif has dnf; then
 	get mast.x86_64.rpm

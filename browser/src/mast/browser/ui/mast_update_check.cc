@@ -134,9 +134,23 @@ class Checker {
         FROM_HERE, {base::MayBlock(), base::TaskPriority::BEST_EFFORT},
         base::BindOnce([]() -> std::optional<std::string> {
           base::FilePath dir;
-          if (!base::PathService::Get(base::DIR_EXE, &dir) ||
-              base::StartsWith(dir.value(), "/opt/") ||
-              base::StartsWith(dir.value(), "/usr/")) {
+          if (!base::PathService::Get(base::DIR_EXE, &dir)) {
+            return std::nullopt;
+          }
+          // A .deb or .rpm under /opt: the system updates it where Mast's
+          // package source works (apt, dnf). zypper can't read it (it won't
+          // fetch packages from another host than its metadata), so openSUSE
+          // gets this check too.
+          const auto exists = [](const char* path) {
+            return base::PathExists(base::FilePath(path));
+          };
+          const bool system_updates =
+              exists("/etc/apt/sources.list.d/mast.sources") ||
+              (exists("/etc/yum.repos.d/mast.repo") &&
+               (exists("/usr/bin/dnf") || exists("/usr/bin/dnf5")));
+          if ((base::StartsWith(dir.value(), "/opt/") ||
+               base::StartsWith(dir.value(), "/usr/")) &&
+              system_updates) {
             return std::nullopt;
           }
           std::string version;
