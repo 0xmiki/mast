@@ -64,9 +64,10 @@ if [[ -z $NFPM ]]; then
 	fi
 fi
 
-# Chromium version plus the build's time, so every build upgrades the last one.
+# Chromium version plus the time it's packaged, so every release (a new build, or the same
+# build packaged again with a fix) upgrades the last one.
 VERSION=$(cat "$ROOT/dist/VERSION")
-RELEASE=$(date -u -r "$ROOT/dist/mast-linux.tar.zst" +%Y%m%d%H%M)
+RELEASE=$(date -u +%Y%m%d%H%M)
 FULL=$VERSION-$RELEASE
 TAG=v$FULL
 log "packaging Mast $FULL"
@@ -104,11 +105,14 @@ mapfile -t RPM_DEPS < <(readelf -d "$SRC/chrome" | sed -n 's/.*Shared library: \
 	grep -vE '^(libc|libm|libdl|libpthread|librt|libgcc_s|ld-linux-x86-64)\.so' |
 	sed 's/$/()(64bit)/'; echo 'libgtk-3.so.0()(64bit)'; echo xdg-utils)
 
-# deb: the packages behind those libraries. Ubuntu 24.04's renamed "t64" packages still
-# provide these names.
-DEB_DEPS=(libasound2 libatk-bridge2.0-0 libatk1.0-0 libatspi2.0-0 libcairo2 libcups2 libdbus-1-3
-	libexpat1 libgbm1 libglib2.0-0 libgtk-3-0 libnspr4 libnss3 libpango-1.0-0 libudev1 libx11-6
-	libxcb1 libxcomposite1 libxdamage1 libxext6 libxfixes3 libxkbcommon0 libxrandr2 xdg-utils)
+# deb: the packages behind those libraries. Debian 13 and Ubuntu 24.04+ renamed seven of
+# them for 64-bit time ("t64") and don't provide the old names, so either name will do
+# (checked on Ubuntu 24.04 and 26.04, Debian 13; Debian 12 and Ubuntu 22.04 have the old ones).
+DEB_DEPS=("libasound2t64 | libasound2" "libatk-bridge2.0-0t64 | libatk-bridge2.0-0"
+	"libatk1.0-0t64 | libatk1.0-0" "libatspi2.0-0t64 | libatspi2.0-0" libcairo2
+	"libcups2t64 | libcups2" libdbus-1-3 libexpat1 libgbm1 "libglib2.0-0t64 | libglib2.0-0"
+	"libgtk-3-0t64 | libgtk-3-0" libnspr4 libnss3 libpango-1.0-0 libudev1 libx11-6 libxcb1
+	libxcomposite1 libxdamage1 libxext6 libxfixes3 libxkbcommon0 libxrandr2 xdg-utils)
 
 # The RPM's own signature: nfpm signs with the key itself, so it's exported for these few
 # seconds into memory-backed storage (your session's /run/user), then removed.

@@ -41,10 +41,24 @@ which `publish` refuses.
 - If it's ever stolen: publish the revocation certificate, make a new key, and ship a
   release (signed with the old key, while it still works) that installs the new one.
 
+## Tested on (2026-11-19, release v157.0.8103.78-202611182050, fresh Hetzner servers)
+
+| Distro | Install (README command) | Update source | Signed download from the source |
+|---|---|---|---|
+| Fedora 44 | ✓ | dnf sees Mast | ✓ `dnf reinstall` (ed25519 accepted) |
+| Rocky Linux 9 | ✓ | dnf sees Mast | ✓ (rpm 4.16 accepts ed25519 too) |
+| openSUSE Leap 16 | ✓ | zypper refreshes it | ✓ |
+| Ubuntu 24.04, 26.04, Debian 13 | ✗ in that release: `libasound2` and six more were renamed "t64"; fixed since (either name) and checked by installing a corrected .deb | apt reads the signed InRelease | ✓ |
+
+Every one: `mast --version` runs and no library is missing. Not checked: a real desktop
+session (the servers have none), and an update arriving (needs a second release).
+
 ## Known limits
 
 - Older rpm releases (openSUSE Leap 15, RHEL/Alma/Rocky 8) may not verify ed25519 signatures.
-  Fedora and openSUSE Tumbleweed do.
+  Fedora 44, Rocky 9 and openSUSE Leap 16 do (tested).
+- `chrome --headless --dump-dom` never finishes (any profile, any distro, the laptop too):
+  something in Mast's start-up waits for a window. The normal windowed start is fine.
 - dnf doesn't check the repository metadata's signature (`repo_gpgcheck=0`, like Google
   Chrome's source): dnf keeps those keys apart from rpm's and would stop to ask about the key,
   which background updaters can't answer. Every package it installs is still signature-checked.
