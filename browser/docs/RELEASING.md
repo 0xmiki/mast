@@ -18,7 +18,8 @@ which `publish` refuses.
 | Install | How it updates | What checks it |
 |---|---|---|
 | `.deb` (Ubuntu, Debian, Mint, Pop!_OS) | With the system's updates. The package installs `/etc/apt/sources.list.d/mast.sources` and the key in `/usr/share/keyrings/mast.asc` | apt verifies `InRelease` against the key, then each file's SHA256 |
-| `.rpm` (Fedora, openSUSE) | With the system's updates. The package installs `/etc/yum.repos.d/mast.repo` (dnf) and `/etc/zypp/repos.d/mast.repo` (zypper), and imports the key into rpm | Every RPM is signed; zypper also checks the signed metadata |
+| `.rpm` (Fedora, RHEL-likes) | With the system's updates: the package installs `/etc/yum.repos.d/mast.repo`, whose `gpgkey=` dnf trusts (install.sh imports it beforehand) | Every RPM is signed |
+| `.rpm` on openSUSE | Mast's daily check, like the tarball (zypper can't use the source) | The same signed RPM |
 | Tarball (`~/.local/opt/mast`) | Mast checks `latest.json` once a day and says when a release is newer, with the update command to copy (install.sh again) | install.sh verifies `SHA256SUMS.asc` with the key built into it (when GnuPG is installed), then each file's SHA256 |
 
 ## Where things are served from
@@ -27,7 +28,7 @@ which `publish` refuses.
   `SHA256SUMS(.asc)`, `latest.json`, and the apt source itself: a flat repository
   (`Packages`, `Release`, `InRelease`) read through `releases/latest/download/`. A release
   is uploaded as a draft and made "latest" only once complete, so its files switch together.
-- **GitHub Pages** (`MAST_PAGES_URL`, the repo's `gh-pages` branch, which holds only this): the dnf/zypper metadata (`rpm/repodata`), which
+- **GitHub Pages** (`MAST_PAGES_URL`, the repo's `gh-pages` branch, which holds only this): the dnf metadata (`rpm/repodata`), which
   can't be a release file because it lives in a folder. It points at the RPM in its own
   release's folder (`releases/download/<tag>/`), never at "latest", so old metadata never
   names a newer file. Also a copy of the key and the installer.
