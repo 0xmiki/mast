@@ -121,7 +121,8 @@ if [[ -n $SIGN ]]; then
 	KEYDIR=$(mktemp -d "${XDG_RUNTIME_DIR:-/tmp}/mast-sign.XXXXXX")
 	trap 'rm -rf "$KEYDIR" "$STAGE"' EXIT
 	KEYFILE=$KEYDIR/key.asc
-	read -rsp "Passphrase for the release key $MAST_SIGNING_KEY: " NFPM_RPM_PASSPHRASE
+	# (A passphrase piped in without a final newline still counts.)
+	read -rsp "Passphrase for the release key $MAST_SIGNING_KEY: " NFPM_RPM_PASSPHRASE || [[ -n $NFPM_RPM_PASSPHRASE ]]
 	echo
 	export NFPM_RPM_PASSPHRASE
 	gpg --batch --pinentry-mode loopback --passphrase-fd 3 --armor \
