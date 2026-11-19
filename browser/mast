@@ -12,7 +12,7 @@
 #   ./mast cost             money spent so far vs MAST_BUDGET
 #   ./mast hold <minutes>   keep an idle builder alive that long (e.g. while writing code)
 #   ./mast run              run the downloaded browser locally
-#   ./mast release [--dry-run]  hand the builder's build to GitHub, which packages, signs and publishes it once you approve
+#   ./mast release [--dry-run]  hand the builder's build to GitHub, which packages, signs and publishes it
 #   ./mast package          (by hand) turn the download into a signed release (.deb, .rpm, tarball, apt/dnf sources) -> dist/release/
 #   ./mast publish          (by hand) put dist/release online (GitHub release + Pages); apt/dnf users then update
 #   ./mast shots            screenshot fixed UI scenes on the builder (Xvfb) -> shots/<time>/
@@ -411,8 +411,8 @@ cmd_build() {
 
 # Hand the builder's build to GitHub, which packages, signs and publishes it
 # (.github/workflows/release.yml), so nothing large goes through this connection. Waits
-# until GitHub has the build (the builder can go down after that), then the release waits
-# for your approval on GitHub. Release notes come from CHANGELOG.md on GitHub's main.
+# until the release is out, then pulls the CHANGELOG commit GitHub made. Release notes come
+# from CHANGELOG.md on GitHub's main. --dry-run signs but doesn't publish.
 cmd_release() {
 	need gh
 	local dry=false
@@ -446,11 +446,20 @@ cmd_release() {
 	done
 	conclusion=${job#completed }
 	[[ $job == completed* && $conclusion == success ]] || die "GitHub couldn't fetch the build ($job): $url"
-	log "GitHub has the build; the builder can go down."
+	tunnel_close
+	log "GitHub has the build; packaging, signing and publishing it"
+	# The builder idles meanwhile (a few minutes, about $0.02): the next command takes it down.
+	for _ in $(seq 360); do
+		[[ $(gh run view "$run" --repo "$repo" --json status -q .status) == completed ]] && break
+		sleep 10
+	done
+	conclusion=$(gh run view "$run" --repo "$repo" --json conclusion -q .conclusion)
+	[[ $conclusion == success ]] || die "the release failed ($conclusion): $url"
 	if [[ $dry == true ]]; then
-		log "approve it to package and sign (no publishing; the files stay in the run): $url"
+		log "dry run done: the signed files are in the run, nothing was published: $url"
 	else
-		log "approve the release to sign and publish it: $url"
+		log "published: https://github.com/$repo/releases/latest"
+		git -C "$ROOT/.." pull -q --ff-only origin main && log "pulled the CHANGELOG commit GitHub made"
 	fi
 }
 

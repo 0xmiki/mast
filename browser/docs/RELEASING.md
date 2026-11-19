@@ -6,16 +6,15 @@ nothing large goes through your connection:
 ```
 # CHANGELOG.md: list what's new under "## Unreleased", commit and push (main is what's read)
 MAST_SKIP_FETCH=1 ./mast build && ./mast shots && ./mast release; ./mast down --keep
-# then approve the run on GitHub (the link ./mast release prints): it signs and publishes
 ```
 
 `./mast release` serves the builder's build through a temporary Cloudflare tunnel at a
 secret address and starts the workflow with that address and the build's SHA-256. The
-workflow's first job downloads the build and checks it; once it has, the builder can go
-down. The second job runs in the `release` environment, which holds the key
-(`MAST_SIGNING_KEY`, `MAST_SIGNING_PASSPHRASE`), is limited to main, and waits for your
-approval: it runs `package.sh` and `publish.sh`, then pushes the CHANGELOG commit to main.
-`./mast release --dry-run` stops before publishing and keeps the files in the run.
+workflow's first job downloads the build and checks it. The second runs in the `release`
+environment, which holds the key (`MAST_SIGNING_KEY`, `MAST_SIGNING_PASSPHRASE`) and only
+main can use: it runs `package.sh` and `publish.sh` and pushes the CHANGELOG commit to main.
+`./mast release` waits for it (the idle builder costs about $0.02 meanwhile), says where the
+release is, and pulls that commit. `--dry-run` signs but keeps the files in the run instead.
 
 By hand, from the laptop (the way it worked before, and still works):
 
@@ -60,7 +59,8 @@ which `publish` refuses.
 ## The key
 
 - A copy lives in GitHub, as the `release` environment's secrets, for the workflow. Anyone
-  who takes over your GitHub account could approve a signed release, so keep two-factor on.
+  who takes over your GitHub account (or gets write access to the repo) could start a signed
+  release, so keep two-factor on and write access to yourself.
   If the key is ever replaced, update both secrets: `gpg --armor --export-secret-keys KEY |
   gh secret set MAST_SIGNING_KEY --env release`, and `gh secret set MAST_SIGNING_PASSPHRASE --env release`.
 - Back up the private key and its revocation certificate offline (password manager or a

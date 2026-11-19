@@ -4,7 +4,7 @@
 # nothing goes through the maintainer's own connection.
 #
 # The release key and its passphrase are secrets of the "release" environment, which only
-# main can use and which waits for the maintainer's approval before the job that reads them.
+# main can use. Only the maintainer can start this (workflow_dispatch needs write access).
 name: Release
 
 on:
