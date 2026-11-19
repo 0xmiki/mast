@@ -1,0 +1,105 @@
+# Packages, signs and publishes a build the Hetzner builder hands over: ./mast release
+# starts this with the address the builder serves its build from, and the build's checksum
+# (browser/docs/RELEASING.md). The builder compiles (GitHub's runners can't build Chromium);
+# nothing goes through the maintainer's own connection.
+#
+# The release key and its passphrase are secrets of the "release" environment, which only
+# main can use and which waits for the maintainer's approval before the job that reads them.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      build:
+        description: Where the builder serves the build (./mast release fills this in)
+        required: true
+      sha256:
+        description: SHA-256 of mast-linux.tar.zst
+        required: true
+      dry_run:
+        description: Package and sign, but don't publish (the files are kept as the run's "release" artifact)
+        type: boolean
+        default: false
+
+concurrency: release
+
+permissions:
+  contents: read
+
+jobs:
+  fetch:
+    name: Fetch the build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Download it from the builder and check it
+        env:
+          BUILD: ${{ inputs.build }}
+          SUM: ${{ inputs.sha256 }}
+        run: |
+          set -euo pipefail
+          mkdir dist
+          curl -fL -C - --retry 5 --retry-all-errors --speed-limit 1024 --speed-time 60 \
+            -o dist/mast-linux.tar.zst "$BUILD/mast-linux.tar.zst"
+          curl -fsS --retry 5 -o dist/VERSION "$BUILD/VERSION"
+          echo "$SUM  dist/mast-linux.tar.zst" | sha256sum -c
+          echo "Chromium $(cat dist/VERSION)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: dist/
+          retention-days: 1
+          compression-level: 0
+
+  release:
+    name: Sign and publish
+    needs: fetch
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: release
+    permissions:
+      contents: write # the release, gh-pages, and CHANGELOG.md on main
+      pages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: build
+          path: browser/dist
+      - name: Unpack the build
+        run: |
+          mkdir -p browser/dist/mast
+          tar --zstd -xf browser/dist/mast-linux.tar.zst -C browser/dist/mast
+          rm browser/dist/mast-linux.tar.zst
+      - name: Tools
+        run: pipx install uv
+      - name: Import the release key
+        env:
+          KEY: ${{ secrets.MAST_SIGNING_KEY }}
+        run: printf '%s\n' "$KEY" | gpg --batch --import
+      - name: Package and sign
+        env:
+          PASSPHRASE: ${{ secrets.MAST_SIGNING_PASSPHRASE }}
+        run: printf '%s' "$PASSPHRASE" | bash browser/packaging/package.sh
+      - name: Keep the files (dry run)
+        if: inputs.dry_run
+        uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: browser/dist/release/
+          retention-days: 3
+          compression-level: 0
+      - name: Publish
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh auth setup-git
+          git config user.name "Mast Releases"
+          git config user.email "releases@mast-browser.com"
+          bash browser/packaging/publish.sh
+          git push origin HEAD:main
+      - name: Forget the key
+        if: always()
+        run: rm -rf ~/.gnupg

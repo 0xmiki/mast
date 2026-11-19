@@ -1,9 +1,26 @@
 # Releasing Mast (Linux)
 
-After a build is downloaded (`./mast build` puts it in `dist/mast`):
+A release is packaged, signed and published on GitHub (.github/workflows/release.yml), so
+nothing large goes through your connection:
 
 ```
-# CHANGELOG.md: list what's new under "## Unreleased" (publish refuses an empty list)
+# CHANGELOG.md: list what's new under "## Unreleased", commit and push (main is what's read)
+MAST_SKIP_FETCH=1 ./mast build && ./mast shots && ./mast release; ./mast down --keep
+# then approve the run on GitHub (the link ./mast release prints): it signs and publishes
+```
+
+`./mast release` serves the builder's build through a temporary Cloudflare tunnel at a
+secret address and starts the workflow with that address and the build's SHA-256. The
+workflow's first job downloads the build and checks it; once it has, the builder can go
+down. The second job runs in the `release` environment, which holds the key
+(`MAST_SIGNING_KEY`, `MAST_SIGNING_PASSPHRASE`), is limited to main, and waits for your
+approval: it runs `package.sh` and `publish.sh`, then pushes the CHANGELOG commit to main.
+`./mast release --dry-run` stops before publishing and keeps the files in the run.
+
+By hand, from the laptop (the way it worked before, and still works):
+
+```
+./mast build      # downloads the build into dist/mast
 ./mast package    # dist/release: .deb, .rpm, tarball, installer, apt/dnf sources; signed
 ./mast publish    # GitHub release + GitHub Pages; apt and dnf users update from there
 ```
@@ -42,6 +59,10 @@ which `publish` refuses.
 
 ## The key
 
+- A copy lives in GitHub, as the `release` environment's secrets, for the workflow. Anyone
+  who takes over your GitHub account could approve a signed release, so keep two-factor on.
+  If the key is ever replaced, update both secrets: `gpg --armor --export-secret-keys KEY |
+  gh secret set MAST_SIGNING_KEY --env release`, and `gh secret set MAST_SIGNING_PASSPHRASE --env release`.
 - Back up the private key and its revocation certificate offline (password manager or a
   USB stick). Lose the key, and every install has to be told to trust a new one.
 - It expires on 2029-11-17. Extend it before then: `gpg --quick-set-expire F871BCDC5C591AFB 3y`,

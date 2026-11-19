@@ -12,8 +12,9 @@
 #   ./mast cost             money spent so far vs MAST_BUDGET
 #   ./mast hold <minutes>   keep an idle builder alive that long (e.g. while writing code)
 #   ./mast run              run the downloaded browser locally
-#   ./mast package          turn the download into a signed release (.deb, .rpm, tarball, apt/dnf sources) -> dist/release/
-#   ./mast publish          put dist/release online (GitHub release + Pages); apt/dnf users then update
+#   ./mast release [--dry-run]  hand the builder's build to GitHub, which packages, signs and publishes it once you approve
+#   ./mast package          (by hand) turn the download into a signed release (.deb, .rpm, tarball, apt/dnf sources) -> dist/release/
+#   ./mast publish          (by hand) put dist/release online (GitHub release + Pages); apt/dnf users then update
 #   ./mast shots            screenshot fixed UI scenes on the builder (Xvfb) -> shots/<time>/
 #   ./mast check-patches    check every make-patches.py anchor locally (no builder, no cost)
 #   ./mast check-rebase <v> what moving to Chromium <v> breaks, before building (local, no cost)
@@ -299,24 +300,35 @@ follow() {
 	done
 }
 
-cmd_fetch() {
-	[[ -n $HOST ]] || HOST=$(server_ip)
-	local token url sum
+# Serve the builder's dist/ (the build tarball and VERSION) at a secret address through a
+# temporary Cloudflare quick tunnel: sets BUILD_URL (<tunnel>/<token>) and BUILD_SUM (the
+# tarball's SHA-256). The caller stops it: tunnel_close.
+tunnel_open() {
+	local token url
 	token=$(head -c 18 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 24)
 	log "publishing the build through a temporary Cloudflare tunnel (much faster than SSH from Hetzner)"
 	rsync -az --timeout=120 -e "ssh ${SSH_OPTS[*]}" "$ROOT/remote/serve.sh" "root@$HOST:mast/remote/"
 	url=$(rssh "bash ~/mast/remote/serve.sh $token")
 	[[ $url == https://* ]] || die "tunnel failed: $url"
-	trap 'rssh "bash ~/mast/remote/serve.sh stop" >/dev/null 2>&1 || true' RETURN
-	mkdir -p "$ROOT/dist"
+	BUILD_URL=$url/$token
 	# A brand-new tunnel hostname takes a little while to appear in DNS; asking too
 	# early caches "no such host" for minutes. Wait until it actually answers.
 	log "waiting for the tunnel to come online"
 	for _ in $(seq 60); do
-		curl -fsS -m 10 -o /dev/null "$url/$token/sha256" 2>/dev/null && break
+		curl -fsS -m 10 -o /dev/null "$BUILD_URL/sha256" 2>/dev/null && break
 		sleep 5
 	done
-	sum=$(curl -fsS -m 30 --retry 5 --retry-all-errors "$url/$token/sha256")
+	BUILD_SUM=$(curl -fsS -m 30 --retry 5 --retry-all-errors "$BUILD_URL/sha256")
+}
+tunnel_close() { rssh "bash ~/mast/remote/serve.sh stop" >/dev/null 2>&1 || true; }
+
+cmd_fetch() {
+	[[ -n $HOST ]] || HOST=$(server_ip)
+	local url sum token
+	tunnel_open
+	trap tunnel_close RETURN
+	url=${BUILD_URL%/*} sum=$BUILD_SUM token=${BUILD_URL##*/}
+	mkdir -p "$ROOT/dist"
 	log "downloading build"
 	rm -f "$ROOT/dist/mast-linux.tar.zst"
 	# A quick tunnel sometimes stalls for good (build 23 stopped at 2%): then resume over
@@ -397,6 +409,51 @@ cmd_build() {
 	log "builder still running for quick rebuilds. When done: ./mast down [--keep]"
 }
 
+# Hand the builder's build to GitHub, which packages, signs and publishes it
+# (.github/workflows/release.yml), so nothing large goes through this connection. Waits
+# until GitHub has the build (the builder can go down after that), then the release waits
+# for your approval on GitHub. Release notes come from CHANGELOG.md on GitHub's main.
+cmd_release() {
+	need gh
+	local dry=false
+	[[ ${1:-} == --dry-run ]] && dry=true
+	[[ -n $HOST ]] || HOST=$(server_ip)
+	local repo=$MAST_RELEASES_REPO started run url job conclusion
+	gh auth status >/dev/null 2>&1 || die "gh isn't logged in (gh auth login)"
+	git -C "$ROOT/.." fetch -q origin main
+	[[ -z $(git -C "$ROOT/.." log --oneline origin/main..HEAD) ]] ||
+		die "push first: GitHub builds the release notes from its main, which is behind yours"
+	git -C "$ROOT/.." show origin/main:CHANGELOG.md | awk '/^## Unreleased/ { on = 1; next } /^## / { on = 0 } on' | grep -q '[^[:space:]]' ||
+		die "CHANGELOG.md has nothing under \"## Unreleased\" on main: add what's new first"
+	tunnel_open
+	trap tunnel_close RETURN EXIT # die exits without returning
+	started=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+	log "starting the release on GitHub"
+	gh workflow run release.yml --repo "$repo" --ref main -f build="$BUILD_URL" -f sha256="$BUILD_SUM" -f dry_run=$dry >/dev/null
+	for _ in $(seq 30); do
+		run=$(gh run list --repo "$repo" --workflow release.yml --event workflow_dispatch --limit 5 \
+			--json databaseId,createdAt -q "[.[] | select(.createdAt >= \"$started\")][0].databaseId // empty")
+		[[ -n $run ]] && break
+		sleep 4
+	done
+	[[ -n $run ]] || die "the release run didn't appear on GitHub"
+	url=https://github.com/$repo/actions/runs/$run
+	log "GitHub is downloading the build: $url"
+	for _ in $(seq 360); do
+		job=$(gh run view "$run" --repo "$repo" --json jobs -q '.jobs[] | select(.name == "Fetch the build") | .status + " " + .conclusion')
+		[[ $job == completed* ]] && break
+		sleep 10
+	done
+	conclusion=${job#completed }
+	[[ $job == completed* && $conclusion == success ]] || die "GitHub couldn't fetch the build ($job): $url"
+	log "GitHub has the build; the builder can go down."
+	if [[ $dry == true ]]; then
+		log "approve it to package and sign (no publishing; the files stay in the run): $url"
+	else
+		log "approve the release to sign and publish it: $url"
+	fi
+}
+
 cmd_shots() {
 	ensure_key_and_firewall
 	[[ -n $HOST ]] || HOST=$(server_ip)
@@ -469,7 +526,7 @@ cmd_check-rebase() {
 cmd=${1:-help}
 shift || true
 case $cmd in
-	up | down | build | unattended | collect | resize | status | cost | hold | destroy | fetch | shots | _guard) need hcloud; need jq; "cmd_$cmd" "$@" ;;
+	up | down | build | unattended | collect | resize | status | cost | hold | destroy | fetch | shots | release | _guard) need hcloud; need jq; "cmd_$cmd" "$@" ;;
 	run) cmd_run "$@" ;;
 	package) bash "$ROOT/packaging/package.sh" "$@" ;;
 	publish) bash "$ROOT/packaging/publish.sh" "$@" ;;
@@ -478,5 +535,5 @@ case $cmd in
 	ssh) HOST=$(server_ip); ssh "${SSH_OPTS[@]}" -t "root@$HOST" "$@" ;;
 	logs) HOST=$(server_ip); follow "${1:-build}" ;;
 	job) HOST=$(server_ip); job "${1:?usage: ./mast job bootstrap|build}" ;;
-	*) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//' ;;
+	*) sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//' ;;
 esac
