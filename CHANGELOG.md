@@ -15,4 +15,12 @@ release's version (docs/RELEASING.md).
 
 ## 157.0.8103.78-202611190537
 
-First public release for Linux.
+The first public release, for Linux.
+
+- **Block**: pick a length of time and every distraction category closes until it's over.
+- **YouTube your way**: allow it, block Shorts, allow music only, or block it all.
+- **Your own categories**: add sites to Mast's lists, or make lists of your own.
+- **Your sites on the new tab**: the star saves a site there, on a background you pick.
+- **Bring everything over**: bookmarks, history and extensions from Chrome, Brave, Edge, Vivaldi or Opera, in one click.
+- **No Google by default**: built on ungoogled-chromium; Chrome extensions still work, and Widevine (Spotify, Netflix) downloads only if you say yes.
+- **Updates with your system**: the .deb and .rpm add Mast's signed package source for apt and dnf.
