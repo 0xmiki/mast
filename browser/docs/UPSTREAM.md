@@ -13,8 +13,8 @@ and re-run. `./mast check-rebase <version>` checks all of this against another r
 | `mast-branding.patch` | 5 edits |
 | `mast-ungoogled.patch` | 2 edits |
 | `mast-webstore.patch` | 11 edits |
-| Chromium headers included by `src/mast` | 195 |
-| Upstream methods overridden | 50 |
+| Chromium headers included by `src/mast` | 198 |
+| Upstream methods overridden | 53 |
 | Upstream GN deps | 30 |
 | ungoogled patches dropped / added | 1 / 1 |
 
@@ -157,7 +157,7 @@ patch run fails. "Why" is the comment above the edit.
 These break at compile time, not in the patch run. `check-rebase` compares each header
 between releases and flags changes to the names below.
 
-**Overridden methods** (50): `AcceleratorPressed`, `Accept`, `BookmarkModelChanged`, `CanHandleAccelerators`, `Cancel`, `CreateInstallPrompt`, `CreateWebUIController`, `DOMContentLoaded`, `DesktopSaveLocationProvider`, `DidChangeThemeColor`, `DidFinishNavigation`, `DidFirstVisuallyNonEmptyPaint`, `DidStopLoading`, `DocumentOnLoadCompletedInPrimaryMainFrame`, `Draw`, `EqualsDelegate`, `FirefoxImport`, `GetBackoffTime`, `GetButtonLabel`, `GetButtons`, `GetFeatureNameForMetrics`, `GetIdentifier`, `GetMessageText`, `GetNameForLogging`, `GetSuggestion`, `ImportEnded`, `ImportItemEnded`, `ImportItemStarted`, `ImportStarted`, `MastHandler`, `MastNavigationThrottle`, `MastShortcuts`, `MastTabBar`, `MastUI`, `MastYouTube`, `OnBackgroundColorChanged`, `OnJavascriptAllowed`, `OnJavascriptDisallowed`, `OnSuggestionRejected`, `OnTabStripModelChanged`, `OnWidgetDestroying`, `OnWidgetInitialized`, `Paint`, `PrimaryPageChanged`, `RegisterMessages`, `ShouldExpire`, `ShouldShowPostInstallUI`, `SilentInstall`, `WillRedirectRequest`, `WillStartRequest`
+**Overridden methods** (53): `AcceleratorPressed`, `Accept`, `AddBookmarks`, `AddHistoryPage`, `BookmarkModelChanged`, `CanHandleAccelerators`, `Cancel`, `CreateInstallPrompt`, `CreateWebUIController`, `DOMContentLoaded`, `DesktopSaveLocationProvider`, `DidChangeThemeColor`, `DidFinishNavigation`, `DidFirstVisuallyNonEmptyPaint`, `DidStopLoading`, `DocumentOnLoadCompletedInPrimaryMainFrame`, `Draw`, `EqualsDelegate`, `FirefoxImport`, `GetBackoffTime`, `GetButtonLabel`, `GetButtons`, `GetFeatureNameForMetrics`, `GetIdentifier`, `GetMessageText`, `GetNameForLogging`, `GetSuggestion`, `ImportEnded`, `ImportItemEnded`, `ImportItemStarted`, `ImportStarted`, `MastHandler`, `MastNavigationThrottle`, `MastProfileWriter`, `MastShortcuts`, `MastTabBar`, `MastUI`, `MastYouTube`, `OnBackgroundColorChanged`, `OnJavascriptAllowed`, `OnJavascriptDisallowed`, `OnSuggestionRejected`, `OnTabStripModelChanged`, `OnWidgetDestroying`, `OnWidgetInitialized`, `Paint`, `PrimaryPageChanged`, `RegisterMessages`, `ShouldExpire`, `ShouldShowPostInstallUI`, `SilentInstall`, `WillRedirectRequest`, `WillStartRequest`
 
 <details><summary>Headers included, by directory</summary>
 
@@ -171,6 +171,7 @@ between releases and flags changes to the names below.
 | `base/containers/flat_map.h` | mast/common/mast_tab_bar_state.cc |
 | `base/containers/flat_set.h` | mast/browser/mast_feeds.h |
 | `base/containers/span.h` | mast/browser/ui/mast_wallpaper.cc |
+| `base/environment.h` | mast/browser/import/mast_import.cc |
 | `base/feature_list.h` | mast/common/mast_features.h |
 | `base/files/file.h` | mast/browser/import/mast_import.cc |
 | `base/files/file_path.h` | mast/browser/import/mast_import.h, mast/browser/mast_feeds.cc, mast/browser/mast_page_backdrop.cc, mast/browser/mast_wallpapers.h, mast/browser/ui/mast_update_check.cc, mast/browser/ui/mast_wallpaper.cc, mast/browser/ui/mast_widevine.cc, mast/browser/webui/mast_ui.cc |
@@ -187,6 +188,7 @@ between releases and flags changes to the names below.
 | `base/memory/ref_counted.h` | mast/browser/import/mast_import.cc |
 | `base/memory/ref_counted_memory.h` | mast/browser/webui/mast_ui.cc |
 | `base/memory/weak_ptr.h` | mast/browser/import/mast_import.cc, mast/browser/mast_navigation_throttle.h, mast/browser/mast_wallpapers.cc, mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_one_row_toolbar.cc, mast/browser/ui/mast_tab_bar.h, mast/browser/ui/mast_widevine.cc, mast/browser/webui/mast_ui.cc |
+| `base/nix/xdg_util.h` | mast/browser/import/mast_import.cc |
 | `base/no_destructor.h` | mast/browser/import/mast_import.cc, mast/browser/mast_blocklist.cc, mast/browser/mast_feeds.cc, mast/browser/mast_feeds.h, mast/browser/mast_page_backdrop.cc, mast/browser/ui/mast_shortcuts.cc, mast/browser/ui/mast_tab_bar.cc, mast/browser/ui/mast_update_check.cc, mast/browser/ui/mast_wallpaper.cc, mast/browser/ui/mast_widevine.cc, mast/browser/ui/mast_widevine.h, mast/browser/webui/mast_ui.cc, mast/common/mast_tab_bar_state.cc, mast/common/mast_widevine_state.cc |
 | `base/path_service.h` | mast/browser/import/mast_import.cc, mast/browser/mast_feeds.cc, mast/browser/mast_wallpapers.cc, mast/browser/ui/mast_update_check.cc, mast/browser/ui/mast_widevine.cc |
 | `base/scoped_observation.h` | mast/browser/ui/mast_shortcuts.h, mast/browser/webui/mast_ui.cc |
@@ -198,7 +200,7 @@ between releases and flags changes to the names below.
 | `base/strings/stringprintf.h` | mast/browser/mast_blocks.cc, mast/browser/mast_pages.cc, mast/browser/webui/mast_ui.cc |
 | `base/strings/utf_string_conversions.h` | mast/browser/import/mast_import.cc, mast/browser/mast_youtube.cc, mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_update_check.cc, mast/browser/webui/mast_ui.cc |
 | `base/task/bind_post_task.h` | mast/browser/ui/mast_tab_bar.cc |
-| `base/task/sequenced_task_runner.h` | mast/browser/component_updater/mast_components.cc, mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_one_row_toolbar.cc |
+| `base/task/sequenced_task_runner.h` | mast/browser/component_updater/mast_components.cc, mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_one_row_toolbar.cc, mast/browser/ui/mast_widevine.cc |
 | `base/task/thread_pool.h` | mast/browser/import/mast_import.cc, mast/browser/mast_feeds.cc, mast/browser/mast_page_backdrop.cc, mast/browser/mast_wallpapers.cc, mast/browser/ui/mast_update_check.cc, mast/browser/ui/mast_wallpaper.cc, mast/browser/ui/mast_widevine.cc, mast/browser/webui/mast_ui.cc |
 | `base/time/time.h` | mast/browser/component_updater/mast_components.cc, mast/browser/desktop/mast_desktop.cc, mast/browser/import/mast_import.h, mast/browser/mast_blocks.h, mast/browser/mast_prefs.cc, mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_update_check.cc |
 | `base/timer/timer.h` | mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_tab_bar.h, mast/browser/ui/mast_update_check.cc |
@@ -267,6 +269,7 @@ between releases and flags changes to the names below.
 | `components/tabs/public/tab_interface.h` | mast/browser/ui/mast_block_bubble.cc, mast/browser/ui/mast_update_check.cc |
 | `components/update_client/update_client_errors.h` | mast/browser/component_updater/mast_components.cc |
 | `components/url_formatter/url_fixer.h` | mast/browser/webui/mast_ui.cc |
+| `components/user_data_importer/common/imported_bookmark_entry.h` | mast/browser/import/mast_import.cc |
 | `components/user_data_importer/common/importer_data_types.h` | mast/browser/import/mast_import.cc |
 | `components/user_prefs/user_prefs.h` | mast/browser/mast_page_backdrop.cc |
 | `components/viz/common/frame_sinks/copy_output_result.h` | mast/browser/ui/mast_tab_bar.cc |
