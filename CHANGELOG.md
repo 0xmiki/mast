@@ -6,6 +6,8 @@ release's version (docs/RELEASING.md).
 
 ## Unreleased
 
+## 157.0.8103.78-202611191046
+
 - New built-in backgrounds, all public-domain paintings: *Among the Sierra Nevada* by Albert Bierstadt (the new default), *Ulysses Deriding Polyphemus* by J. M. W. Turner and *The Ninth Wave* by Ivan Aivazovsky. They replace the NASA photos.
 - Icons on the new tab page lie flat, like on a desktop, with a lighter shadow under their names.
 - Importing from Firefox puts its toolbar's sites on the new tab page and everything else in a "From Mozilla Firefox" folder, like the other browsers. Firefox bookmarks used to go into a bookmarks bar Mast doesn't show.
