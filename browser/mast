@@ -318,8 +318,17 @@ cmd_fetch() {
 	done
 	sum=$(curl -fsS -m 30 --retry 5 --retry-all-errors "$url/$token/sha256")
 	log "downloading build"
-	curl -fL --retry 5 --retry-all-errors --speed-limit 1024 --speed-time 60 --progress-bar -o "$ROOT/dist/mast-linux.tar.zst" "$url/$token/mast-linux.tar.zst"
-	curl -fsS --retry 5 -o "$ROOT/dist/VERSION" "$url/$token/VERSION"
+	rm -f "$ROOT/dist/mast-linux.tar.zst"
+	# A quick tunnel sometimes stalls for good (build 23 stopped at 2%): then resume over
+	# SSH, slower but dependable, instead of failing the build and skipping its shots.
+	if ! curl -fL -C - --retry 5 --retry-all-errors --speed-limit 1024 --speed-time 60 --progress-bar \
+		-o "$ROOT/dist/mast-linux.tar.zst" "$url/$token/mast-linux.tar.zst" ||
+		! curl -fsS --retry 5 -o "$ROOT/dist/VERSION" "$url/$token/VERSION"; then
+		log "the tunnel stalled; downloading over SSH instead"
+		rsync -a --partial --timeout=120 -e "ssh ${SSH_OPTS[*]}" \
+			"root@$HOST:mast/dist/mast-linux.tar.zst" "root@$HOST:mast/dist/VERSION" "$ROOT/dist/" ||
+			die "download failed (the builder still has it: ./mast fetch)"
+	fi
 	echo "$sum  $ROOT/dist/mast-linux.tar.zst" | sha256sum -c --quiet || die "checksum mismatch"
 	rm -rf "$ROOT/dist/mast"
 	mkdir -p "$ROOT/dist/mast"
