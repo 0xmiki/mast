@@ -4,8 +4,7 @@
 
 # Mast
 
-A deep-work browser. One button blocks every known distraction for a set time,<br>
-and nothing inside the browser can stop it early.
+A browser for deep work that lets you block distractions for good.
 
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-2b2b2b)](LICENSE)
 [![Chromium 157](https://img.shields.io/badge/Chromium-157-2b2b2b)](browser/chromium_version.txt)
