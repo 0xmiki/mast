@@ -16,10 +16,12 @@ namespace mast {
 
 // One-click import for the welcome page (design C25), the way Brave does it:
 // Chromium-family browsers (Chrome, Brave, Edge, Vivaldi, Opera, Chromium) are
-// read straight from their profile folders, and Firefox goes through
-// Chromium's own importer. Passwords and open tabs are left alone on purpose.
-//   - Bookmarks: the bookmarks bar's sites go onto the new tab page (Mast's
-//     desktop folder); everything else goes into a "From <browser>" folder.
+// read straight from their profile folders (on Linux, Flatpak and Snap ones
+// too), and Firefox goes through Chromium's own importer, which can't read a
+// profile while Firefox runs. Passwords and open tabs are left alone on purpose.
+//   - Bookmarks: the bookmarks bar's (Firefox: toolbar's) sites go onto the
+//     new tab page (Mast's desktop folder); everything else goes into a
+//     "From <browser>" folder.
 //   - History: the most recent pages, so they come up as you type.
 //   - Extensions: the source's Web Store extensions, reinstalled from the
 //     Web Store (no prompts: the user asked for them in one click).
@@ -38,11 +40,12 @@ struct ImportSource {
 
 struct ImportResult {
   std::string browser;
-  int bookmarks = 0;        // -1: imported, count unknown (Firefox)
+  int bookmarks = 0;
   int on_new_tab = 0;       // of those, put on the new tab page
-  int history = 0;          // -1: imported, count unknown (Firefox)
+  int history = 0;
   int extensions = 0;       // reinstalls started and finished
   bool ok = true;
+  bool close_first = false; // nothing came over: close the browser, try again
 };
 
 // The browsers and profiles on this computer that have something to import,

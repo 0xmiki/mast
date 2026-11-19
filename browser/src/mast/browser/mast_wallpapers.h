@@ -12,7 +12,7 @@ class Profile;
 
 namespace mast {
 
-// Customize's built-in pictures (design C26): NASA photos, public domain,
+// Customize's built-in pictures (design C26): public-domain paintings,
 // shipped beside the browser in mast-wallpapers/ (wallpapers/CREDITS.md). A
 // new profile starts on the first one.
 struct WallpaperPreset {
@@ -23,14 +23,14 @@ struct WallpaperPreset {
 };
 
 inline constexpr WallpaperPreset kWallpaperPresets[] = {
-    {"sunrise", "Sunrise", "sunrise.jpg",
-     "Sunrise over Earth, from the Space Station · NASA"},
-    {"aurora", "Aurora", "aurora.jpg",
-     "Aurora, from the Space Station · NASA"},
-    {"cosmic-cliffs", "Cosmic Cliffs", "cosmic-cliffs.jpg",
-     "Cosmic Cliffs, James Webb Space Telescope · NASA, ESA, CSA, STScI"},
+    {"sierra-nevada", "Sierra Nevada", "sierra-nevada.jpg",
+     "Among the Sierra Nevada, California · Albert Bierstadt, 1868"},
+    {"ulysses", "Ulysses", "ulysses.jpg",
+     "Ulysses Deriding Polyphemus · J. M. W. Turner, 1829"},
+    {"ninth-wave", "The Ninth Wave", "ninth-wave.jpg",
+     "The Ninth Wave · Ivan Aivazovsky, 1850"},
 };
-inline constexpr char kDefaultWallpaperPreset[] = "sunrise";
+inline constexpr char kDefaultWallpaperPreset[] = "sierra-nevada";
 
 // Null for an unknown id.
 const WallpaperPreset* FindWallpaperPreset(std::string_view id);

@@ -332,7 +332,8 @@ class MastHandler : public content::WebUIMessageHandler,
                           .Set("onNewTab", r.on_new_tab)
                           .Set("history", r.history)
                           .Set("extensions", r.extensions)
-                          .Set("ok", r.ok))));
+                          .Set("ok", r.ok)
+                          .Set("closeFirst", r.close_first))));
   }
 
   // ["welcomeDefault"]: make Mast the default browser (the OS may ask).

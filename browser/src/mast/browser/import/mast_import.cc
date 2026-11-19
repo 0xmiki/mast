@@ -3,13 +3,17 @@
 #include "mast/browser/import/mast_import.h"
 
 #include <algorithm>
+#include <iterator>
 #include <memory>
 #include <optional>
 #include <set>
+#include <string>
+#include <string_view>
 #include <utility>
 
 #include "base/barrier_closure.h"
 #include "base/base_paths.h"
+#include "base/environment.h"
 #include "base/files/file.h"
 #include "base/files/file_util.h"
 #include "base/files/scoped_temp_dir.h"
@@ -40,6 +44,7 @@
 #include "components/history/core/browser/history_types.h"
 #include "components/history/core/browser/url_row.h"
 #include "components/keyed_service/core/service_access_type.h"
+#include "components/user_data_importer/common/imported_bookmark_entry.h"
 #include "components/user_data_importer/common/importer_data_types.h"
 #include "extensions/browser/extension_registry.h"
 #include "mast/browser/desktop/mast_desktop.h"
@@ -47,6 +52,10 @@
 #include "sql/statement.h"
 #include "ui/gfx/native_ui_types.h"
 #include "url/gurl.h"
+
+#if !BUILDFLAG(IS_WIN) && !BUILDFLAG(IS_MAC)
+#include "base/nix/xdg_util.h"
+#endif
 
 namespace mast {
 
@@ -63,7 +72,9 @@ constexpr int kMaxHistoryRows = 20000;
 struct Browser {
   const char* key;
   const char* name;
-  const char* folder;  // under the platform's base folder
+  // Where it keeps its profiles: under the platform's base folder, or, when
+  // it starts with "~/", the home folder (Linux: Snap and Flatpak installs).
+  const char* folders[4];
 };
 
 // Where Chromium-family browsers keep their profiles.
@@ -74,38 +85,64 @@ base::FilePath BaseFolder() {
 #elif BUILDFLAG(IS_MAC)
   base::PathService::Get(base::DIR_APP_DATA, &base);
 #else
-  base::PathService::Get(base::DIR_HOME, &base);
-  base = base.AppendASCII(".config");
+  // $XDG_CONFIG_HOME, else ~/.config.
+  std::unique_ptr<base::Environment> env = base::Environment::Create();
+  base = base::nix::GetXDGDirectory(env.get(), base::nix::kXdgConfigHomeEnvVar,
+                                    base::nix::kDotConfigDir);
 #endif
   return base;
 }
 
+base::FilePath BrowserFolder(const base::FilePath& base, std::string_view folder) {
+  if (folder.starts_with("~/")) {
+    base::FilePath home;
+    base::PathService::Get(base::DIR_HOME, &home);
+    return home.AppendASCII(folder.substr(2));
+  }
+  return base.AppendASCII(folder);
+}
+
 constexpr Browser kBrowsers[] = {
 #if BUILDFLAG(IS_WIN)
-    {"chrome", "Google Chrome", "Google/Chrome/User Data"},
-    {"chrome-beta", "Chrome Beta", "Google/Chrome Beta/User Data"},
-    {"brave", "Brave", "BraveSoftware/Brave-Browser/User Data"},
-    {"edge", "Microsoft Edge", "Microsoft/Edge/User Data"},
-    {"vivaldi", "Vivaldi", "Vivaldi/User Data"},
-    {"chromium", "Chromium", "Chromium/User Data"},
+    {"chrome", "Google Chrome", {"Google/Chrome/User Data"}},
+    {"chrome-beta", "Chrome Beta", {"Google/Chrome Beta/User Data"}},
+    {"brave", "Brave", {"BraveSoftware/Brave-Browser/User Data"}},
+    {"edge", "Microsoft Edge", {"Microsoft/Edge/User Data"}},
+    {"vivaldi", "Vivaldi", {"Vivaldi/User Data"}},
+    {"chromium", "Chromium", {"Chromium/User Data"}},
 #elif BUILDFLAG(IS_MAC)
-    {"chrome", "Google Chrome", "Google/Chrome"},
-    {"chrome-beta", "Chrome Beta", "Google/Chrome Beta"},
-    {"brave", "Brave", "BraveSoftware/Brave-Browser"},
-    {"edge", "Microsoft Edge", "Microsoft Edge"},
-    {"arc", "Arc", "Arc/User Data"},
-    {"vivaldi", "Vivaldi", "Vivaldi"},
-    {"opera", "Opera", "com.operasoftware.Opera"},
-    {"chromium", "Chromium", "Chromium"},
+    {"chrome", "Google Chrome", {"Google/Chrome"}},
+    {"chrome-beta", "Chrome Beta", {"Google/Chrome Beta"}},
+    {"brave", "Brave", {"BraveSoftware/Brave-Browser"}},
+    {"edge", "Microsoft Edge", {"Microsoft Edge"}},
+    {"arc", "Arc", {"Arc/User Data"}},
+    {"vivaldi", "Vivaldi", {"Vivaldi"}},
+    {"opera", "Opera", {"com.operasoftware.Opera"}},
+    {"chromium", "Chromium", {"Chromium"}},
 #else
-    {"chrome", "Google Chrome", "google-chrome"},
-    {"chrome-beta", "Chrome Beta", "google-chrome-beta"},
-    {"chrome-dev", "Chrome Dev", "google-chrome-unstable"},
-    {"brave", "Brave", "BraveSoftware/Brave-Browser"},
-    {"edge", "Microsoft Edge", "microsoft-edge"},
-    {"vivaldi", "Vivaldi", "vivaldi"},
-    {"opera", "Opera", "opera"},
-    {"chromium", "Chromium", "chromium"},
+    // The package's folder, then Flatpak's (~/.var/app/<app id>/config) and
+    // Snap's. Ubuntu's Chromium is only a Snap.
+    {"chrome", "Google Chrome",
+     {"google-chrome", "~/.var/app/com.google.Chrome/config/google-chrome"}},
+    {"chrome-beta", "Chrome Beta", {"google-chrome-beta"}},
+    {"chrome-dev", "Chrome Dev",
+     {"google-chrome-unstable",
+      "~/.var/app/com.google.ChromeDev/config/google-chrome-unstable"}},
+    {"brave", "Brave",
+     {"BraveSoftware/Brave-Browser",
+      "~/.var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser",
+      "~/snap/brave/current/.config/BraveSoftware/Brave-Browser"}},
+    {"edge", "Microsoft Edge",
+     {"microsoft-edge", "~/.var/app/com.microsoft.Edge/config/microsoft-edge"}},
+    {"vivaldi", "Vivaldi",
+     {"vivaldi", "~/.var/app/com.vivaldi.Vivaldi/config/vivaldi"}},
+    {"opera", "Opera",
+     {"opera", "~/.var/app/com.opera.Opera/config/opera",
+      "~/snap/opera/current/.config/opera"}},
+    {"chromium", "Chromium",
+     {"chromium", "~/snap/chromium/common/chromium",
+      "~/.var/app/org.chromium.Chromium/config/chromium",
+      "~/.var/app/io.github.ungoogled_software.ungoogled_chromium/config/chromium"}},
 #endif
 };
 
@@ -212,57 +249,73 @@ std::vector<std::string> ReadExtensions(const base::FilePath& profile) {
   return std::vector<std::string>(ids.begin(), ids.end());
 }
 
-// Every Chromium-family profile with bookmarks or history.
+// The profiles in one browser folder that have bookmarks, history or
+// extensions. `suffix` keeps ids unique when a browser is installed twice (a
+// package and a Flatpak, say): "chromium/Default", then "chromium/Default@1".
+void ScanBrowserFolder(const Browser& browser,
+                       const base::FilePath& root,
+                       const std::string& suffix,
+                       std::vector<ImportSource>& sources) {
+  // Profiles and their names from "Local State"; a browser without one
+  // (Opera) keeps a single profile in the folder itself.
+  std::vector<std::pair<base::FilePath, ImportSource>> found;
+  std::optional<base::DictValue> local = ReadJson(root.AppendASCII("Local State"));
+  const base::DictValue* cache =
+      local ? local->FindDictByDottedPath("profile.info_cache") : nullptr;
+  if (cache) {
+    for (const auto [dir, info] : *cache) {
+      ImportSource s;
+      s.path = root.AppendASCII(dir);
+      if (const base::DictValue* d = info.GetIfDict()) {
+        if (const std::string* name = d->FindString("name")) {
+          s.profile = *name;
+        }
+        s.last_used = base::Time::FromSecondsSinceUnixEpoch(
+            d->FindDouble("active_time").value_or(0));
+      }
+      s.id = std::string(browser.key) + "/" + dir + suffix;
+      found.emplace_back(s.path, std::move(s));
+    }
+  } else {
+    ImportSource s;
+    s.path = base::PathExists(root.AppendASCII("Bookmarks"))
+                 ? root
+                 : root.AppendASCII("Default");
+    s.id = std::string(browser.key) + "/Default" + suffix;
+    found.emplace_back(s.path, std::move(s));
+  }
+  for (auto& [path, s] : found) {
+    s.browser = browser.name;
+    const BookmarkTree tree = ReadBookmarks(path);
+    s.bookmarks = CountUrls(tree.bar) + CountUrls(tree.other);
+    s.history = base::PathExists(path.AppendASCII("History"));
+    s.extensions = static_cast<int>(ReadExtensions(path).size());
+    if (s.last_used.is_null()) {
+      base::File::Info info;
+      if (base::GetFileInfo(path.AppendASCII("Preferences"), &info)) {
+        s.last_used = info.last_modified;
+      }
+    }
+    if (s.bookmarks > 0 || s.history || s.extensions > 0) {
+      sources.push_back(std::move(s));
+    }
+  }
+}
+
+// Every Chromium-family profile with bookmarks, history or extensions.
 std::vector<ImportSource> ScanChromiumFamily() {
   std::vector<ImportSource> sources;
   const base::FilePath base = BaseFolder();
   for (const Browser& browser : kBrowsers) {
-    const base::FilePath root = base.AppendASCII(browser.folder);
-    if (!base::DirectoryExists(root)) {
-      continue;
-    }
-    // Profiles and their names from "Local State"; a browser without one
-    // (Opera) keeps a single profile in the folder itself.
-    std::vector<std::pair<base::FilePath, ImportSource>> found;
-    std::optional<base::DictValue> local = ReadJson(root.AppendASCII("Local State"));
-    const base::DictValue* cache =
-        local ? local->FindDictByDottedPath("profile.info_cache") : nullptr;
-    if (cache) {
-      for (const auto [dir, info] : *cache) {
-        ImportSource s;
-        s.path = root.AppendASCII(dir);
-        if (const base::DictValue* d = info.GetIfDict()) {
-          if (const std::string* name = d->FindString("name")) {
-            s.profile = *name;
-          }
-          s.last_used = base::Time::FromSecondsSinceUnixEpoch(
-              d->FindDouble("active_time").value_or(0));
-        }
-        s.id = std::string(browser.key) + "/" + dir;
-        found.emplace_back(s.path, std::move(s));
+    for (size_t place = 0; place < std::size(browser.folders); ++place) {
+      if (!browser.folders[place]) {
+        break;
       }
-    } else {
-      ImportSource s;
-      s.path = base::PathExists(root.AppendASCII("Bookmarks"))
-                   ? root
-                   : root.AppendASCII("Default");
-      s.id = std::string(browser.key) + "/Default";
-      found.emplace_back(s.path, std::move(s));
-    }
-    for (auto& [path, s] : found) {
-      s.browser = browser.name;
-      const BookmarkTree tree = ReadBookmarks(path);
-      s.bookmarks = CountUrls(tree.bar) + CountUrls(tree.other);
-      s.history = base::PathExists(path.AppendASCII("History"));
-      s.extensions = static_cast<int>(ReadExtensions(path).size());
-      if (s.last_used.is_null()) {
-        base::File::Info info;
-        if (base::GetFileInfo(path.AppendASCII("Preferences"), &info)) {
-          s.last_used = info.last_modified;
-        }
-      }
-      if (s.bookmarks > 0 || s.history || s.extensions > 0) {
-        sources.push_back(std::move(s));
+      const base::FilePath root = BrowserFolder(base, browser.folders[place]);
+      if (base::DirectoryExists(root)) {
+        ScanBrowserFolder(browser, root,
+                          place ? "@" + base::NumberToString(place) : std::string(),
+                          sources);
       }
     }
   }
@@ -461,6 +514,89 @@ void ApplyChromiumFamily(base::WeakPtr<Profile> weak_profile,
   job->Finish();
 }
 
+// Where Chromium's importer writes Firefox's bookmarks and history. Its own
+// writer puts bookmarks in the bookmarks bar, which Mast doesn't show; this one
+// files them the way Chromium-family imports are (AddBookmarks above): the
+// toolbar's sites on the new tab page, everything else in "From <browser>". It
+// also counts what came over.
+class MastProfileWriter : public ProfileWriter {
+ public:
+  MastProfileWriter(Profile* profile, scoped_refptr<Job> job)
+      : ProfileWriter(profile), target_(profile), job_(std::move(job)) {}
+
+  void AddBookmarks(
+      const std::vector<user_data_importer::ImportedBookmarkEntry>& bookmarks,
+      const std::u16string& top_level_folder_name) override {
+    bookmarks::BookmarkModel* model =
+        BookmarkModelFactory::GetForBrowserContext(target_);
+    if (!model || !model->loaded() || bookmarks.empty()) {
+      return;
+    }
+    const bookmarks::BookmarkNode* desktop = DesktopFolder(model);
+    std::set<GURL> there;
+    if (desktop) {
+      for (const auto& child : desktop->children()) {
+        there.insert(child->url());
+      }
+    }
+    const bookmarks::BookmarkNode* from = nullptr;  // made on first use
+    for (const user_data_importer::ImportedBookmarkEntry& e : bookmarks) {
+      if (!e.is_folder && (!e.url.is_valid() || e.url.SchemeIs("javascript"))) {
+        continue;
+      }
+      // A toolbar entry's path starts with the toolbar's own folder.
+      std::vector<std::u16string> path = e.path;
+      if (e.in_toolbar && !path.empty()) {
+        path.erase(path.begin());
+      }
+      if (e.in_toolbar && path.empty() && !e.is_folder && desktop) {
+        if (there.insert(e.url).second) {
+          model->AddURL(desktop, desktop->children().size(), e.title, e.url);
+          ++job_->result.on_new_tab;
+          ++job_->result.bookmarks;
+        }
+        continue;
+      }
+      if (!from) {
+        const bookmarks::BookmarkNode* other = model->other_node();
+        from = model->AddFolder(other, other->children().size(),
+                                u"From " + base::UTF8ToUTF16(job_->result.browser));
+      }
+      const bookmarks::BookmarkNode* parent = from;
+      if (e.is_folder) {
+        path.push_back(e.title);
+      }
+      for (const std::u16string& name : path) {
+        const bookmarks::BookmarkNode* found = nullptr;
+        for (const auto& child : parent->children()) {
+          if (child->is_folder() && child->GetTitle() == name) {
+            found = child.get();
+            break;
+          }
+        }
+        parent = found ? found
+                       : model->AddFolder(parent, parent->children().size(), name);
+      }
+      if (!e.is_folder) {
+        model->AddURL(parent, parent->children().size(), e.title, e.url);
+        ++job_->result.bookmarks;
+      }
+    }
+  }
+
+  void AddHistoryPage(const history::URLRows& page,
+                      history::VisitSource visit_source) override {
+    job_->result.history += static_cast<int>(page.size());
+    ProfileWriter::AddHistoryPage(page, visit_source);
+  }
+
+ private:
+  ~MastProfileWriter() override = default;
+
+  const raw_ptr<Profile> target_;
+  scoped_refptr<Job> job_;
+};
+
 // Firefox, through Chromium's importer (a separate process, as in Settings).
 class FirefoxImport : public importer::ImporterProgressObserver {
  public:
@@ -474,14 +610,21 @@ class FirefoxImport : public importer::ImporterProgressObserver {
     self->host_->set_observer(self);
     self->host_->set_headless();
     self->host_->StartImportSettings(source, profile, items,
-                                     new ProfileWriter(profile));
+                                     new MastProfileWriter(profile, job));
   }
 
-  void ImportStarted() override {}
+  void ImportStarted() override { started_ = true; }
   void ImportItemStarted(user_data_importer::ImportItem item) override {}
   void ImportItemEnded(user_data_importer::ImportItem item) override {}
   void ImportEnded() override {
     host_->set_observer(nullptr);
+    // Without a window to ask in, the importer gives up before it starts when
+    // Firefox is running (it holds its profile's lock): say so, instead of
+    // reporting an import that never happened.
+    if (!started_) {
+      job_->result.ok = false;
+      job_->result.close_first = true;
+    }
     job_->Finish();
     delete this;
   }
@@ -492,6 +635,7 @@ class FirefoxImport : public importer::ImporterProgressObserver {
 
   scoped_refptr<Job> job_;
   raw_ptr<ExternalProcessImporterHost> host_ = nullptr;
+  bool started_ = false;
 };
 
 // Chromium's list of Firefox profiles, kept alive while it's detected and
@@ -567,11 +711,9 @@ void RunImport(Profile* profile,
     uint16_t items = 0;
     if (bookmarks) {
       items |= user_data_importer::FAVORITES;
-      job->result.bookmarks = -1;
     }
     if (history) {
       items |= user_data_importer::HISTORY;
-      job->result.history = -1;
     }
     FirefoxImport::Start(profile, list.GetSourceProfileAt(source.firefox_index),
                          items, job);

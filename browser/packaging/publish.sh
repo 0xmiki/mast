@@ -34,15 +34,26 @@ gpg --verify "$OUT/SHA256SUMS.asc" "$OUT/SHA256SUMS" 2>/dev/null || die "SHA256S
 	die "$REPO must be public: apt, dnf and the installer download from it without logging in"
 gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1 && die "$TAG is already published"
 
+# The notes (packaging/notes.py): install, what's new from CHANGELOG.md, Chromium, checks.
+CHANGES=$ROOT/../CHANGELOG.md
+notes_py() { uv run --no-project --quiet python "$ROOT/packaging/notes.py" "$@"; }
+prev=$(gh release view --repo "$REPO" --json tagName -q .tagName 2>/dev/null || true)
+notes=$(mktemp)
+notes_py notes "$CHANGES" "$FULL" "$(cat "$ROOT/ungoogled_version.txt")" "$REPO" "$prev" > "$notes" ||
+	{ rm -f "$notes"; die "no release notes (see above)"; }
+
 log "uploading $TAG (a draft until every file is there)"
 assets=(mast_amd64.deb mast.x86_64.rpm mast-linux-x86_64.tar.xz install.sh SHA256SUMS SHA256SUMS.asc
 	Packages Packages.gz Release InRelease Release.gpg latest.json mast-release-key.asc)
-notes="Mast $FULL (Chromium ${FULL%-*}).
-
-Install or update:  curl -fsSL https://github.com/$REPO/releases/latest/download/install.sh | sh"
-(cd "$OUT" && gh release create "$TAG" --repo "$REPO" --draft --title "Mast $FULL" --notes "$notes" "${assets[@]}")
+(cd "$OUT" && gh release create "$TAG" --repo "$REPO" --draft --title "Mast $FULL" --notes-file "$notes" "${assets[@]}")
+rm -f "$notes"
 gh release edit "$TAG" --repo "$REPO" --draft=false --latest >/dev/null
 log "published: https://github.com/$REPO/releases/tag/$TAG"
+
+# CHANGELOG.md: this release's list goes under its version, and "Unreleased" starts empty.
+notes_py file "$CHANGES" "$FULL"
+git -C "$ROOT/.." commit -q -m "docs: CHANGELOG for $FULL" -- CHANGELOG.md &&
+	log "CHANGELOG.md: filed under $FULL and committed (push it with the rest)"
 
 # GitHub Pages: the gh-pages branch holds the dnf/zypper source and a copy of the key and
 # installer. Rewritten each release (only the newest metadata is ever needed).

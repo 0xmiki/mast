@@ -11,7 +11,7 @@
    of explanation under them. */
 body { display: flex; justify-content: center; min-height: 100vh; margin: 0; padding: 18vh 24px 40px; box-sizing: border-box; text-align: center; }
 /* On the picture (design C26): Customize's, which a new profile starts with
-   (Sunrise). A wash keeps text readable; no logo, no tagline. */
+   (Among the Sierra Nevada). A wash keeps text readable; no logo, no tagline. */
 #wall { position: fixed; inset: 0; z-index: -1; background: var(--bg) center / cover no-repeat; }
 #wall::after { content: ""; position: absolute; inset: 0; background: linear-gradient(rgb(0 0 0/.45), rgb(0 0 0/.15) 40%, rgb(0 0 0/.55)); }
 body.wall { background: transparent; color: #f2f2f2; --text: #f2f2f2; --text-2: rgb(242 242 242/.72); --text-3: rgb(242 242 242/.5); }
@@ -47,6 +47,8 @@ button { font: inherit; cursor: pointer; }
 .row .nm { color: var(--text); font-size: 14px; font-weight: 600; }
 .row .nm small { margin-left: 8px; color: var(--text-3); font-size: 12px; font-weight: 400; }
 .row .meta { margin-top: 4px; color: var(--text-3); font-size: 12px; }
+/* Not ember: in Mast, ember means blocked. Brighter text is enough. */
+.row .meta.warn { color: var(--text-2); }
 .row button { height: 32px; padding: 0 16px; font-size: 13px; }
 .empty { padding: 24px; color: var(--text-2); text-align: center; }
 .what { width: 560px; max-width: 100%; margin-top: 16px; text-align: left; }
@@ -128,6 +130,9 @@ const tick = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke
 const COLORS = {chrome: '#2f6fe4', brave: '#e2541f', edge: '#0f8fd8', vivaldi: '#d6333a', opera: '#c8102e', arc: '#5b4bdb', chromium: '#4a7fd6', firefox: '#ff8a1f'};
 const what = {bookmarks: true, history: true, extensions: true};
 let sources = null, busy = '', step = 0, imported = null;
+// Sources that couldn't be read because the browser is running (Firefox locks
+// its profile): their row says so until the next try.
+const closeFirst = new Set();
 // The search engines on offer, by Chromium's prepopulated id
 // (kWelcomeEngines in mast_ui.cc), and the one in use: Google on a new profile.
 const ENGINES = [[1, 'Google'], [92, 'DuckDuckGo'], [3, 'Bing'], [109, 'Brave Search'], [21, 'Baidu'], [15, 'Yandex']];
@@ -163,7 +168,7 @@ function renderList() {
   $('list').innerHTML = !sources.length ? '<div class="none">No other browsers on this computer</div>' : sources.map((s, i) => {
     const key = s.id.split('/')[0].replace(/-.*/, '');
     return `<div class="row"><span class="ic" style="background:${COLORS[key] || '#555'}">${esc(s.browser[0] || '?')}</span>
-      <span class="tx"><span class="nm">${esc(s.browser)}${s.profile ? `<small>${esc(s.profile)}</small>` : ''}</span><span class="meta">${esc(meta(s))}</span></span>
+      <span class="tx"><span class="nm">${esc(s.browser)}${s.profile ? `<small>${esc(s.profile)}</small>` : ''}</span>${closeFirst.has(s.id) ? `<span class="meta warn">Close ${esc(s.browser)}, then import again</span>` : `<span class="meta">${esc(meta(s))}</span>`}</span>
       <button class="${i === 0 ? 'primary' : 'secondary'}" data-import="${esc(s.id)}" ${busy ? 'disabled' : ''}>${busy === s.id ? 'Importing…' : 'Import'}</button></div>`;
   }).join('');
   $('chips').innerHTML = [['bookmarks', 'Bookmarks'], ['history', 'History'], ['extensions', 'Extensions']].map(([k, label]) =>
@@ -188,7 +193,8 @@ function renderDone() {
 
 window.mastWelcome = (m) => {
   if (m.sources) { sources = m.sources; renderList(); }
-  if (m.result) { busy = ''; imported = m.result; go(2); }
+  if (m.result && m.result.closeFirst) { closeFirst.add(busy); busy = ''; renderList(); }
+  else if (m.result) { busy = ''; imported = m.result; go(2); }
   if ('engine' in m) { engine = m.engine; if (step === 2) renderEngines(); }
   if ('isDefault' in m) {
     const b = $('default');
@@ -203,7 +209,7 @@ document.addEventListener('click', (e) => {
   if (t.dataset.go) return go(+t.dataset.go);
   if (t.dataset.engine) { engine = +t.dataset.engine; renderEngines(); return chrome.send('welcomeSetEngine', [engine]); }
   if (t.dataset.what) { what[t.dataset.what] = !what[t.dataset.what]; return renderList(); }
-  if (t.dataset.import && !busy) { busy = t.dataset.import; renderList(); return chrome.send('welcomeImport', [busy, what]); }
+  if (t.dataset.import && !busy) { busy = t.dataset.import; closeFirst.delete(busy); renderList(); return chrome.send('welcomeImport', [busy, what]); }
   if (t.id === 'default') return chrome.send('welcomeDefault');
   if (t.id === 'start') location.href = 'chrome://newtab/';
 });

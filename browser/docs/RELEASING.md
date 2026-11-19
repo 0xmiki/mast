@@ -1,11 +1,18 @@
 # Releasing Mast (Linux)
 
-Three commands, after a build is downloaded (`./mast build` puts it in `dist/mast`):
+After a build is downloaded (`./mast build` puts it in `dist/mast`):
 
 ```
+# CHANGELOG.md: list what's new under "## Unreleased" (publish refuses an empty list)
 ./mast package    # dist/release: .deb, .rpm, tarball, installer, apt/dnf sources; signed
 ./mast publish    # GitHub release + GitHub Pages; apt and dnf users update from there
 ```
+
+The release's notes come from `packaging/notes.py`, laid out like Brave's: the install
+command and which file is for which system, **What's new** (the Unreleased list), the
+Chromium it's built on (with Chromium's changes since the last release, when it moved), and
+how to verify the files. Afterwards publish files that list under the release's version in
+CHANGELOG.md and commits it.
 
 `package` asks for the release key's passphrase once. The key is `MAST_SIGNING_KEY` in
 `mast.env` (F871BCDC5C591AFB, "Mast Releases"). It never leaves your GnuPG: the RPM's

@@ -5,9 +5,9 @@ Customize's built-in backgrounds, shipped beside the browser as `mast-wallpapers
 
 | File | Picture | Source | Rights |
 |---|---|---|---|
-| `sunrise.jpg` (default) | Sunrise over Earth's edge, from the International Space Station | NASA, image `iss040e080833` | NASA imagery: public domain (credit NASA) |
-| `aurora.jpg` | Aurora seen from the International Space Station | NASA, image `iss044e012986` | NASA imagery: public domain (credit NASA) |
-| `cosmic-cliffs.jpg` | "Cosmic Cliffs" in the Carina Nebula, James Webb Space Telescope (NIRCam) | NASA, image `carina_nebula` | NASA, ESA, CSA, STScI: STScI-produced Webb imagery is public domain (credit requested) |
+| `sierra-nevada.jpg` (default) | *Among the Sierra Nevada, California*, Albert Bierstadt, 1868 (Smithsonian American Art Museum) | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Albert_Bierstadt_-_Among_the_Sierra_Nevada,_California_-_Google_Art_Project.jpg) (Google Arts & Culture) | Public domain |
+| `ulysses.jpg` | *Ulysses Deriding Polyphemus – Homer's Odyssey*, J. M. W. Turner, 1829 (National Gallery, London) | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Turner_-_Ulysses_deriding_Polyphemus_1829.jpg) | Public domain |
+| `ninth-wave.jpg` | *The Ninth Wave*, Ivan Aivazovsky, 1850 (State Russian Museum) | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Hovhannes_Aivazovsky_-_The_Ninth_Wave_-_Google_Art_Project.jpg) (Google Arts & Culture) | Public domain |
 
-NASA media guidelines: https://www.nasa.gov/nasa-brand-center/images-and-media/
-STScI (Webb) copyright: https://webbtelescope.org/copyright
+The paintings are long out of copyright, and faithful photographs of them add none
+(Wikimedia Commons' PD-Art reasoning: *Bridgeman v. Corel*).
