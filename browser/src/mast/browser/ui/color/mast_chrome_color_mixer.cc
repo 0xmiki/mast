@@ -277,11 +277,20 @@ void AddMastChromeColorMixer(ui::ColorProvider* provider,
         SkColorSetARGB(0xB3, 0x0A, 0x0A, 0x0A)};
   }
 
+  // The page area before a page paints (a new site loading, a blank or
+  // crashed renderer). Chromium's grey here read as a separate sheet under the
+  // row; it's the row's colour instead, so a loading page looks like the row
+  // running down until the site arrives. ContentsWebView repaints it whenever
+  // the window's colours change. It must be opaque (RenderWidgetHostView::
+  // SetBackgroundColor).
+  SkColor page_area = p.chrome;
   if (IsOneRowWindow() && own_row && SkColorGetA(*own_row) == SK_AlphaOPAQUE) {
     if (const std::optional<site_color::Row> row = site_color::RowFor(*own_row)) {
       AddSiteRow(mixer, *row);
+      page_area = row->bar;
     }
   }
+  mixer[kColorWebContentsBackground] = {page_area};
 
   // The download button's progress ring: Chromium picks a Google colour near
   // the throbber with barely visible contrast (a pale yellow on a light row).

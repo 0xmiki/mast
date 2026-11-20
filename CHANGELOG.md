@@ -7,6 +7,7 @@ release's version (docs/RELEASING.md).
 ## Unreleased
 
 - Truer-colour scans of *Among the Sierra Nevada* and *Ulysses Deriding Polyphemus* for the built-in backgrounds.
+- While a website loads, the page area takes the tab bar's colour (the site's own with Match site) instead of Chromium's grey.
 
 ## 157.0.8103.78-202611191046
 
