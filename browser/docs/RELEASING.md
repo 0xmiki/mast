@@ -36,6 +36,19 @@ signature needs the key as a file, so it's exported for a few seconds into `/run
 (memory, not disk) and removed. `MAST_UNSIGNED=1 ./mast package` makes a local test build,
 which `publish` refuses.
 
+## Version numbers
+
+Mast numbers its releases like Brave: **Mast 0.1.0 (Chromium 157.0.8103.78)**, tag `v0.1.0`.
+`browser/mast_version.txt` holds MAJOR.MINOR (`0.1`); `package.sh` counts PATCH up from the
+tags already published in that series, so releases go 0.1.0, 0.1.1, 0.1.2 … on their own.
+Bump the file (`0.2`) for a bigger release and the next one is 0.2.0. The Chromium version
+goes beside it, in the release title and the CHANGELOG heading.
+
+The first four releases were numbered after Chromium (`157.0.8103.78-202611191046`), so the
+packages carry **epoch 1** (`1:0.1.0-1`): without it apt and dnf would rank 0.1.0 below them.
+The epoch stays 1 for good. Tarball installs from those four releases compare plain version
+numbers, so their daily check never reports 0.x; running install.sh again moves them over.
+
 ## How each install gets updates
 
 | Install | How it updates | What checks it |

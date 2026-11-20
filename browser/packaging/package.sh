@@ -64,13 +64,20 @@ if [[ -z $NFPM ]]; then
 	fi
 fi
 
-# Chromium version plus the time it's packaged, so every release (a new build, or the same
-# build packaged again with a fix) upgrades the last one.
-VERSION=$(cat "$ROOT/dist/VERSION")
-RELEASE=$(date -u +%Y%m%d%H%M)
-FULL=$VERSION-$RELEASE
-TAG=v$FULL
-log "packaging Mast $FULL"
+# Mast's own version, like Brave's: MAJOR.MINOR from mast_version.txt (bumped by hand for a
+# bigger release), PATCH counted up from the releases already tagged with that MAJOR.MINOR:
+# 0.1.0, 0.1.1, 0.1.2 ... then 0.2.0 once mast_version.txt says 0.2. The Chromium it's built
+# on (dist/VERSION) goes beside it in the release's title and notes.
+CHROMIUM=$(cat "$ROOT/dist/VERSION")
+SERIES=$(tr -d '[:space:]' < "$ROOT/mast_version.txt")
+[[ $SERIES =~ ^[0-9]+\.[0-9]+$ ]] || die "mast_version.txt should be MAJOR.MINOR (like 0.1), not '$SERIES'"
+tags=$(git ls-remote --tags --refs "https://github.com/$MAST_RELEASES_REPO.git") ||
+	die "couldn't list $MAST_RELEASES_REPO's tags, to number this release"
+last=$(sed -n "s|.*refs/tags/v${SERIES//./\\.}\.\([0-9][0-9]*\)$|\1|p" <<<"$tags" | sort -n | tail -1)
+VERSION=$SERIES.$((${last:--1} + 1))
+FULL=$VERSION
+TAG=v$VERSION
+log "packaging Mast $VERSION (Chromium $CHROMIUM)"
 
 # Stage: the browser, plus its launcher file and icons beside it (the tarball install
 # reads them from there; Chrome ships its icons beside the browser the same way).
@@ -136,7 +143,10 @@ name: mast
 arch: amd64
 platform: linux
 version: "$VERSION"
-release: "$RELEASE"
+release: "1"
+# Epoch 1: the first releases were numbered after Chromium (157.0.8103.78-202611191046), so
+# without it apt and dnf would take 0.1.0 for an older version. It stays 1 from now on.
+epoch: "1"
 version_schema: none
 maintainer: "Mast"
 description: |
@@ -236,6 +246,7 @@ fi
 unset NFPM_RPM_PASSPHRASE
 rm -rf "$STAGE"
 echo "$TAG" > "$OUT/TAG"
+echo "$CHROMIUM" > "$OUT/CHROMIUM" # for publish.sh: the title and the notes
 
 log "done: dist/release/ ($TAG${SIGN:+, signed})"
 ls -lh "$OUT" | tail -n +2

@@ -6,6 +6,7 @@ release's version (docs/RELEASING.md).
 
 ## Unreleased
 
+- New version numbers: this is Mast 0.1.0, built on Chromium 157.0.8103.78. Releases count up from here (0.1.1, 0.1.2 …) instead of carrying Chromium's version and a timestamp.
 - Truer-colour scans of *Among the Sierra Nevada* and *Ulysses Deriding Polyphemus* for the built-in backgrounds.
 - While a website loads, the page area takes the tab bar's colour (the site's own with Match site) instead of Chromium's grey.
 - Customize no longer credits NASA when no built-in background is picked; a built-in painting still shows its credit.

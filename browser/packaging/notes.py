@@ -6,10 +6,11 @@
 "Unreleased" list in CHANGELOG.md), which Chromium, how to check the files. Run by
 publish.sh, through uv.
 
-  uv run packaging/notes.py notes <CHANGELOG.md> <version> <ungoogled tag> <repo> [<previous tag>]
+  uv run packaging/notes.py notes <CHANGELOG.md> <chromium> <ungoogled tag> <repo> [<previous chromium>]
       -> prints the notes; fails when "Unreleased" lists nothing
-  uv run packaging/notes.py file <CHANGELOG.md> <version>
-      -> files the "Unreleased" list under the version; "Unreleased" starts empty
+  uv run packaging/notes.py file <CHANGELOG.md> <heading>
+      -> files the "Unreleased" list under the heading ("0.1.0 (Chromium 157.0.8103.78)");
+         "Unreleased" starts empty
 """
 import re
 import sys
@@ -22,12 +23,10 @@ def whats_new(changelog):
     return m.group(1).strip() if m else ""
 
 
-def notes(changelog, version, ungoogled, repo, previous=""):
+def notes(changelog, chromium, ungoogled, repo, before=""):
     new = whats_new(changelog)
     if not new:
         sys.exit('CHANGELOG.md has nothing under "## Unreleased": add what\'s new in this release first')
-    chromium = version.rsplit("-", 1)[0]
-    before = previous.removeprefix("v").rsplit("-", 1)[0] if previous else ""
     if before and before != chromium:
         log = f"https://chromium.googlesource.com/chromium/src/+log/{before}..{chromium}?pretty=fuller&n=10000"
         chromium_line = f"Upgraded Chromium to {chromium} ([changes since {before}]({log})), through ungoogled-chromium {ungoogled}."
@@ -69,10 +68,10 @@ gpg --import mast-release-key.asc && gpg --verify SHA256SUMS.asc SHA256SUMS && s
 """
 
 
-def file_under(changelog, version):
+def file_under(changelog, heading):
     text = open(changelog).read()
     new = whats_new(changelog)
-    text = UNRELEASED.sub(lambda m: f"## Unreleased\n\n## {version}\n\n{new}\n\n", text, count=1)
+    text = UNRELEASED.sub(lambda m: f"## Unreleased\n\n## {heading}\n\n{new}\n\n", text, count=1)
     open(changelog, "w").write(text)
 
 
