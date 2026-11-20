@@ -6,6 +6,8 @@ release's version (docs/RELEASING.md).
 
 ## Unreleased
 
+- Truer-colour scans of *Among the Sierra Nevada* and *Ulysses Deriding Polyphemus* for the built-in backgrounds.
+
 ## 157.0.8103.78-202611191046
 
 - New built-in backgrounds, all public-domain paintings: *Among the Sierra Nevada* by Albert Bierstadt (the new default), *Ulysses Deriding Polyphemus* by J. M. W. Turner and *The Ninth Wave* by Ivan Aivazovsky. They replace the NASA photos.
