@@ -411,7 +411,7 @@ function guessTone(bmp) {
 function renderCustomize() {
   if (!state || !document.getElementById('czDialog').open) return;
   const t = state.theme || {};
-  // Built-in pictures first (NASA photos), then none or your own.
+  // Built-in pictures first (public-domain paintings), then none or your own.
   const presets = t.presets || [];
   const preset = wallpaper ? (t.preset || '') : '';
   const own = wallpaper && !preset;
@@ -422,7 +422,10 @@ function renderCustomize() {
     (own ? `<button data-bg="image" class="on" aria-pressed="true" aria-label="Your image" style="background-image:url(wallpaper-${wallpaper}.jpg)"></button>` : '') +
     `<button data-bg="upload" class="up" ${czBusy ? 'disabled' : ''}>${czBusy ? 'Saving…' : own ? 'Replace' : 'Upload your own'}</button>`;
   const shown = presets.find((p) => p.id === preset);
-  document.getElementById('czCredit').textContent = shown ? shown.credit : 'Built-in photos: NASA. Public domain.';
+  // The painting's credit when one is picked; nothing otherwise.
+  const credit = document.getElementById('czCredit');
+  credit.textContent = shown ? shown.credit : '';
+  credit.hidden = !shown;
   // Dark or Light only means something with a picture: it sets the text and
   // icons on it (tab row included) to light or dark.
   document.getElementById('czTone').innerHTML = !wallpaper ? '' : `<h4>Image</h4>

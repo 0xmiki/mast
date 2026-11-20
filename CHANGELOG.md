@@ -8,6 +8,7 @@ release's version (docs/RELEASING.md).
 
 - Truer-colour scans of *Among the Sierra Nevada* and *Ulysses Deriding Polyphemus* for the built-in backgrounds.
 - While a website loads, the page area takes the tab bar's colour (the site's own with Match site) instead of Chromium's grey.
+- Customize no longer credits NASA when no built-in background is picked; a built-in painting still shows its credit.
 
 ## 157.0.8103.78-202611191046
 
