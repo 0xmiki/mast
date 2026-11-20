@@ -180,7 +180,15 @@ diff -ruN a/chrome/browser/prefs/browser_prefs.cc b/chrome/browser/prefs/browser
    ChromeContentBrowserClient::RegisterLocalStatePrefs(registry);
  #if BUILDFLAG(CHROME_FOR_TESTING)
    chrome_for_testing::RegisterPrefs(registry);
-@@ -2518,6 +2521,7 @@
+@@ -1979,6 +1982,7 @@
+       policy::policy_prefs::kLocalNetworkAccessPermissionsPolicyDefaultEnabled,
+       false);
+ 
++  mast::SetLocalStateDefaults(registry);
+   // This is intentionally last.
+   RegisterLocalStatePrefsForMigration(registry);
+ }
+@@ -2518,6 +2522,7 @@
  #endif  // BUILDFLAG(IS_ANDROID)
  
    registry->RegisterBooleanPref(prefs::kStaticStorageQuotaEnabled, false);
@@ -333,6 +341,18 @@ diff -ruN a/chrome/browser/ui/tab_ui_helper.cc b/chrome/browser/ui/tab_ui_helper
      // Cache the model so repeated calls return an equal ImageModel; TabData
      // compares favicons by value, and a fresh BindRepeating each call would
      // never compare equal. The bound resolver still re-runs at raster time, so
+diff -ruN a/chrome/browser/ui/toolbar/app_menu_model.cc b/chrome/browser/ui/toolbar/app_menu_model.cc
+--- a/chrome/browser/ui/toolbar/app_menu_model.cc
++++ b/chrome/browser/ui/toolbar/app_menu_model.cc
+@@ -2043,7 +2043,7 @@
+ 
+   AddSeparator(ui::NORMAL_SEPARATOR);
+ 
+-#if !BUILDFLAG(IS_CHROMEOS)
++#if 0  // Mast: no profile row; profiles are hidden for now.
+   sub_menus_.push_back(std::make_unique<ProfileSubMenuModel>(
+       this, browser()->GetProfile(),
+       BrowserWindow::FromBrowser(browser())->GetColorProvider()));
 diff -ruN a/chrome/browser/ui/toolbar/bookmark_sub_menu_model.cc b/chrome/browser/ui/toolbar/bookmark_sub_menu_model.cc
 --- a/chrome/browser/ui/toolbar/bookmark_sub_menu_model.cc
 +++ b/chrome/browser/ui/toolbar/bookmark_sub_menu_model.cc

@@ -62,6 +62,10 @@ inline constexpr char kUpdateCheckedPref[] = "mast.update_checked";
 // Widevine answer (mast/common/mast_widevine_state.h) and the update check.
 void RegisterLocalStatePrefs(PrefRegistrySimple* registry);
 
+// New defaults for upstream Local State prefs (profiles hidden), called at the
+// end of RegisterLocalState() once upstream has registered them.
+void SetLocalStateDefaults(PrefRegistrySimple* registry);
+
 }  // namespace mast
 
 #endif  // MAST_BROWSER_MAST_PREFS_H_

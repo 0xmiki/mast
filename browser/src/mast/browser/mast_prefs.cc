@@ -22,6 +22,17 @@ void RegisterLocalStatePrefs(PrefRegistrySimple* registry) {
   registry->RegisterTimePref(kUpdateCheckedPref, base::Time());
 }
 
+void SetLocalStateDefaults(PrefRegistrySimple* registry) {
+  // Profiles are hidden for now: Chromium's profile screens aren't Mast's yet.
+  // No "Add" or guest mode in the profile picker, so with one profile it never
+  // shows (the ⋮ menu's profile row is gone too; mast-hooks.patch). These are
+  // the switches companies set by policy, so a policy still wins.
+  registry->SetDefaultPrefValue(prefs::kBrowserAddPersonEnabled,
+                                base::Value(false));
+  registry->SetDefaultPrefValue(prefs::kBrowserGuestModeEnabled,
+                                base::Value(false));
+}
+
 void RegisterProfilePrefs(user_prefs::PrefRegistrySyncable* registry) {
   // No tab-search button at the start of the tab strip. Ctrl+Shift+A still
   // opens tab search, and anyone who pins it again keeps it.

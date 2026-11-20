@@ -121,14 +121,19 @@ edit(H, "chrome/browser/BUILD.gn", lambda t: add_dep(t, 'source_set("core") {', 
 
 # Mast's prefs: blocks in Local State (shared by every profile, incognito too), the rest per
 # profile, registered last so Mast can change upstream defaults.
-edit(H, "chrome/browser/prefs/browser_prefs.cc", lambda t: once(once(once(t,
+edit(H, "chrome/browser/prefs/browser_prefs.cc", lambda t: once(once(once(once(t,
     '#include "chrome/browser/prefs/incognito_mode_prefs.h"\n',
     '#include "chrome/browser/prefs/incognito_mode_prefs.h"\n#include "mast/browser/mast_blocks.h"\n#include "mast/browser/mast_prefs.h"\n'),
     '  BrowserProcessImpl::RegisterPrefs(registry);\n',
     '  BrowserProcessImpl::RegisterPrefs(registry);\n  mast::RegisterLocalStatePrefs(registry);\n'),
     # Last in RegisterProfilePrefs(), so Mast can change upstream defaults.
     '  registry->RegisterBooleanPref(prefs::kStaticStorageQuotaEnabled, false);\n}\n',
-    '  registry->RegisterBooleanPref(prefs::kStaticStorageQuotaEnabled, false);\n  mast::RegisterProfilePrefs(registry);\n}\n'))
+    '  registry->RegisterBooleanPref(prefs::kStaticStorageQuotaEnabled, false);\n  mast::RegisterProfilePrefs(registry);\n}\n'),
+    # Last in RegisterLocalState() too (before the migration prefs, which upstream keeps
+    # last), so upstream's Local State prefs exist when Mast changes their defaults.
+    '  // This is intentionally last.\n  RegisterLocalStatePrefsForMigration(registry);\n',
+    '  mast::SetLocalStateDefaults(registry);\n'
+    '  // This is intentionally last.\n  RegisterLocalStatePrefsForMigration(registry);\n'))
 edit(H, "chrome/browser/prefs/BUILD.gn", lambda t: add_dep(t, 'source_set("impl") {', "//mast/browser"))
 
 # Widevine on request (mast/browser/ui/mast_widevine.h), the way Brave does it. The component
@@ -214,6 +219,12 @@ edit(H, "chrome/browser/bookmarks/BUILD.gn", lambda t: add_dep(t, 'source_set("i
 edit(H, "chrome/browser/ui/views/toolbar/toolbar_view.cc", lambda t: once(t,
     '        AvatarToolbarButtonInterface::CanShowForProfile(browser_->GetProfile());\n',
     '        false;  // Mast: no sign-in, so no profile button.\n'))
+# Profiles are hidden for now: the ⋮ menu has no profile row ("Your Mast": close, customize,
+# add profile, guest). Adding people and guest mode are off too (mast::SetLocalStateDefaults).
+edit(H, "chrome/browser/ui/toolbar/app_menu_model.cc", lambda t: once(t,
+    '#if !BUILDFLAG(IS_CHROMEOS)\n  sub_menus_.push_back(std::make_unique<ProfileSubMenuModel>(\n',
+    '#if 0  // Mast: no profile row; profiles are hidden for now.\n'
+    '  sub_menus_.push_back(std::make_unique<ProfileSubMenuModel>(\n'))
 
 # The one-row window's toolbar (mast_one_row_layout.h) is exactly as wide as it wants to be.
 # The extensions area and the pinned actions (downloads) slide their size in while their
