@@ -292,6 +292,15 @@ edit(H, "chrome/browser/ui/webui/settings/settings_ui.cc", lambda t: once(t,
     '  html_source->AddBoolean("showGeicSettings", false);\n'
     '  html_source->AddBoolean("showPrivacyGuide", false);\n\n'
     '  TryShowHatsSurveyWithTimeout();\n}\n'))
+# Settings > About: Mast's version in front of Chromium's, like Brave's ("Version 0.1.0
+# (Chromium 157.0.8103.78) (Official Build) (64-bit)"); mast/common/mast_version.h.
+edit(H, "chrome/browser/ui/webui/settings/settings_localized_strings_provider.cc", lambda t: once(once(t,
+    '#include "chrome/browser/ui/webui/version/version_ui.h"\n',
+    '#include "chrome/browser/ui/webui/version/version_ui.h"\n#include "mast/common/mast_version.h"\n'),
+    '  std::u16string browser_version = VersionUI::GetAnnotatedVersionStringForUi();\n',
+    '  std::u16string browser_version =\n'
+    '      mast::WithMastVersion(VersionUI::GetAnnotatedVersionStringForUi());\n'))
+edit(H, "chrome/browser/ui/webui/settings/BUILD.gn", lambda t: add_dep(t, 'source_set("impl") {', "//mast/common"))
 edit(H, "chrome/browser/resources/settings/page_visibility.ts", lambda t: once(t,
     "  if (!loadTimeData.getBoolean('isGuest')) {\n    return undefined;\n  }\n",
     "  if (!loadTimeData.getBoolean('isGuest')) {\n"

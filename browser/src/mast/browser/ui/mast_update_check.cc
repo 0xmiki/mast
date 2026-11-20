@@ -36,6 +36,7 @@
 #include "components/tabs/public/tab_interface.h"
 #include "content/public/browser/web_contents.h"
 #include "mast/browser/mast_prefs.h"
+#include "mast/common/mast_version.h"
 #include "net/base/load_flags.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
 #include "services/network/public/cpp/resource_request.h"
@@ -128,15 +129,25 @@ class Checker {
   Checker() = default;
 
   void Begin() {
-    // The tarball's copy of mast-version, beside the browser; the .deb and .rpm
-    // install under /opt, where the system updates them.
+    // mast-version, beside the browser (every package has it; a development
+    // build doesn't). Settings > About shows it whatever the install
+    // (mast/common/mast_version.h); the check below only runs where the system
+    // doesn't update Mast.
     base::ThreadPool::PostTaskAndReplyWithResult(
-        FROM_HERE, {base::MayBlock(), base::TaskPriority::BEST_EFFORT},
-        base::BindOnce([]() -> std::optional<std::string> {
+        FROM_HERE, {base::MayBlock(), base::TaskPriority::USER_VISIBLE},
+        base::BindOnce([]() -> Installed {
+          Installed installed;
           base::FilePath dir;
           if (!base::PathService::Get(base::DIR_EXE, &dir)) {
-            return std::nullopt;
+            return installed;
           }
+          std::string version;
+          if (!base::ReadFileToString(dir.AppendASCII("mast-version"),
+                                      &version)) {
+            return installed;  // a development build
+          }
+          installed.version =
+              std::string(base::TrimWhitespaceASCII(version, base::TRIM_ALL));
           // A .deb or .rpm under /opt: the system updates it where Mast's
           // package source works (apt, dnf). zypper can't read it (it won't
           // fetch packages from another host than its metadata), so openSUSE
@@ -148,27 +159,26 @@ class Checker {
               exists("/etc/apt/sources.list.d/mast.sources") ||
               (exists("/etc/yum.repos.d/mast.repo") &&
                (exists("/usr/bin/dnf") || exists("/usr/bin/dnf5")));
-          if ((base::StartsWith(dir.value(), "/opt/") ||
-               base::StartsWith(dir.value(), "/usr/")) &&
-              system_updates) {
-            return std::nullopt;
-          }
-          std::string version;
-          if (!base::ReadFileToString(dir.AppendASCII("mast-version"),
-                                      &version)) {
-            return std::nullopt;  // a development build
-          }
-          return std::string(base::TrimWhitespaceASCII(version, base::TRIM_ALL));
+          installed.check = !((base::StartsWith(dir.value(), "/opt/") ||
+                               base::StartsWith(dir.value(), "/usr/")) &&
+                              system_updates);
+          return installed;
         }),
-        base::BindOnce(&Checker::OnInstalledVersion, base::Unretained(this)));
+        base::BindOnce(&Checker::OnInstalled, base::Unretained(this)));
   }
 
  private:
-  void OnInstalledVersion(std::optional<std::string> version) {
-    if (!version || version->empty()) {
+  struct Installed {
+    std::string version;  // empty: a development build
+    bool check = false;   // the system doesn't update this install
+  };
+
+  void OnInstalled(Installed installed) {
+    SetInstalledVersion(installed.version);
+    if (installed.version.empty() || !installed.check) {
       return;
     }
-    installed_ = *version;
+    installed_ = installed.version;
     // A day after the last check (Local State), at least a minute from now.
     base::TimeDelta wait = kFirstDelay;
     if (PrefService* p = g_browser_process->local_state()) {

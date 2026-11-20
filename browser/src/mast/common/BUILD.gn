@@ -9,6 +9,8 @@ source_set("common") {
     "mast_features.h",
     "mast_tab_bar_state.cc",
     "mast_tab_bar_state.h",
+    "mast_version.cc",
+    "mast_version.h",
     "mast_widevine_state.cc",
     "mast_widevine_state.h",
   ]
