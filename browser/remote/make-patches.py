@@ -331,12 +331,8 @@ edit(H, "chrome/browser/ui/tab_ui_helper.cc", lambda t: once(once(t,
     '#include "chrome/grit/generated_resources.h"\n#include "chrome/grit/theme_resources.h"\n'),
     '  if (!favicon_driver || !favicon_driver->FaviconIsValid()) {\n',
     '  if (!favicon_driver || !favicon_driver->FaviconIsValid()) {\n'
-    '    // Mast: a new tab shows the new-tab icon while it loads, not the globe;\n'
-    '    // so do error pages (Mast\'s blocked page, sites that can\'t be reached).\n'
-    '    const content::NavigationEntry* mast_entry =\n'
-    '        web_contents()->GetController().GetLastCommittedEntry();\n'
-    '    if (IsNTP(web_contents()->GetVisibleURL()) ||\n'
-    '        (mast_entry && mast_entry->GetPageType() == content::PAGE_TYPE_ERROR)) {\n'
+    '    // Mast: a new tab shows the new-tab icon while it loads, not the globe.\n'
+    '    if (IsNTP(web_contents()->GetVisibleURL())) {\n'
     '      return ui::ImageModel::FromResourceId(IDR_NTP_FAVICON);\n    }\n'))
 # The new tab's sails stayed grey: before the page commits a new tab has no entry, so its
 # icon isn't themed; after it commits the icon is the same image, and SetIcon() returned
@@ -349,12 +345,8 @@ edit(H, "chrome/browser/ui/views/tabs/tab/tab_icon.cc", lambda t: once(t,
 edit(H, "chrome/browser/ui/tab_ui_helper.cc", lambda t: once(t,
     'bool TabUIHelper::ShouldThemifyFavicon() {\n',
     'bool TabUIHelper::ShouldThemifyFavicon() {\n'
-    '  // Mast: a new tab\'s sails follow the tab text from the first frame, and\n'
-    '  // error pages\' sails too.\n'
-    '  const content::NavigationEntry* mast_entry =\n'
-    '      tab().GetContents()->GetController().GetLastCommittedEntry();\n'
-    '  if (IsNTP(tab().GetContents()->GetVisibleURL()) ||\n'
-    '      (mast_entry && mast_entry->GetPageType() == content::PAGE_TYPE_ERROR)) {\n    return true;\n  }\n'))
+    '  // Mast: a new tab\'s sails follow the tab text from the first frame.\n'
+    '  if (IsNTP(tab().GetContents()->GetVisibleURL())) {\n    return true;\n  }\n'))
 # ...and in the one-row window a browser page's icon takes its own tab's text colour: bright
 # on the active tab, quieter on the others, like the title next to it. (Recolouring with
 # one colour for every tab left the active tab's sails grey beside its white title.)

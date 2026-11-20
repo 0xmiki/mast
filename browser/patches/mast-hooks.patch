@@ -238,6 +238,20 @@ diff -ruN a/chrome/browser/resources/settings/page_visibility.ts b/chrome/browse
    }
  
    // <if expr="not is_chromeos">
+diff -ruN a/chrome/browser/search/search.cc b/chrome/browser/search/search.cc
+--- a/chrome/browser/search/search.cc
++++ b/chrome/browser/search/search.cc
+@@ -176,7 +176,9 @@
+       return NewTabURLDetails(GURL(), NEW_TAB_URL_INCOGNITO);
+     }
+ 
+-    const bool default_is_google = DefaultSearchProviderIsGoogle(profile);
++    // Mast: always Mast's new tab page, never the search engine's.
++    const bool default_is_google =
++        DefaultSearchProviderIsGoogle(profile) || !profile->IsOffTheRecord();
+ 
+ #if BUILDFLAG(IS_ANDROID)
+     const bool is_desktop_android = IsWebUiNtpEnabledForDesktopAndroid();
 diff -ruN a/chrome/browser/themes/theme_service.cc b/chrome/browser/themes/theme_service.cc
 --- a/chrome/browser/themes/theme_service.cc
 +++ b/chrome/browser/themes/theme_service.cc
@@ -297,31 +311,23 @@ diff -ruN a/chrome/browser/ui/tab_ui_helper.cc b/chrome/browser/ui/tab_ui_helper
  #include "components/favicon/content/content_favicon_util.h"
  #include "components/security_interstitials/content/security_interstitial_tab_helper.h"
  #include "components/tabs/public/tab_interface.h"
-@@ -154,6 +155,14 @@
+@@ -154,6 +155,10 @@
  }
  
  bool TabUIHelper::ShouldThemifyFavicon() {
-+  // Mast: a new tab's sails follow the tab text from the first frame, and
-+  // error pages' sails too.
-+  const content::NavigationEntry* mast_entry =
-+      tab().GetContents()->GetController().GetLastCommittedEntry();
-+  if (IsNTP(tab().GetContents()->GetVisibleURL()) ||
-+      (mast_entry && mast_entry->GetPageType() == content::PAGE_TYPE_ERROR)) {
++  // Mast: a new tab's sails follow the tab text from the first frame.
++  if (IsNTP(tab().GetContents()->GetVisibleURL())) {
 +    return true;
 +  }
    content::NavigationEntry* const entry =
        tab().GetContents()->GetController().GetLastCommittedEntry();
    return entry && favicon::ShouldThemifyFaviconForEntry(entry);
-@@ -231,6 +240,14 @@
+@@ -231,6 +236,10 @@
    const favicon::FaviconDriver* const favicon_driver =
        favicon::ContentFaviconDriver::FromWebContents(web_contents());
    if (!favicon_driver || !favicon_driver->FaviconIsValid()) {
-+    // Mast: a new tab shows the new-tab icon while it loads, not the globe;
-+    // so do error pages (Mast's blocked page, sites that can't be reached).
-+    const content::NavigationEntry* mast_entry =
-+        web_contents()->GetController().GetLastCommittedEntry();
-+    if (IsNTP(web_contents()->GetVisibleURL()) ||
-+        (mast_entry && mast_entry->GetPageType() == content::PAGE_TYPE_ERROR)) {
++    // Mast: a new tab shows the new-tab icon while it loads, not the globe.
++    if (IsNTP(web_contents()->GetVisibleURL())) {
 +      return ui::ImageModel::FromResourceId(IDR_NTP_FAVICON);
 +    }
      // Cache the model so repeated calls return an equal ImageModel; TabData
