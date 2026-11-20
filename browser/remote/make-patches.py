@@ -186,6 +186,16 @@ edit(H, "chrome/browser/ui/webui/chrome_web_ui_configs.cc", lambda t: once(once(
     '  map.AddWebUIConfig(std::make_unique<NewTabPageThirdPartyUIConfig>());\n',
     '  map.AddWebUIConfig(std::make_unique<mast::MastUIConfig>(\n      chrome::kChromeUINewTabPageThirdPartyHost));\n'))
 edit(H, "chrome/browser/ui/webui/BUILD.gn", lambda t: add_dep(t, 'source_set("configs") {', "//mast/browser/webui"))
+# The new tab is Mast's page whatever the search engine. With any engine but Google,
+# Chromium opened the engine's own new tab page instead (Brave Search, Bing). The early
+# return for Google now covers every profile that reaches it (off-the-record ones returned
+# just above); it isn't written as `true`, so the code after it doesn't trip
+# -Wunreachable-code.
+edit(H, "chrome/browser/search/search.cc", lambda t: once(t,
+    '    const bool default_is_google = DefaultSearchProviderIsGoogle(profile);\n',
+    '    // Mast: always Mast\'s new tab page, never the search engine\'s.\n'
+    '    const bool default_is_google =\n'
+    '        DefaultSearchProviderIsGoogle(profile) || !profile->IsOffTheRecord();\n'))
 
 # The star (and Ctrl+D) saves to the Desktop folder behind the new tab page. Mast's
 # provider takes the slot of the shopping one (commerce is off in Mast); the shopping
