@@ -11,9 +11,9 @@
    of explanation under them. */
 body { display: flex; justify-content: center; min-height: 100vh; margin: 0; padding: 18vh 24px 40px; box-sizing: border-box; text-align: center; }
 /* On the picture (design C26): Customize's, which a new profile starts with
-   (Among the Sierra Nevada). A wash keeps text readable; no logo, no tagline. */
+   (Among the Sierra Nevada). No wash over it: the page runs on from the tab
+   row, which shows the picture as it is. No logo, no tagline. */
 #wall { position: fixed; inset: 0; z-index: -1; background: var(--bg) center / cover no-repeat; }
-#wall::after { content: ""; position: absolute; inset: 0; background: linear-gradient(rgb(0 0 0/.45), rgb(0 0 0/.15) 40%, rgb(0 0 0/.55)); }
 body.wall { background: transparent; color: #f2f2f2; --text: #f2f2f2; --text-2: rgb(242 242 242/.72); --text-3: rgb(242 242 242/.5); }
 .credit { position: fixed; left: 24px; bottom: 20px; margin: 0; color: rgb(255 255 255/.4); font-size: 11px; }
 main { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 760px; }

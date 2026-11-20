@@ -11,6 +11,7 @@ release's version (docs/RELEASING.md).
 - Customize no longer credits NASA when no built-in background is picked; a built-in painting still shows its credit.
 - The new tab page stays Mast's with any search engine. Brave Search and Bing used to replace it with their own.
 - Profiles are hidden for now: no profile row in the menu, and no adding profiles or guest mode.
+- The welcome screen shows its picture as it is, with no dark wash that set the page apart from the tab bar.
 
 ## 157.0.8103.78-202611191046
 
